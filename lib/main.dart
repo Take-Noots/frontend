@@ -36,6 +36,7 @@ import 'core/constants/app_constants.dart';
 
 import 'core/providers/theme_provider.dart'; // Theme provider
 import 'core/providers/auth_provider.dart'; // Auth provider for global access
+import 'core/providers/user_profile_provider.dart'; // User profile provider
 import 'presentation/screens/fanbase/fanbase.dart';
 import 'presentation/screens/profile/normal_user.dart';
 // import 'package:frontend/presentation/screens/search/search_feed_screen.dart';
@@ -51,6 +52,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => UserProfileProvider()),
       ],
       child: const MyApp(),
     ),
