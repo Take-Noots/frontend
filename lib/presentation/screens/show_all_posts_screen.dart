@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/services/song_post_service.dart';
-import '../../data/services/spotify_service.dart';
 import '../../data/models/post_model.dart';
 import '../../core/constants/app_constants.dart';
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart'; 
 import '../widgets/song_post/comment.dart';
+import 'package:provider/provider.dart';
+import '../../data/services/auth_service.dart';
 
 
 class ShowAllPostsScreen extends StatefulWidget {
@@ -20,9 +22,6 @@ class ShowAllPostsScreen extends StatefulWidget {
 
 class _ShowAllPostsScreenState extends State<ShowAllPostsScreen> {
   final SongPostService _songPostService = SongPostService();
-  final SpotifyService _spotifyService = SpotifyService(
-    accessToken: AppConstants.spotifyAccessToken,
-  );
   
   List<Post> _posts = [];
   bool _isLoading = true;
@@ -236,8 +235,8 @@ class _ShowAllPostsScreenState extends State<ShowAllPostsScreen> {
                 ),
                 const SizedBox(width: 16),
                 _buildActionButton(
-                  icon: _currentlyPlayingTrackId == post.trackId && _isPlaying 
-                      ? Icons.pause_circle_outline 
+                  icon: _currentlyPlayingTrackId == post.trackId && _isPlaying
+                      ? Icons.pause_circle_outline
                       : Icons.play_circle_outline,
                   label: _currentlyPlayingTrackId == post.trackId && _isPlaying ? 'Pause' : 'Play',
                   onTap: () => _handlePlay(post),
@@ -361,58 +360,75 @@ class _ShowAllPostsScreenState extends State<ShowAllPostsScreen> {
 
   Future<void> _handlePlay(Post post) async {
     if (_currentlyPlayingTrackId == post.trackId && _isPlaying) {
-      await _pausePlayback();
+      setState(() {
+        _isPlaying = false;
+      });
+      try {
+        await _pausePlayback();
+      } catch (e) {
+        setState(() {
+          _isPlaying = true;
+        });
+      }
     } else {
-      await _playTrack(post);
+      setState(() {
+        _currentlyPlayingTrackId = post.trackId;
+        _isPlaying = true;
+      });
+      try {
+        await _playTrack(post);
+      } catch (e) {
+        setState(() {
+          _isPlaying = false;
+        });
+      }
     }
   }
 
   Future<void> _playTrack(Post post) async {
     try {
-      final result = await _spotifyService.playTrack(post.trackId);
-      
-      if (result['success']) {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+      final response = await dio.post(
+        '/spotify/player/post/play',
+        data: {'track_id': post.trackId},
+      );
+      if (response.statusCode == 200 || response.statusCode == 202 || response.statusCode == 204) {
         setState(() {
           _currentlyPlayingTrackId = post.trackId;
           _isPlaying = true;
         });
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Now playing: ${post.songName}')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Failed to play track')),
-        );
-      }
+      } 
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error playing track: $e')),
-      );
+      String errorMsg = 'Failed to play track';
+      if (e is DioError && e.response != null && e.response?.data != null) {
+        // Try to extract a more specific error message from the backend
+        final data = e.response?.data;
+        if (data is Map && data['message'] != null) {
+          errorMsg = data['message'];
+        } else if (data is String) {
+          errorMsg = data;
+        }
+      }
     }
   }
 
   Future<void> _pausePlayback() async {
     try {
-      final result = await _spotifyService.pausePlayback();
-      
-      if (result['success']) {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+      final response = await dio.put('/spotify/player/post/pause');
+      if (response.statusCode == 200 || response.statusCode == 204) {
         setState(() {
           _isPlaying = false;
         });
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Playback paused')),
-        );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Failed to pause')),
-        );
+        // Removed SnackBar
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error pausing playback: $e')),
-      );
+      // Removed SnackBar
     }
   }
 

@@ -123,11 +123,7 @@ class MyApp extends StatelessWidget {
           //   return MaterialPageRoute(builder: (_) => const SignupScreen());
           case '/create':
             return MaterialPageRoute(
-              builder: (_) => CreatePostPage(
-                spotifyService: SpotifyService(
-                  accessToken: AppConstants.spotifyAccessToken,
-                ),
-              ),
+              builder: (_) => CreatePostPage(),
             );
           case '/fanbases':
             return MaterialPageRoute(builder: (_) => FanbasePage());

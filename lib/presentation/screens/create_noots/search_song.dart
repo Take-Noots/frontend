@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'dart:convert';
 import '/data/services/spotify_service.dart';
 import 'dart:async';
 import 'create_new_noot.dart';
 import '../../widgets/create_post/button.dart';
 import '../../widgets/common/musicplayer_bar.dart';
+import 'package:provider/provider.dart';
+import '../../../data/services/auth_service.dart';
 
 class CreatePostPage extends StatefulWidget {
-  final SpotifyService spotifyService;
-
-  const CreatePostPage({
-    Key? key,
-    required this.spotifyService,
-  }) : super(key: key);
+  const CreatePostPage({Key? key}) : super(key: key);
 
   @override
   State<CreatePostPage> createState() => _CreatePostPageState();
@@ -33,20 +30,16 @@ class _CreatePostPageState extends State<CreatePostPage> {
     });
 
     try {
-      final url = Uri.parse(
-          'http://localhost:3000/spotify/search/track?track_name=${Uri.encodeComponent(query)}');
-
-      final response = await http.get(
-        url,
-        headers: {
-          'x-spotify-token': widget.spotifyService.accessToken,
-        },
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+      final response = await dio.get(
+        '/spotify/search/track',
+        queryParameters: {'track_name': query},
       );
 
       if (response.statusCode == 200) {
-        final results = jsonDecode(response.body);
         setState(() {
-          _searchResults = results;
+          _searchResults = response.data;
           _isLoading = false;
         });
       } else {
@@ -55,7 +48,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error searching: ${response.body}')),
+            SnackBar(content: Text('Error searching: ${response.statusCode}')),
           );
         }
       }
