@@ -24,7 +24,7 @@ class ProfileNameRow extends StatelessWidget {
           style: TextStyle(
             color: Theme.of(context).colorScheme.onPrimary,
             fontWeight: FontWeight.bold,
-            fontSize: 16.0,
+            fontSize: 22.0,
           ),
         ),
       ],

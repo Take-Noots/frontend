@@ -5,7 +5,6 @@ import './fanbase_profilebar.dart';
 class FanbaseCard extends StatelessWidget {
   final int numLikes;
   final int numPosts;
-  final int numShares;
   final String profileImageUrl;
   final String fanbaseName;
   final String topic;
@@ -17,7 +16,6 @@ class FanbaseCard extends StatelessWidget {
     super.key,
     required this.numLikes,
     required this.numPosts,
-    required this.numShares,
     required this.profileImageUrl,
     required this.fanbaseName,
     required this.topic,
@@ -68,19 +66,19 @@ class FanbaseCard extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    // padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   ),
                   child: Text(isJoined ? 'Joined' : 'Join'),
                 ),
               ],
             ),
 
-            const SizedBox(height: 16.0),
+            const SizedBox(height: 14.0),
 
             /// Topic
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16.0),
+              // padding: const EdgeInsets.all(16.0),
               child: Text(
                 truncateText(topic, 55),
                 style: TextStyle(
@@ -90,13 +88,12 @@ class FanbaseCard extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 10.0),
+            const SizedBox(height: 14.0),
 
             /// Interaction stats
             FanbaseInterations(
               numLikes: numLikes,
               numPosts: numPosts,
-              numShares: numShares,
             ),
           ],
         ),
