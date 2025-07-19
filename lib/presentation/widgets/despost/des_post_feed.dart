@@ -3,7 +3,6 @@ import 'package:palette_generator/palette_generator.dart';
 import './widgets/des_post_content_widget.dart';
 import './widgets/des_post_bg_container.dart';
 
-/// A feed widget that displays song posts
 class FeedWidget extends StatefulWidget {
   const FeedWidget({Key? key}) : super(key: key);
 
@@ -12,7 +11,6 @@ class FeedWidget extends StatefulWidget {
 }
 
 class _FeedWidgetState extends State<FeedWidget> {
-  // Hardcoded feed posts data
   final List<Map<String, dynamic>> feedPosts = [
     {
       "_id": "686b967060b0a052ded69195",
@@ -38,7 +36,7 @@ class _FeedWidgetState extends State<FeedWidget> {
       "username": "owl",
       "title": "BLUESTAR by Pretty Patterns",
       "description":
-          "In BLUESTAR, Pretty Patterns crafts an ethereal soundscape that transcends genre boundaries. The track shimmers with a dreamlike ambiance, where softly plucked guitars and airy synths coexist in perfect harmony. From the first note, you're drawn into a world where time seems to stretch and colors seem to glow just a bit brighter. The song’s progression is subtle but immersive, with each layer building toward a gentle climax that feels like sunrise after a long night. There's a wistful energy in the melodies, as if the track is remembering something distant yet deeply personal. Hints of lo-fi percussion and reverb-soaked instrumentation add a raw, emotional edge—making it feel handcrafted and human despite its electronic roots. BLUESTAR is the kind of track that sticks with you, not through force, but through the quiet power of mood and memory. It's a brilliant testament to Pretty Patterns' ability to translate feeling into sound.",
+          "In BLUESTAR, Pretty Patterns crafts an ethereal soundscape that transcends genre boundaries. The track shimmers with a dreamlike ambiance, where softly plucked guitars and airy synths coexist in perfect harmony...",
     },
     {
       "_id": "686b966060b0a052ded69190",
@@ -50,14 +48,12 @@ class _FeedWidgetState extends State<FeedWidget> {
       "caption": "huh",
       "username": "owl",
       "title": "HOT by LE SSERAFIM",
-      "description":
-          "A high-energy track that combines pop and hip-hop influences.",
+      "description": "A high-energy track that combines pop and hip-hop influences.",
     }
   ];
 
-  // Map to store extracted colors for each album image
   final Map<String, Color> _extractedColors = {};
-  final Color _defaultColor = Color.fromARGB(255, 17, 37, 37);
+  final Color _defaultColor = const Color.fromARGB(255, 17, 37, 37);
 
   @override
   void initState() {
@@ -73,7 +69,7 @@ class _FeedWidgetState extends State<FeedWidget> {
           final PaletteGenerator paletteGenerator =
               await PaletteGenerator.fromImageProvider(
             NetworkImage(albumImageUrl),
-            size: Size(100, 100),
+            size: const Size(100, 100),
             maximumColorCount: 10,
           );
 
@@ -120,31 +116,35 @@ class _FeedWidgetState extends State<FeedWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      itemCount: feedPosts.length,
-      itemBuilder: (context, index) {
-        final post = feedPosts[index];
-        return _buildPostItem(post);
-      },
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: feedPosts.length,
+          itemBuilder: (context, index) {
+            final post = feedPosts[index];
+            return _buildPostItem(post);
+          },
+        ),
+      ),
     );
   }
 
   Widget _buildPostItem(Map<String, dynamic> post) {
-    const aspectRatio = 496 / 455;
     final albumImageUrl = post['albumImage'] as String;
     final backgroundColor = _extractedColors[albumImageUrl] ?? _defaultColor;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: AspectRatio(
-        aspectRatio: aspectRatio,
+        aspectRatio: 496 / 455, // Maintain a fixed aspect ratio
         child: Stack(
-          fit: StackFit.expand,
           children: [
-            CustomPaint(
-              painter: PostShape(backgroundColor: backgroundColor),
-              child: const SizedBox.expand(),
+            Positioned.fill(
+              child: CustomPaint(
+                painter: PostShape(backgroundColor: backgroundColor),
+              ),
             ),
             Post(
               trackId: post['trackId'],
@@ -158,7 +158,7 @@ class _FeedWidgetState extends State<FeedWidget> {
               description: post['description'],
               onLike: () => print('Liked post: ${post['_id']}'),
               onComment: () => print('Comment: ${post['_id']}'),
-              onPlay: () => print('Play: ${post['_id']}'),
+              // onPlay: () => print('Play: ${post['_id']}'),
               isLiked: false,
               isPlaying: false,
             ),
@@ -167,4 +167,56 @@ class _FeedWidgetState extends State<FeedWidget> {
       ),
     );
   }
+
+//   Widget _buildPostItem(Map<String, dynamic> post) {
+//   final albumImageUrl = post['albumImage'] as String;
+//   final backgroundColor = _extractedColors[albumImageUrl] ?? _defaultColor;
+
+//   return Padding(
+//     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+//     child: LayoutBuilder(
+//       builder: (context, constraints) {
+//         return ConstrainedBox(
+//           constraints: const BoxConstraints(
+//             minHeight: 220,
+//             maxHeight: 455, // allows growth but caps it
+//           ),
+//           child: Container(
+//             clipBehavior: Clip.hardEdge,
+//             decoration: const BoxDecoration(),
+//             child: Stack(
+//               children: [
+//                 // Background painter fills height naturally
+//                 Positioned.fill(
+//                   child: CustomPaint(
+//                     painter: PostShape(backgroundColor: backgroundColor),
+//                   ),
+//                 ),
+//                 Padding(
+//                   padding: const EdgeInsets.all(12.0),
+//                   child: Post(
+//                     trackId: post['trackId'],
+//                     songName: post['songName'],
+//                     artists: post['artists'],
+//                     albumImage: post['albumImage'],
+//                     caption: post['caption'],
+//                     username: post['username'] ?? 'Unknown User',
+//                     userImage: 'assets/images/profile_picture.jpg',
+//                     descriptionTitle: post['title'],
+//                     description: post['description'],
+//                     onLike: () => print('Liked post: ${post['_id']}'),
+//                     onComment: () => print('Comment: ${post['_id']}'),
+//                     isLiked: false,
+//                     isPlaying: false,
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         );
+//       },
+//     ),
+//   );
+// }
+
 }

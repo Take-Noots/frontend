@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import './des_post_layers.dart';
 
+// ========== Post ==========
 class Post extends StatelessWidget {
   final String? trackId;
   final String? songName;
@@ -14,9 +15,12 @@ class Post extends StatelessWidget {
 
   final VoidCallback? onLike;
   final VoidCallback? onComment;
-  final VoidCallback? onPlay;
+  final VoidCallback? onShare;
+  final VoidCallback? onPlayPause;
+  final VoidCallback? onUsernameTap;
   final bool isLiked;
   final bool isPlaying;
+  final bool isCurrentTrack;
 
   const Post({
     super.key,
@@ -31,35 +35,42 @@ class Post extends StatelessWidget {
     this.description,
     this.onLike,
     this.onComment,
-    this.onPlay,
+    this.onShare,
+    this.onPlayPause,
+    this.onUsernameTap,
     this.isLiked = false,
     this.isPlaying = false,
+    this.isCurrentTrack = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      child: Column(
-        children: [
-          HeaderWidget(
-            username: username,
-            userImage: userImage,
-            trackId: trackId,
-          ),
-          Expanded(
-            flex: 4,
-            child: PostArtWidget(
-              albumImage: albumImage,
-              title: descriptionTitle,
-              description: description,
-            ),
-          ),
-          FooterWidget(
-            songName: songName,
-            artists: artists,
-          ),
-        ],
-      ),
+    return Column(
+      // mainAxisSize: MainAxisSize.min,
+      children: [
+        HeaderWidget(
+          username: username,
+          userImage: userImage,
+          trackId: trackId,
+          // isPlaying: isPlaying,
+          // isCurrentTrack: isCurrentTrack,
+          // onPlayPause: onPlayPause,
+          // onUsernameTap: onUsernameTap, // <-- Pass callback
+        ),
+        PostArtWidget(
+          albumImage: albumImage,
+          title: descriptionTitle,
+          description: description,
+        ),
+        FooterWidget(
+          songName: songName,
+          artists: artists,
+          // onLike: onLike,
+          // onComment: onComment,
+          // onShare: onShare,
+          // isLiked: isLiked,
+        ),
+      ],
     );
   }
 }

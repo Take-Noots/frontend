@@ -15,13 +15,14 @@ class ShellScreen2 extends StatefulWidget {
 }
 
 class _ShellScreen2State extends State<ShellScreen2> {
-  int _currentIndex = 3; // Start on Fanbases tab
+  int _currentIndex = 4; // Start on Fanbases tab
   bool _showMusicPlayer = false;
 
   final List<Widget> _pages = const [
     HomeScreen(inShell: true),
     Placeholder(), // Search
     Placeholder(), // Create
+    Placeholder(), // Requests
     FanbasePage(),
     Placeholder(), // Profile
   ];
