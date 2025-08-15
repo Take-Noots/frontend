@@ -182,7 +182,7 @@ class _TermsScreenState extends State<TermsScreen> {
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w900,
                   ),
                   textAlign: TextAlign.left,
                 ),

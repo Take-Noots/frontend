@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../data/services/auth_service.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import '../../widgets/auth/custom_text_form_field.dart';
 import '../../widgets/auth/custom_button.dart';
+import '../../widgets/auth/custom_snack_bar.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -39,19 +39,17 @@ class _LoginScreenState extends State<LoginScreen> {
       try {
         final response = await _authService.login(email, password);
 
-        // print('Login response: $response');
-
         if (response['status'] == 200) {
-          // Print success message to console
-          print('Login successful: ${response['message']}');
+          // Show success message using CustomSnackBar
+          CustomSnackBar.show(
+            context,
+            title: 'Success',
+            text: 'Login successful!',
+            type: SnackBarType.success,
+          );
 
           final authProvider =
               Provider.of<AuthProvider>(context, listen: false);
-
-          // // Update the AuthProvider with the user data and token from the response.
-          // if (response['user'] != null && response['token'] != null) {
-          //   authProvider.login(response['user'], response['token']);
-          // }
 
           // Check if user is authenticated in auth provider
           if (authProvider.isAuthenticated && authProvider.user != null) {
@@ -59,12 +57,22 @@ class _LoginScreenState extends State<LoginScreen> {
             Navigator.pushReplacementNamed(context, '/home');
           } else {
             print('Authentication failed: User not stored in AuthProvider');
-            throw Exception('Error occurred in authentication process');
+            CustomSnackBar.show(
+              context,
+              title: 'Error',
+              text: 'Error occurred in authentication process',
+              type: SnackBarType.destructive,
+            );
           }
         } else {
-          // Show error message
+          // Show error message using CustomSnackBar
           print('Login failed: ${response['message']}');
-          throw Exception('${response['message']}');
+          CustomSnackBar.show(
+            context,
+            title: 'Error',
+            text: response['message'] ?? 'Login failed',
+            type: SnackBarType.destructive,
+          );
         }
       } catch (e) {
         print('Login error: $e');
@@ -73,8 +81,11 @@ class _LoginScreenState extends State<LoginScreen> {
         if (errorMsg.contains('Invalid credentials - User not found')) {
           errorMsg = "Invalid credentials - User not found";
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg)),
+        CustomSnackBar.show(
+          context,
+          title: 'Error',
+          text: errorMsg,
+          type: SnackBarType.destructive,
         );
       } finally {
         setState(() {
@@ -94,6 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false, // Prevent automatic resizing
       body: Stack(
         children: [
           // Background image
@@ -115,108 +127,140 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(40),
             ),
           ),
-          // Existing widget content
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // App Logo
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 40.0),
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      height: 40,
+          // Scrollable content
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20.0),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height -
+                      MediaQuery.of(context).padding.top -
+                      MediaQuery.of(context).padding.bottom -
+                      40,
+                ),
+                child: IntrinsicHeight(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // App Logo
+                        Padding(
+                          padding: EdgeInsets.only(
+                              left: 20.0, bottom: 40.0, top: 20.0),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              height: 40,
+                            ),
+                          ),
+                        ),
+
+                        // Title
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20.0),
+                          child: Text(
+                            'Login',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                            ),
+                            textAlign: TextAlign.left,
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Email Field
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                          child: CustomTextFormField(
+                            controller: _emailController,
+                            hintText: 'Enter your email',
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your email';
+                              }
+                              if (!value.contains('@')) {
+                                return 'Please enter a valid email';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 6),
+
+                        // Password Field
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                          child: CustomTextFormField(
+                            controller: _passwordController,
+                            hintText: 'Enter your password',
+                            obscureText: true,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your password';
+                              }
+                              if (value.length < 6) {
+                                return 'Password must be at least 6 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        // Forgot Password Link
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              // Forgot password functionality would go here
+                            },
+                            child: const Text('Forgot Password?'),
+                          ),
+                        ),
+
+                        // Login Button
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                          child: CustomButton(
+                            onPressed: handleLogin,
+                            isLoading: _isLoading,
+                            text: 'Login',
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+                        // Don't have an account button
+                        Center(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/signup');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0, vertical: 8.0),
+                            ),
+                            child: const Text(
+                              "Don't have an account?",
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-
-                  // Email Field
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                    child: CustomTextFormField(
-                      controller: _emailController,
-                      hintText: 'Enter your email',
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  // Password Field
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                    child: CustomTextFormField(
-                      controller: _passwordController,
-                      hintText: 'Enter your password',
-                      obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Forgot Password Link
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        // Forgot password functionality would go here
-                      },
-                      child: const Text('Forgot Password?'),
-                    ),
-                  ),
-
-                  // Login Button
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                    child: CustomButton(
-                      onPressed: handleLogin,
-                      isLoading: _isLoading,
-                      text: 'Login',
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-                  // Don't have an account button
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/signup');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        elevation: 0,
-                        shadowColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0, vertical: 8.0),
-                      ),
-                      child: const Text(
-                        "Don't have an account?",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),

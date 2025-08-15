@@ -1,9 +1,15 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThoughtsPostService {
-  final String baseUrl = 'http://localhost:3000';
+  String get baseUrl {
+    if (Platform.isAndroid) {
+      return 'https://backend-nestjs-production-8204.up.railway.app';
+    }
+    return 'http://localhost:3000';
+  }
 
   // Create a new thoughts post
   Future<Map<String, dynamic>> createThoughts({
@@ -13,10 +19,10 @@ class ThoughtsPostService {
     String? fanbaseID,
   }) async {
     try {
-      // Get user data from shared preferences 
+      // Get user data from shared preferences
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       // Check if user is logged in
       if (userDataString == null) {
         return {
@@ -24,9 +30,9 @@ class ThoughtsPostService {
           'message': 'User not logged in. Please log in to share thoughts.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
-      
+
       // Validate that we have the required user data
       if (userData['id'] == null || userData['name'] == null) {
         return {
@@ -64,10 +70,7 @@ class ThoughtsPostService {
       }
     } catch (e) {
       print('Error creating thoughts post: $e');
-      return {
-        'success': false,
-        'message': 'Error sharing thoughts: $e'
-      };
+      return {'success': false, 'message': 'Error sharing thoughts: $e'};
     }
   }
 
@@ -89,7 +92,8 @@ class ThoughtsPostService {
   // Get thoughts by user ID
   Future<List<Map<String, dynamic>>> getThoughtsByUser(String userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/thoughts/user/$userId'));
+      final response =
+          await http.get(Uri.parse('$baseUrl/thoughts/user/$userId'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return List<Map<String, dynamic>>.from(data);

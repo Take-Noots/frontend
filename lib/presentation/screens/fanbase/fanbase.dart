@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
-import 'package:frontend/data/models/fanbase/fanbase_model.dart';
-import 'package:frontend/data/services/fanbase/fanbase_service.dart';
-import 'package:frontend/presentation/widgets/fanbases/fanbase_card.dart';
-import 'package:frontend/presentation/widgets/common/bottom_bar.dart';
-import 'package:frontend/presentation/widgets/home/header_bar.dart';
+import 'package:Noot/data/models/fanbase/fanbase_model.dart';
+import 'package:Noot/data/services/fanbase/fanbase_service.dart';
+import 'package:Noot/presentation/widgets/fanbases/fanbase_card.dart';
+import 'package:Noot/presentation/widgets/common/bottom_bar.dart';
+import 'package:Noot/presentation/widgets/home/header_bar.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class FanbasePage extends StatefulWidget {

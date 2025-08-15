@@ -1,9 +1,15 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class ProfileService {
   // Base URL for backend API
-  static const String baseUrl = 'http://localhost:3000/profile';
+  static String get baseUrl {
+    if (Platform.isAndroid) {
+      return 'https://backend-nestjs-production-8204.up.railway.app/profile';
+    }
+    return 'http://localhost:3000/profile';
+  }
 
   // Fetch user profile info (username, profileImage, bio, stats)
   Future<Map<String, dynamic>> getUserProfile(String userId) async {

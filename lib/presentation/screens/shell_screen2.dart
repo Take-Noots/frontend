@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/presentation/screens/fanbase/fanbase.dart';
+import 'package:Noot/presentation/screens/fanbase/fanbase.dart';
 import '../widgets/common/bottom_bar.dart';
 import '../widgets/common/musicplayer_bar.dart';
 import 'home_screen.dart';

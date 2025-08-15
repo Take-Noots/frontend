@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:provider/provider.dart';
-import 'package:frontend/data/services/auth_service.dart';
+import 'package:Noot/data/services/auth_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/auth/custom_button.dart';

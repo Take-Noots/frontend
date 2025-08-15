@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-// import 'package:frontend/presentation/screens/demopost/des_post_home.dart';
-import 'package:frontend/data/models/fanbase/fanbase_model.dart';
-import 'package:frontend/data/services/fanbase/fanbase_service.dart';
+// import 'package:Noot/presentation/screens/demopost/des_post_home.dart';
+import 'package:Noot/data/models/fanbase/fanbase_model.dart';
+import 'package:Noot/data/services/fanbase/fanbase_service.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:frontend/presentation/widgets/fanbasepost/fanbase_post_feed.dart';
+import 'package:Noot/presentation/widgets/fanbasepost/fanbase_post_feed.dart';
 
 import '../../widgets/common/bottom_bar.dart';
 

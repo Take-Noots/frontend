@@ -1,26 +1,32 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatService {
-  static const String baseUrl = 'http://localhost:3000/chat';
+  static String get baseUrl {
+    if (Platform.isAndroid) {
+      return 'https://backend-nestjs-production-8204.up.railway.app/chat';
+    }
+    return 'http://localhost:3000/chat';
+  }
 
   // Get all chats for the current user
   Future<Map<String, dynamic>> getUserChats() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in. Please log in to view chats.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
       final userId = userData['id'];
-      
+
       final response = await http.get(
         Uri.parse('$baseUrl/$userId'),
         headers: {
@@ -87,16 +93,16 @@ class ChatService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in. Please log in to send messages.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
-      
+
       final response = await http.post(
         Uri.parse('$baseUrl/send'),
         headers: {
@@ -105,7 +111,8 @@ class ChatService {
         body: jsonEncode({
           'chatId': chatId,
           'senderId': userData['id'],
-          'senderUsername': userData['username'] ?? userData['name'] ?? 'Unknown',
+          'senderUsername':
+              userData['username'] ?? userData['name'] ?? 'Unknown',
           'text': text,
         }),
       );
@@ -137,16 +144,16 @@ class ChatService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in. Please log in to create chat.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
-      
+
       final response = await http.post(
         Uri.parse('$baseUrl/create'),
         headers: {

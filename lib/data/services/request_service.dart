@@ -1,8 +1,14 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 
 class RequestService {
   static final Dio _dio = Dio();
-  static const String _baseUrl = 'http://localhost:3000';
+  static String get _baseUrl {
+    if (Platform.isAndroid) {
+      return 'https://backend-nestjs-production-8204.up.railway.app';
+    }
+    return 'http://localhost:3000';
+  }
 
   static Future<List<Map<String, dynamic>>> getPendingRequests() async {
     try {
@@ -18,7 +24,8 @@ class RequestService {
     }
   }
 
-  static Future<bool> confirmRequest(String requestSendUserId, String requestReceiveUserId) async {
+  static Future<bool> confirmRequest(
+      String requestSendUserId, String requestReceiveUserId) async {
     try {
       final response = await _dio.patch(
         '$_baseUrl/request/confirm',

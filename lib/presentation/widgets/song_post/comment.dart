@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:frontend/data/models/post_model.dart';
-import 'package:frontend/data/services/song_post_service.dart';
+import 'package:Noot/data/models/post_model.dart';
+import 'package:Noot/data/services/song_post_service.dart';
 
 String timeAgo(DateTime dateTime) {
   final now = DateTime.now();

@@ -1,11 +1,17 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 
 class SongPostService {
-  final String baseUrl = 'http://localhost:3000';
+  String get baseUrl {
+    if (Platform.isAndroid) {
+      return 'https://backend-nestjs-production-8204.up.railway.app';
+    }
+    return 'http://localhost:3000';
+  }
 
   Future<Map<String, dynamic>> createPost({
     required String trackId,
