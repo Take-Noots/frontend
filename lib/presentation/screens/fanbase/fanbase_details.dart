@@ -1,6 +1,6 @@
 // import 'package:flutter/material.dart';
 // import 'package:frontend/data/models/fanbase/fanbase_model.dart';
-import 'package:frontend/data/models/feed_item.dart';
+import 'package:Noot/data/models/feed_item.dart';
 // import 'package:frontend/data/services/fanbase/fanbase_service.dart';
 // import 'package:frontend/presentation/screens/demopost/des_post_home.dart';
 // import 'package:lucide_icons/lucide_icons.dart';
@@ -163,8 +163,8 @@ import 'package:frontend/data/models/feed_item.dart';
 
 import 'package:flutter/material.dart';
 // import 'package:Noot/presentation/screens/demopost/des_post_home.dart';
-import 'package:Noot/data/models/fanbase/fanbase_model.dart';
-import 'package:Noot/data/services/fanbase/fanbase_service.dart';
+import 'package:Noot/data/models/fanbase_model.dart';
+import 'package:Noot/data/services/fanbase_service.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:Noot/presentation/screens/fanbasePost/fanbasePost_creation_screen.dart';
 import '../../widgets/fanbasepost/fanbase_post_feed.dart';

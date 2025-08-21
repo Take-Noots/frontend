@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:Noot/data/models/fanbase/fanbase_model.dart';
-import 'package:Noot/data/services/fanbase/fanbase_service.dart';
+import 'package:Noot/data/models/fanbase_model.dart';
+import 'package:Noot/data/services/fanbase_service.dart';
 import './fanbase_interations.dart';
 import './fanbase_profilebar.dart';
 

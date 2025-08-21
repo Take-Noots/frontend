@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 
 import '/data/services/spotify_service.dart';
-import '../../../data/models/fanbase_model.dart';
-import '../../../data/services/fanbase_service.dart';
+import 'package:Noot/data/models/fanbase_model.dart';
+import 'package:Noot/data/services/fanbase_service.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/description_post_service.dart';
 import '../../widgets/create_post/button.dart';
