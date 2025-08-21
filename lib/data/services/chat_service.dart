@@ -10,6 +10,65 @@ class ChatService {
     }
     return 'http://localhost:3000/chat';
   }
+  static String get userBaseUrl {
+    if (Platform.isAndroid) {
+      return 'https://backend-nestjs-production-8204.up.railway.app/user';
+    }
+    return 'http://localhost:3000/user';
+  }
+
+  // Search users by username
+  Future<Map<String, dynamic>> searchUsers(String query) async {
+    try {
+      print('🔍 Searching for users with query: $query'); // Debug log
+      
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      
+      if (userDataString == null) {
+        return {
+          'success': false,
+          'message': 'User not logged in. Please log in to search users.',
+        };
+      }
+      
+      final url = '$userBaseUrl/search?q=$query';
+      print('🌐 Making request to: $url'); // Debug log
+      
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📡 Response status: ${response.statusCode}'); // Debug log
+      print('📡 Response body: ${response.body}'); // Debug log
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ Search successful, found ${data.length} users'); // Debug log
+        return {
+          'success': true,
+          'data': data,
+          'message': 'Users retrieved successfully',
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        print('❌ Search failed: ${errorData}'); // Debug log
+        return {
+          'success': false,
+          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to search users',
+        };
+      }
+    } catch (e) {
+      print('❌ Network error during search: $e'); // Debug log
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
 
   // Get all chats for the current user
   Future<Map<String, dynamic>> getUserChats() async {

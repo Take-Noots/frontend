@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 
 import '/data/services/spotify_service.dart';
+import '../../../data/models/fanbase_model.dart';
+import '../../../data/services/fanbase_service.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/description_post_service.dart';
 import '../../widgets/create_post/button.dart';
@@ -38,9 +40,17 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
   
   // Show image search interface
   bool _showImageSearch = false;
+
+  // Selected fanbase for post
+  Fanbase? _selectedFanbase;
   
   // Selected cover image URL
   String? _selectedCoverImage;
+
+  // Selected song and artist
+  String? _selectedSongName;
+  String? _selectedArtistName;
+  String? _selectedTrackId;
 
   @override
   void initState() {
@@ -143,6 +153,11 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
       final result = await thoughtsService.createThoughts(
         thoughtsText: thoughtsText,
         coverImage: _selectedCoverImage,
+        songName: _selectedSongName,
+        artistName: _selectedArtistName,
+        trackId: _selectedTrackId,
+        inAFanbase: _selectedFanbase != null,
+        fanbaseID: _selectedFanbase?.id,
       );
       
       if (mounted) {
@@ -192,12 +207,12 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
     }
   }
 
-  void _showThoughtsPreview() {
+  void _showFanbaseNamesDialog() async {
     final thoughtsText = _thoughtsController.text.trim();
     if (thoughtsText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please write your thoughts before previewing'),
+                  const SnackBar(
+            content: Text('Please write your thoughts before selecting fanbase'),
           backgroundColor: Colors.red,
         ),
       );
@@ -206,37 +221,167 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
 
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Preview'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (_selectedCoverImage != null) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    _selectedCoverImage!,
-                    width: double.infinity,
-                    height: 150,
-                    fit: BoxFit.cover,
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        return FutureBuilder<List<Fanbase>>(
+          future: FanbaseService.getAllFanbases(context),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(24),
                   ),
+                  child: const CircularProgressIndicator(),
                 ),
-                const SizedBox(height: 16),
-              ],
-              Text(
-                thoughtsText,
-                style: const TextStyle(fontSize: 16),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
+              );
+            } else if (snapshot.hasError) {
+              return Center(
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Text('Error loading fanbases'),
+                ),
+              );
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Center(
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Text('No fanbases found.'),
+                ),
+              );
+            } else {
+              final fanbases = snapshot.data!;
+              return Dialog(
+                backgroundColor: theme.cardColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 80),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Gradient header
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.purpleAccent.withOpacity(0.9),
+                            Colors.deepPurple.withOpacity(0.8),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.purpleAccent.withOpacity(0.18),
+                            blurRadius: 16,
+                            spreadRadius: 2,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.groups_2_rounded, color: Colors.white, size: 28),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Select a Fanbase',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: 320,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        itemCount: fanbases.length,
+                        separatorBuilder: (context, idx) => Divider(
+                          color: colorScheme.primary.withOpacity(0.07),
+                          height: 1,
+                        ),
+                        itemBuilder: (context, index) {
+                          final fanbase = fanbases[index];
+                          return InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {
+                              setState(() {
+                                _selectedFanbase = fanbase;
+                              });
+                              Navigator.of(context).pop();
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              child: Row(
+                                children: [
+                                  Checkbox(
+                                    value: _selectedFanbase?.id == fanbase.id,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                    activeColor: colorScheme.primary,
+                                    onChanged: (checked) {
+                                      setState(() {
+                                        _selectedFanbase = fanbase;
+                                      });
+                                      Navigator.of(context).pop();
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
+                                  CircleAvatar(
+                                    backgroundColor: colorScheme.primary.withOpacity(0.15),
+                                    child: Icon(Icons.group, color: colorScheme.primary),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Text(
+                                      fanbase.fanbaseName,
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        color: colorScheme.onBackground,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.1,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12, top: 6),
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          foregroundColor: colorScheme.primary,
+                          textStyle: theme.textTheme.labelLarge,
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+          },
         );
       },
     );
@@ -246,10 +391,60 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
   Widget _buildHeader(ColorScheme colorScheme) {
     return Column(
       children: [
-        Icon(
-          Icons.lightbulb_outline,
-          size: 80,
-          color: colorScheme.onPrimary.withOpacity(0.7),
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.purpleAccent.withOpacity(0.9),
+                    Colors.deepPurple.withOpacity(0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.purpleAccent.withOpacity(0.3),
+                    blurRadius: 16,
+                    spreadRadius: 2,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.lightbulb_outline,
+              size: 54,
+              color: Colors.white,
+              shadows: [
+                Shadow(
+                  color: Colors.deepPurple.withOpacity(0.4),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            Positioned(
+              bottom: 14,
+              right: 18,
+              child: Icon(
+                Icons.music_note_rounded,
+                size: 32,
+                color: Colors.purpleAccent.shade100,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 24),
         Text(
@@ -432,6 +627,11 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
       onTap: () {
         setState(() {
           _selectedCoverImage = imageUrl;
+          _selectedSongName = track['name'];
+          _selectedArtistName = (track['artists'] is List)
+              ? (track['artists'] as List).join(', ')
+              : track['artists']?.toString();
+          _selectedTrackId = track['id'];
           _showImageSearch = false;
           _searchController.clear();
           _searchResults = null;
@@ -570,9 +770,11 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
               _buildSelectedCoverImage(),
               const SizedBox(height: 24),
               PreviewShareButtonRow(
-                onPreview: _showThoughtsPreview,
-                onShare: _shareThoughts,
+                onPreview: _showFanbaseNamesDialog,
+                onShare: _isShareLoading ? null : _shareThoughts,
                 isLoading: _isShareLoading,
+                previewText: _selectedFanbase?.fanbaseName ?? 'Add to Fanbase',
+                shareText: 'Share',
               ),
             ],
           ),

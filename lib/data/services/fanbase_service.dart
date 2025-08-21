@@ -4,9 +4,10 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
-import '../../../core/providers/auth_provider.dart';
-import '../../models/fanbase/fanbase_model.dart';
-import '../auth_service.dart';
+import '../../core/providers/auth_provider.dart';
+import '../models/fanbase_model.dart';
+import '../models/fanbase_post_model.dart';
+import 'auth_service.dart';
 
 class FanbaseService {
   static Future<List<Fanbase>> getAllFanbases(BuildContext context) async {
@@ -150,6 +151,125 @@ class FanbaseService {
 
     } catch (e) {
       throw Exception('Failed to update like status: $e');
+    }
+  }
+
+  // Create a fanbase post
+  static Future<FanbasePost> createFanbasePost({
+    required String fanbaseId,
+    required String topic,
+    required String description,
+    String? spotifyTrackId,
+    String? songName,
+    String? artistName,
+    String? albumArt,
+    required BuildContext context,
+  }) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final postData = {
+        'topic': topic.trim(),
+        'description': description.trim(),
+        'fanbaseId': fanbaseId,
+        if (spotifyTrackId != null) 'spotifyTrackId': spotifyTrackId,
+        if (songName != null) 'songName': songName,
+        if (artistName != null) 'artistName': artistName,
+        if (albumArt != null) 'albumArt': albumArt,
+      };
+
+      final response = await dio.post('/fanbase/posts', data: postData);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return FanbasePost.fromJson(response.data);
+      } else {
+        throw Exception('Failed to create post: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data?['message'] ?? e.message;
+      throw Exception('Failed to create post: $errorMessage');
+    } catch (e) {
+      throw Exception('Failed to create post: $e');
+    }
+  }
+
+  // Get posts for a fanbase
+  static Future<List<FanbasePost>> getFanbasePosts(
+    String fanbaseId,
+    BuildContext context, {
+    int page = 1,
+    int limit = 10,
+  }) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.get(
+        '/fanbase/$fanbaseId/posts',
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data['posts'] ?? response.data;
+        return data.map((json) => FanbasePost.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to fetch posts');
+      }
+    } on DioException catch (e) {
+      throw Exception('Failed to fetch posts: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch posts: $e');
+    }
+  }
+
+  // Like/Unlike a fanbase post
+  static Future<FanbasePost> likeFanbasePost(
+    String postId,
+    BuildContext context, {
+    String? fanbaseId,
+  }) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      String actualFanbaseId = fanbaseId ?? '';
+      
+      // If fanbaseId is not provided, try to get it from the post
+      if (actualFanbaseId.isEmpty) {
+        try {
+          final postResponse = await dio.get('/fanbase/posts/$postId');
+          final postData = postResponse.data;
+          actualFanbaseId = postData['fanbaseId'] ?? '';
+        } catch (e) {
+          print('[DEBUG] Could not fetch post to get fanbaseId: $e');
+        }
+      }
+
+      if (actualFanbaseId.isEmpty) {
+        throw Exception('FanbaseId is required to like a post');
+      }
+
+      print('[DEBUG] Liking fanbase post (from fanbase_service)');
+      print('[DEBUG] PostId: $postId');
+      print('[DEBUG] FanbaseId: $actualFanbaseId');
+      print('[DEBUG] Making POST request to: /fanbase/$actualFanbaseId/posts/$postId/like');
+      
+      final response = await dio.post('/fanbase/$actualFanbaseId/posts/$postId/like');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return FanbasePost.fromJson(response.data);
+      } else {
+        throw Exception('Failed to like post: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data?['message'] ?? e.message;
+      throw Exception('Failed to like post: $errorMessage');
+    } catch (e) {
+      throw Exception('Failed to like post: $e');
     }
   }
 }

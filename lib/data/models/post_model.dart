@@ -29,6 +29,7 @@ class Comment {
 
   Map<String, dynamic> toJson() => {
         '_id': id,
+        '_id': id,
         'userId': userId,
         'username': username,
         'text': text,
@@ -39,6 +40,8 @@ class Comment {
 }
 
 class Post {
+  final int isHidden; // 0 = visible, 1 = hidden
+  final int isDeleted; // 0 = not deleted, 1 = deleted
   final String id;
   final String trackId;
   final String songName;
@@ -51,12 +54,15 @@ class Post {
   int commentsCount;
   List<String> likedBy;
   bool likedByMe;
+  bool isSaved; 
   final DateTime createdAt;
   final DateTime updatedAt;
   List<Comment> comments;
 
   Post({
     required this.id,
+    required this.isHidden,
+    required this.isDeleted,
     required this.trackId,
     required this.songName,
     required this.artists,
@@ -68,6 +74,7 @@ class Post {
     required this.commentsCount,
     required this.likedBy,
     required this.likedByMe,
+    this.isSaved = false,
     required this.createdAt,
     required this.updatedAt,
     required this.comments,
@@ -76,6 +83,8 @@ class Post {
   factory Post.fromJson(Map<String, dynamic> json) {
     return Post(
       id: json['_id'] ?? '',
+      isHidden: _parseIsHidden(json['isHidden']),
+      isDeleted: _parseIsDeleted(json['isDeleted']),
       trackId: json['trackId'] ?? '',
       songName: json['songName'] ?? '',
       artists: json['artists'] ?? '',
@@ -92,6 +101,7 @@ class Post {
               .toList() ??
           [],
       likedByMe: false,
+      isSaved: _parseIsSaved(json['isSaved']),
       createdAt:
           DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
       updatedAt:
@@ -104,9 +114,50 @@ class Post {
     );
   }
 
+  // Helper method to parse isSaved field from various types
+  static bool _parseIsSaved(dynamic value) {
+    if (value == null) return false;
+    if (value is bool) return value;
+    if (value is String) {
+      return value.toLowerCase() == 'true';
+    }
+    if (value is int) {
+      return value == 1;
+    }
+    return false;
+  }
+
+  // Helper method to parse isHidden field from various types
+  static int _parseIsHidden(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) {
+      return value.toLowerCase() == 'true' || value == '1' ? 1 : 0;
+    }
+    if (value is bool) {
+      return value ? 1 : 0;
+    }
+    return 0;
+  }
+
+  // Helper method to parse isDeleted field from various types
+  static int _parseIsDeleted(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) {
+      return value.toLowerCase() == 'true' || value == '1' ? 1 : 0;
+    }
+    if (value is bool) {
+      return value ? 1 : 0;
+    }
+    return 0;
+  }
+
   Map<String, dynamic> toJson() {
     return {
       '_id': id,
+      'isHidden': isHidden,
+      'isDeleted': isDeleted,
       'trackId': trackId,
       'songName': songName,
       'artists': artists,
@@ -118,13 +169,17 @@ class Post {
       'comments': comments.map((c) => c.toJson()).toList(),
       'commentsCount': commentsCount,
       'likedBy': likedBy,
+      'isSaved': isSaved,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
+
   }
 
   Post copyWith({
     String? id,
+    int? isHidden,
+    int? isDeleted,
     String? trackId,
     String? songName,
     String? artists,
@@ -136,12 +191,15 @@ class Post {
     int? commentsCount,
     List<String>? likedBy,
     bool? likedByMe,
+    bool? isSaved,
     DateTime? createdAt,
     DateTime? updatedAt,
     List<Comment>? comments,
   }) {
     return Post(
       id: id ?? this.id,
+      isHidden: isHidden ?? this.isHidden,
+      isDeleted: isDeleted ?? this.isDeleted,
       trackId: trackId ?? this.trackId,
       songName: songName ?? this.songName,
       artists: artists ?? this.artists,
@@ -153,6 +211,7 @@ class Post {
       commentsCount: commentsCount ?? this.commentsCount,
       likedBy: likedBy ?? this.likedBy,
       likedByMe: likedByMe ?? this.likedByMe,
+      isSaved: isSaved ?? this.isSaved,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       comments: comments ?? this.comments,

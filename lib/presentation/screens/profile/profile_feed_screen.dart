@@ -4,11 +4,13 @@ import '../../widgets/common/bottom_bar.dart';
 import '../../widgets/home/feed_widget.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../data/models/post_model.dart' as data_model;
+import '../../../data/models/feed_item.dart';
 import '../../../data/services/profile_service.dart';
 import '../../../data/models/profile_model.dart';
 import '../../../data/services/song_post_service.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../widgets/song_post/post_options_menu.dart';
+import '../song_posts/update.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -148,7 +150,8 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
       context,
       postUserId: post.userId,
       currentUserId: _currentUserId,
-      isOwnPost: isUsersOwnPost, // Explicitly set based on our calculation
+      postId: post.id,
+      isOwnPost: isUsersOwnPost,
       onCopyLink: () {
         final shareText =
             'Check out this song: ${post.songName} by ${post.artists}';
@@ -158,7 +161,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Post saved')),
         );
-        // Implement save post functionality
+       
       },
       onUnfollow: () {
         // Implement unfollow user functionality
@@ -169,27 +172,59 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
       onReport: () {
         // Report functionality is handled inside PostOptionsMenu
       },
-      onEdit: () {
-        // Navigate to edit post screen
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Edit post functionality coming soon')),
+      onEdit: isUsersOwnPost ? () async {
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EditPostScreen(post: post),
+          ),
         );
-      },
+        if (result == true) {
+          // Refresh the feed after successful edit
+          _loadProfilePosts();
+        }
+      } : null,
       onDelete: () async {
         // Show confirmation dialog
         final confirm = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text('Delete Post'),
-            content: Text('Are you sure you want to delete this post?'),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            backgroundColor: Colors.black,
+            title: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Color(0xFFA855F7)),
+                SizedBox(width: 8),
+                Text('Delete Post', style: TextStyle(color: Color(0xFFA855F7), fontWeight: FontWeight.bold)),
+              ],
+            ),
+            content: Text(
+              'Are you sure you want to delete this post? This action cannot be undone.',
+              style: TextStyle(color: Colors.white, fontSize: 15),
+            ),
+            actionsPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  textStyle: TextStyle(fontWeight: FontWeight.w600),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
                 child: Text('Cancel'),
               ),
-              TextButton(
+              ElevatedButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: Text('Delete', style: TextStyle(color: Colors.red)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFFA855F7),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                  textStyle: TextStyle(fontWeight: FontWeight.bold),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Text('Delete'),
               ),
             ],
           ),
@@ -200,7 +235,8 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             final result = await _songPostService.deletePost(post.id);
             if (result['success']) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Post deleted successfully')),
+                SnackBar(content: Text('Post deleted successfully'), backgroundColor: Colors.purple),
+
               );
               // Refresh posts after deletion
               _loadProfilePosts();
@@ -218,11 +254,24 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
           }
         }
       },
-      onHide: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Post hidden from your feed')),
-        );
-        // Implement hide post functionality
+      onHide: () async {
+        try {
+          final result = await _songPostService.hidePost(post.id);
+          if (result['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Post hidden from your feed'), backgroundColor: Colors.purple),
+            );
+            _loadProfilePosts(); // Refresh posts
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(result['message'] ?? 'Failed to hide post')),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error hiding post: $e')),
+          );
+        }
       },
     );
   }
@@ -261,20 +310,19 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
     return Scaffold(
       appBar: NootAppBar(),
       body: FeedWidget(
-        posts: _posts,
+        feedItems: _posts.map((p) => FeedItem.song(p)).toList(),
         isLoading: false,
         error: null,
         onRefresh: _loadProfilePosts,
-        onLike: (_) {},
-        onComment: (_) {},
-        onPlay: (_) {},
-        onShare: (_) {},
+        onSongLike: (_) {},
+        onSongComment: (_) {},
+        onSongPlay: (_) {},
+        onSongShare: (_) {},
         currentlyPlayingTrackId: null,
         isPlaying: false,
-        currentUserId: _currentUserId, // Pass the currentUserId
+        currentUserId: _currentUserId, 
         onUserTap: (_) {},
-        onPostOptions: _handlePostOptions, // Add this line
-        // Use scrollable_positioned_list controllers
+        onPostOptions: _handlePostOptions, 
         itemScrollController: _itemScrollController,
         itemPositionsListener: _itemPositionsListener,
         initialIndex: _initialIndex,

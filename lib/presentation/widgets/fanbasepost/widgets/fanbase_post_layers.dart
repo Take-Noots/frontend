@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:auto_size_text/auto_size_text.dart';
-import '../../../screens/fanbasePost/fanbasePost_screen.dart'; // Add this import
+import '../../../screens/fanbasePost/fanbasePost_screen.dart';
 
 // ========== HeaderWidget ==========
 class HeaderWidget extends StatelessWidget {
@@ -95,7 +95,6 @@ class PostArtWidget extends StatefulWidget {
   final String title;
   final String description;
   final String postId;
-  // Add all the missing parameters
   final String trackId;
   final String songName;
   final String artists;
@@ -105,7 +104,8 @@ class PostArtWidget extends StatefulWidget {
   final bool isLiked;
   final bool isPlaying;
   final bool isCurrentTrack;
-  final Color backgroundColor; // Add this line
+  final Color backgroundColor;
+  final String fanbaseId; // Make this required
 
   const PostArtWidget({
     super.key,
@@ -113,7 +113,6 @@ class PostArtWidget extends StatefulWidget {
     this.title = '',
     this.description = '',
     this.postId = '',
-    // Add all the missing parameters to constructor
     this.trackId = '',
     this.songName = '',
     this.artists = '',
@@ -124,6 +123,7 @@ class PostArtWidget extends StatefulWidget {
     this.isPlaying = false,
     this.isCurrentTrack = false,
     this.backgroundColor = Colors.black,
+    required this.fanbaseId, // Make this required instead of optional with empty string
   });
 
   @override
@@ -134,7 +134,8 @@ class _PostArtWidgetState extends State<PostArtWidget> {
   bool _showFull = false;
 
   void _navigateToPost(BuildContext context) {
-    if (widget.postId != null) {
+    if (widget.postId.isNotEmpty) {
+      // Check for empty string instead of null
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => PostDetailPage(
@@ -151,7 +152,8 @@ class _PostArtWidgetState extends State<PostArtWidget> {
             isLiked: widget.isLiked,
             isPlaying: widget.isPlaying,
             isCurrentTrack: widget.isCurrentTrack,
-            backgroundColor: widget.backgroundColor, // Add this line
+            backgroundColor: widget.backgroundColor,
+            fanbaseId: widget.fanbaseId,
           ),
         ),
       );
@@ -270,11 +272,23 @@ class _PostArtWidgetState extends State<PostArtWidget> {
 class FooterWidget extends StatelessWidget {
   final String? songName;
   final String? artists;
+  final VoidCallback? onLike; // Add missing callback parameters
+  final VoidCallback? onComment;
+  final VoidCallback? onShare;
+  final bool isLiked;
+  final int likesCount;
+  final int commentsCount;
 
   const FooterWidget({
     super.key,
     this.songName,
     this.artists,
+    this.onLike, // Add to constructor
+    this.onComment,
+    this.onShare,
+    this.isLiked = false,
+    this.likesCount = 0,
+    this.commentsCount = 0,
   });
 
   @override
@@ -290,9 +304,16 @@ class FooterWidget extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        const Flexible(
+        Flexible(
           flex: 1,
-          child: InteractionWidget(),
+          child: InteractionWidget(
+            onLike: onLike, // Pass the callbacks to InteractionWidget
+            onComment: onComment,
+            onShare: onShare,
+            isLiked: isLiked,
+            likesCount: likesCount,
+            commentsCount: commentsCount,
+          ),
         ),
       ],
     );

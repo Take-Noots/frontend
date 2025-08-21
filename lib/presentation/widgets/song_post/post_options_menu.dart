@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'dart:ui';
+import '../../../data/services/post_report_service.dart';
 
 class PostOptionsMenu {
   static void show(
@@ -7,8 +9,11 @@ class PostOptionsMenu {
     String? postUserId,
     String? currentUserId,
     bool? isOwnPost,
+    bool? isSaved,
+    String? postId,
     VoidCallback? onCopyLink,
     VoidCallback? onSavePost,
+    VoidCallback? onUnsavePost,
     VoidCallback? onUnfollow,
     VoidCallback? onReport,
     VoidCallback? onEdit,
@@ -18,6 +23,10 @@ class PostOptionsMenu {
     // Debug output to understand the values
     print(
         'PostOptionsMenu - postUserId: $postUserId, currentUserId: $currentUserId');
+    print('PostOptionsMenu - isOwnPost: $isOwnPost');
+    print('PostOptionsMenu - isSaved: $isSaved');
+    print('PostOptionsMenu - postId: $postId');
+    print('PostOptionsMenu - onHide callback is ${onHide != null ? "NOT NULL" : "NULL"}');
 
     // Enhanced logic to determine if post belongs to current user
     bool isCurrentUserPost;
@@ -82,6 +91,7 @@ class PostOptionsMenu {
                 ListTile(
                   leading: Icon(LucideIcons.pencil, color: textColor),
                   title: Text('Edit post', style: TextStyle(color: textColor)),
+
                   onTap: () {
                     Navigator.pop(context);
                     if (onEdit != null) onEdit();
@@ -102,18 +112,37 @@ class PostOptionsMenu {
                   leading: Icon(LucideIcons.eyeOff, color: textColor),
                   title: Text('Hide post', style: TextStyle(color: textColor)),
                   onTap: () {
+                    print('[DEBUG] PostOptionsMenu: Hide post tapped');
+                    print('[DEBUG] PostOptionsMenu: onHide callback is ${onHide != null ? "NOT NULL" : "NULL"}');
                     Navigator.pop(context);
-                    if (onHide != null) onHide();
+                    if (onHide != null) {
+                      print('[DEBUG] PostOptionsMenu: Calling onHide callback');
+                      onHide();
+                    } else {
+                      print('[DEBUG] PostOptionsMenu: onHide callback is null, not calling');
+                    }
                   },
                 ),
               ] else ...[
-                // Show save and unfollow options for other users' posts
+                // Show save/unsave options for other users' posts
                 ListTile(
-                  leading: Icon(LucideIcons.bookmark, color: textColor),
-                  title: Text('Save post', style: TextStyle(color: textColor)),
+                  leading: Icon(
+                    isSaved == true ? LucideIcons.bookmarkMinus : LucideIcons.bookmark,
+                    color: isSaved == true ? Colors.blue : textColor,
+                  ),
+                  title: Text(
+                    isSaved == true ? 'Unsave post' : 'Save post',
+                    style: TextStyle(
+                      color: isSaved == true ? Colors.blue : textColor,
+                    ),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
-                    if (onSavePost != null) onSavePost();
+                    if (isSaved == true) {
+                      if (onUnsavePost != null) onUnsavePost();
+                    } else {
+                      if (onSavePost != null) onSavePost();
+                    }
                   },
                 ),
                 ListTile(
@@ -132,7 +161,7 @@ class PostOptionsMenu {
                   onTap: () {
                     Navigator.pop(context);
                     // Show report options menu
-                    _showReportOptions(context);
+                    _showReportOptions(context, postUserId, postId);
                   },
                 ),
               ],
@@ -145,109 +174,188 @@ class PostOptionsMenu {
     );
   }
 
-  static void _showReportOptions(BuildContext context) {
+  static void _showReportOptions(BuildContext context, String? reportedUserId, String? postId) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? Colors.black : Colors.white;
+    final backgroundColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black;
+    final purpleColor = const Color(0xFFA855F7);
 
     showModalBottomSheet(
       context: context,
       backgroundColor: backgroundColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with rounded drag handle
-              Container(
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(2),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with rounded drag handle
+                Container(
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
 
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Why are you reporting this post?',
-                  style: TextStyle(
-                    color: textColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                // Title with icon
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        LucideIcons.flag,
+                        color: purpleColor,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Report Post',
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
 
-              // Report options
-              ListTile(
-                title: Text('Spam', style: TextStyle(color: textColor)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _submitReport(context, 'Spam');
-                },
-              ),
-              ListTile(
-                title: Text('Inappropriate content',
-                    style: TextStyle(color: textColor)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _submitReport(context, 'Inappropriate content');
-                },
-              ),
-              ListTile(
-                title: Text('Harmful or abusive',
-                    style: TextStyle(color: textColor)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _submitReport(context, 'Harmful or abusive');
-                },
-              ),
-              ListTile(
-                title: Text('Intellectual property violation',
-                    style: TextStyle(color: textColor)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _submitReport(context, 'Intellectual property violation');
-                },
-              ),
-              ListTile(
-                title: Text('Other', style: TextStyle(color: textColor)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _submitReport(context, 'Other');
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+                  child: Text(
+                    'Why are you reporting this post?',
+                    style: TextStyle(
+                      color: textColor.withOpacity(0.8),
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // Report options with enhanced styling
+                _buildReportOption(context, 'Spam', LucideIcons.ban, reportedUserId, postId, textColor, purpleColor),
+                _buildReportOption(context, 'Inappropriate content', LucideIcons.alertTriangle, reportedUserId, postId, textColor, purpleColor),
+                _buildReportOption(context, 'Harmful or abusive', LucideIcons.shield, reportedUserId, postId, textColor, purpleColor),
+                _buildReportOption(context, 'Intellectual property violation', LucideIcons.copyright, reportedUserId, postId, textColor, purpleColor),
+                _buildReportOption(context, 'Other', LucideIcons.helpCircle, reportedUserId, postId, textColor, purpleColor),
+
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  static void _submitReport(BuildContext context, String reason) {
-    // Show confirmation dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Report submitted: $reason'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(10),
-        duration: const Duration(seconds: 2),
+  static Widget _buildReportOption(BuildContext context, String title, IconData icon, String? reportedUserId, String? postId, Color textColor, Color purpleColor) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      decoration: BoxDecoration(
+        color: textColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: textColor.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: purpleColor,
+          size: 20,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.w500,
+            fontSize: 16,
+          ),
+        ),
+
+        onTap: () {
+          Navigator.pop(context);
+          _submitReport(context, title, reportedUserId, postId);
+        },
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       ),
     );
+  }
 
-    // Here you would typically call an API to submit the report
-    // Example: postBloc.add(ReportPostEvent(postId: postId, reason: reason));
+  static void _submitReport(BuildContext context, String reason, String? reportedUserId, String? postId) async {
+    print('[DEBUG] _submitReport called with:');
+    print('[DEBUG] - reason: $reason');
+    print('[DEBUG] - reportedUserId: $reportedUserId');
+    print('[DEBUG] - postId: $postId');
+    
+    if (reportedUserId == null || postId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Error: Missing user or post information'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final result = await PostReportService.reportPost(
+        reportedUserId: reportedUserId,
+        reportedPostId: postId,
+        reason: reason,
+        context: context,
+      );
+
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Report submitted successfully'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to submit report'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error submitting report: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 }

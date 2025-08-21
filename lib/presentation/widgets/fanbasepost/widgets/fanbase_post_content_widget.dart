@@ -13,6 +13,7 @@ class Post extends StatelessWidget {
   final String userImage;
   final String descriptionTitle;
   final String description;
+  final List<Map<String, String>> comments; // Add this line
   final VoidCallback? onLike;
   final VoidCallback? onComment;
   final VoidCallback? onShare;
@@ -22,6 +23,9 @@ class Post extends StatelessWidget {
   final bool isPlaying;
   final bool isCurrentTrack;
   final Color backgroundColor;
+  final int likesCount;
+  final int commentsCount;
+  final String fanbaseId;
 
   const Post({
     super.key,
@@ -35,6 +39,7 @@ class Post extends StatelessWidget {
     this.userImage = '',
     this.descriptionTitle = '',
     this.description = '',
+    this.comments = const [], // Add this line
     this.onLike,
     this.onComment,
     this.onShare,
@@ -44,6 +49,9 @@ class Post extends StatelessWidget {
     this.isPlaying = false,
     this.isCurrentTrack = false,
     this.backgroundColor = Colors.black,
+    this.likesCount = 0,
+    this.commentsCount = 0,
+    required this.fanbaseId, // Make this required, not empty string default
   });
 
   @override
@@ -63,17 +71,24 @@ class Post extends StatelessWidget {
           trackId: trackId,
           songName: songName,
           artists: artists,
-          comments: [],
+          comments: comments, // Update this line to pass the actual comments
           username: username,
           userImage: userImage,
           isLiked: isLiked,
           isPlaying: isPlaying,
           isCurrentTrack: isCurrentTrack,
           backgroundColor: backgroundColor,
+          fanbaseId: fanbaseId, // Add the missing fanbaseId parameter
         ),
         FooterWidget(
           songName: songName,
           artists: artists,
+          onLike: onLike, // Add the missing callbacks
+          onComment: onComment,
+          onShare: onShare,
+          isLiked: isLiked,
+          likesCount: likesCount,
+          commentsCount: commentsCount,
         ),
       ],
     );

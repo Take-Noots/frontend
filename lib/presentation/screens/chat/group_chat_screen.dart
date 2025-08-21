@@ -1,44 +1,68 @@
 import 'package:flutter/material.dart';
-import '../../../data/models/chat_model.dart';
-import '../../../data/services/chat_service.dart';
-import 'user_profile_screen.dart';
-import 'dart:async';
+import '../../../data/models/group_chat_model.dart';
+import '../../../data/services/group_chat_service.dart';
+import 'group_details_screen.dart';
 
-class ChatScreen extends StatefulWidget {
-  final Chat chat;
+class GroupChatScreen extends StatefulWidget {
+  final String groupChatId;
   final String currentUserId;
 
-  const ChatScreen(
-      {super.key, required this.chat, required this.currentUserId});
+  const GroupChatScreen({
+    super.key, 
+    required this.groupChatId, 
+    required this.currentUserId
+  });
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  State<GroupChatScreen> createState() => _GroupChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _GroupChatScreenState extends State<GroupChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final ChatService _chatService = ChatService();
-
-  List<Message> messages = [];
+  final GroupChatService _groupChatService = GroupChatService();
+  
+  List<GroupMessage> messages = [];
+  GroupChat? groupChat;
   bool _isLoading = true;
   bool _isSending = false;
   String? _error;
-  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
-    _loadMessages();
+    _loadGroupChatData();
     _startAutoRefresh();
   }
 
   void _startAutoRefresh() {
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (mounted && !_isLoading) {
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
         _loadMessages(showLoading: false);
+        _startAutoRefresh();
       }
     });
+  }
+
+  Future<void> _loadGroupChatData() async {
+    await Future.wait([
+      _loadGroupDetails(),
+      _loadMessages(),
+    ]);
+  }
+
+  Future<void> _loadGroupDetails() async {
+    try {
+      final result = await _groupChatService.getGroupChatDetails(widget.groupChatId);
+      
+      if (result['success'] && mounted) {
+        setState(() {
+          groupChat = GroupChat.fromJson(result['data'], widget.currentUserId);
+        });
+      }
+    } catch (e) {
+      print('Error loading group details: $e');
+    }
   }
 
   Future<void> _loadMessages({bool showLoading = true}) async {
@@ -50,20 +74,18 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
 
-      final result = await _chatService.getChatMessages(widget.chat.id);
-
+      final result = await _groupChatService.getGroupChatMessages(widget.groupChatId);
+      
       if (result['success']) {
         final List<dynamic> messagesData = result['data'];
-        final messageList = messagesData
-            .map((json) => Message.fromJson(json, widget.currentUserId))
-            .toList();
-
+        final messageList = messagesData.map((json) => GroupMessage.fromJson(json, widget.currentUserId)).toList();
+        
         if (mounted) {
           setState(() {
             messages = messageList;
             if (showLoading) _isLoading = false;
           });
-
+          
           if (showLoading) _scrollToBottom();
         }
       } else {
@@ -95,12 +117,10 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     try {
-      final result =
-          await _chatService.sendMessage(widget.chat.id, messageText);
-
+      final result = await _groupChatService.sendGroupMessage(widget.groupChatId, messageText);
+      
       if (result['success']) {
-        final newMessage =
-            Message.fromJson(result['data'], widget.currentUserId);
+        final newMessage = GroupMessage.fromJson(result['data'], widget.currentUserId);
         setState(() {
           messages.add(newMessage);
           _isSending = false;
@@ -118,7 +138,6 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           );
         }
-        // Restore the message text if sending failed
         _messageController.text = messageText;
       }
     } catch (e) {
@@ -133,7 +152,6 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         );
       }
-      // Restore the message text if sending failed
       _messageController.text = messageText;
     }
   }
@@ -148,18 +166,6 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     });
-  }
-
-  void _navigateToProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => UserProfileScreen(
-          userId: widget.chat.user.id,
-          username: widget.chat.user.username,
-        ),
-      ),
-    );
   }
 
   @override
@@ -177,39 +183,36 @@ class _ChatScreenState extends State<ChatScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: GestureDetector(
-          onTap: _navigateToProfile,
+          onTap: () {
+            if (groupChat != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => GroupDetailsScreen(
+                    groupChat: groupChat!,
+                    currentUserId: widget.currentUserId,
+                  ),
+                ),
+              ).then((_) => _loadGroupChatData());
+            }
+          },
           child: Row(
             children: [
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundImage: widget.chat.user.profileImage != null &&
-                            widget.chat.user.profileImage!.isNotEmpty
-                        ? (widget.chat.user.profileImage!.startsWith('http')
-                            ? NetworkImage(widget.chat.user.profileImage!)
-                                as ImageProvider
-                            : AssetImage(widget.chat.user.profileImage!))
-                        : const AssetImage('assets/images/hehe.png'),
-                  ),
-                  if (widget.chat.user.isOnline)
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.grey[600],
+                backgroundImage: groupChat?.groupIcon != null && groupChat!.groupIcon!.isNotEmpty
+                    ? (groupChat!.groupIcon!.startsWith('http')
+                        ? NetworkImage(groupChat!.groupIcon!) as ImageProvider
+                        : AssetImage(groupChat!.groupIcon!))
+                    : null,
+                child: groupChat?.groupIcon == null || groupChat!.groupIcon!.isEmpty
+                    ? Icon(
+                        Icons.group,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        size: 24,
+                      )
+                    : null,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -217,7 +220,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.chat.user.username,
+                      groupChat?.name ?? 'Loading...',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onPrimary,
                         fontSize: 16,
@@ -226,9 +229,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      widget.chat.user.isOnline
-                          ? 'Online'
-                          : widget.chat.user.lastSeen,
+                      groupChat != null ? '${groupChat!.members.length} members' : '',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.secondary,
                         fontSize: 12,
@@ -246,7 +247,19 @@ class _ChatScreenState extends State<ChatScreen> {
               Icons.info_outline,
               color: Theme.of(context).colorScheme.onPrimary,
             ),
-            onPressed: _navigateToProfile,
+            onPressed: () {
+              if (groupChat != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => GroupDetailsScreen(
+                      groupChat: groupChat!,
+                      currentUserId: widget.currentUserId,
+                    ),
+                  ),
+                ).then((_) => _loadGroupChatData());
+              }
+            },
           ),
         ],
       ),
@@ -257,7 +270,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Expanded(
               child: _buildMessagesContent(),
             ),
-
+            
             // Message input
             Container(
               padding: const EdgeInsets.all(16),
@@ -265,10 +278,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 color: Theme.of(context).colorScheme.primary,
                 border: Border(
                   top: BorderSide(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .secondary
-                        .withOpacity(0.2),
+                    color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
                     width: 1,
                   ),
                 ),
@@ -278,10 +288,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .secondary
-                            .withOpacity(0.1),
+                        color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(25),
                       ),
                       child: TextField(
@@ -306,6 +313,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                   ),
+                  
                   IconButton(
                     icon: _isSending
                         ? const SizedBox(
@@ -343,12 +351,9 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline,
-                color: Theme.of(context).colorScheme.onPrimary, size: 48),
+            Icon(Icons.error_outline, color: Theme.of(context).colorScheme.onPrimary, size: 48),
             const SizedBox(height: 16),
-            Text(_error!,
-                style:
-                    TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => _loadMessages(),
@@ -364,16 +369,10 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.chat_bubble_outline,
-                color: Theme.of(context).colorScheme.onPrimary, size: 48),
+            Icon(Icons.chat_bubble_outline, color: Theme.of(context).colorScheme.onPrimary, size: 48),
             const SizedBox(height: 16),
-            Text('No messages yet',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    fontSize: 18)),
-            Text('Send the first message!',
-                style:
-                    TextStyle(color: Theme.of(context).colorScheme.secondary)),
+            Text('No messages yet', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontSize: 18)),
+            Text('Start the conversation!', style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
           ],
         ),
       );
@@ -385,7 +384,7 @@ class _ChatScreenState extends State<ChatScreen> {
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];
-        return MessageBubble(message: message);
+        return GroupMessageBubble(message: message);
       },
     );
   }
@@ -394,23 +393,21 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
-    _autoRefreshTimer?.cancel();
     super.dispose();
   }
 }
 
-class MessageBubble extends StatelessWidget {
-  final Message message;
+class GroupMessageBubble extends StatelessWidget {
+  final GroupMessage message;
 
-  const MessageBubble({super.key, required this.message});
+  const GroupMessageBubble({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment:
-            message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           if (!message.isMe) ...[
             const CircleAvatar(
@@ -419,23 +416,33 @@ class MessageBubble extends StatelessWidget {
             ),
             const SizedBox(width: 8),
           ],
+          
           Flexible(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: message.isMe
-                    ? Colors.green
+                color: message.isMe 
+                    ? Colors.green 
                     : Theme.of(context).colorScheme.secondary.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (!message.isMe)
+                    Text(
+                      message.senderUsername,
+                      style: TextStyle(
+                        color: Colors.green[300],
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   Text(
                     message.text,
                     style: TextStyle(
-                      color: message.isMe
-                          ? Colors.white
+                      color: message.isMe 
+                          ? Colors.white 
                           : Theme.of(context).colorScheme.onPrimary,
                       fontSize: 14,
                     ),
@@ -444,8 +451,8 @@ class MessageBubble extends StatelessWidget {
                   Text(
                     _formatTime(message.timestamp),
                     style: TextStyle(
-                      color: message.isMe
-                          ? Colors.white70
+                      color: message.isMe 
+                          ? Colors.white70 
                           : Theme.of(context).colorScheme.secondary,
                       fontSize: 11,
                     ),
@@ -454,6 +461,7 @@ class MessageBubble extends StatelessWidget {
               ),
             ),
           ),
+          
           if (message.isMe) ...[
             const SizedBox(width: 8),
             const CircleAvatar(
@@ -471,7 +479,7 @@ class MessageBubble extends StatelessWidget {
     final minute = timestamp.minute.toString().padLeft(2, '0');
     final period = hour >= 12 ? 'PM' : 'AM';
     final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-
+    
     return '$displayHour:$minute $period';
   }
 }
