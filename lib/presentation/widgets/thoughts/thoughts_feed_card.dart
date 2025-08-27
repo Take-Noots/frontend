@@ -6,6 +6,8 @@ class ThoughtsFeedCard extends StatelessWidget {
   final VoidCallback? onLike;
   final VoidCallback? onComment;
   final void Function(String userId)? onUserTap;
+  final bool showCoverImage;
+  final bool? isLiked;
 
   const ThoughtsFeedCard({
     Key? key,
@@ -13,6 +15,8 @@ class ThoughtsFeedCard extends StatelessWidget {
     this.onLike,
     this.onComment,
     this.onUserTap,
+    this.showCoverImage = true,
+    this.isLiked,
   }) : super(key: key);
 
   @override
@@ -31,9 +35,10 @@ class ThoughtsFeedCard extends StatelessWidget {
                 GestureDetector(
                   onTap: () => onUserTap?.call(post.userId),
                   child: CircleAvatar(
-                    child: Text(post.username != null && post.username!.isNotEmpty
-                        ? post.username![0].toUpperCase()
-                        : '?'),
+                    child: Text(
+                        post.username != null && post.username!.isNotEmpty
+                            ? post.username![0].toUpperCase()
+                            : '?'),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -58,13 +63,15 @@ class ThoughtsFeedCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  if (post.artistName != null && post.artistName!.isNotEmpty) ...[
+                  if (post.artistName != null &&
+                      post.artistName!.isNotEmpty) ...[
                     Icon(Icons.music_note, size: 20, color: Colors.deepPurple),
                     const SizedBox(width: 4),
                     Flexible(
                       child: Text(
                         '${post.songName} - ${post.artistName}',
-                        style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w500, fontSize: 15),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -75,7 +82,8 @@ class ThoughtsFeedCard extends StatelessWidget {
                     Flexible(
                       child: Text(
                         post.songName!,
-                        style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w500, fontSize: 15),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -84,7 +92,9 @@ class ThoughtsFeedCard extends StatelessWidget {
                 ],
               ),
             ],
-            if (post.coverImage != null && post.coverImage!.isNotEmpty) ...[
+            if (showCoverImage &&
+                post.coverImage != null &&
+                post.coverImage!.isNotEmpty) ...[
               const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
@@ -106,10 +116,12 @@ class ThoughtsFeedCard extends StatelessWidget {
             Row(
               children: [
                 IconButton(
-                  icon: Icon(Icons.favorite,
-                      color: post.likedBy.contains(post.userId)
-                          ? Colors.red
-                          : Colors.grey),
+                  icon: Icon(
+                    Icons.favorite,
+                    color: (isLiked ?? post.likedBy.contains(post.userId))
+                        ? Colors.red
+                        : Colors.grey,
+                  ),
                   onPressed: onLike,
                 ),
                 Text('${post.likes}'),

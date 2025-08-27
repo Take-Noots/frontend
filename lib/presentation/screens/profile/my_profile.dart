@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Uncomment this
 import 'dart:convert'; // Uncomment this
 import 'tabs/album_art_posts_tab.dart';
-import 'tabs/description_posts_tab.dart';
+import 'tabs/thought_posts_tab.dart';
 import 'tabs/tagged_posts_tab.dart';
 import 'settings/edit_profile.dart';
 
@@ -218,7 +218,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           },
         ),
         ArtistNewReleasesTab(userId: userId!), // Implement this tab
-        const DescriptionPostsTab(),
+        ThoughtPostsTab(postsList: posts, userId: userId),
         ArtistConcertsTab(userId: userId!), // Implement this tab
         ArtistUpcomingTab(userId: userId!), // Implement this tab
         // ArtistInsightsTab(userId: userId!), // REMOVE
@@ -251,7 +251,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
         ),
         BusinessAdsTab(userId: userId!), // Implement this tab
         BusinessAdInsightsTab(userId: userId!), // Implement this tab
-        const DescriptionPostsTab(),
+        ThoughtPostsTab(postsList: posts, userId: userId),
         const TaggedPostsTab(),
       ];
     } else {
@@ -279,7 +279,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
             );
           },
         ),
-        const DescriptionPostsTab(),
+        ThoughtPostsTab(postsList: posts, userId: userId),
         const TaggedPostsTab(),
       ];
     }

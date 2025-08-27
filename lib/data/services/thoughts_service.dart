@@ -12,10 +12,10 @@ class ThoughtsService {
     String? artistName,
   }) async {
     try {
-      // Get user data from shared preferences 
+      // Get user data from shared preferences
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       // Check if user is logged in
       if (userDataString == null) {
         return {
@@ -23,9 +23,9 @@ class ThoughtsService {
           'message': 'User not logged in. Please log in to share thoughts.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
-      
+
       // Validate that we have the required user data
       if (userData['id'] == null) {
         return {
@@ -62,10 +62,7 @@ class ThoughtsService {
       }
     } catch (e) {
       print('Error creating thoughts post: $e');
-      return {
-        'success': false,
-        'message': 'Error sharing thoughts: $e'
-      };
+      return {'success': false, 'message': 'Error sharing thoughts: $e'};
     }
   }
 
@@ -89,42 +86,79 @@ class ThoughtsService {
 
   // Get thoughts posts from followers
   Future<Map<String, dynamic>> getFollowerThoughts(String userId) async {
-  try {
-    final response = await http.get(
-      Uri.parse('$baseUrl/thoughts/followers/$userId'),
-      headers: {'Content-Type': 'application/json'},
-    );
-    print('Raw response.body: ${response.body}');
-    final decoded = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      if (decoded is List) {
-        // Backend returned a raw array
-        return {
-          'success': true,
-          'data': decoded,
-          'message': 'Follower thoughts posts retrieved successfully',
-        };
-      } else if (decoded is Map && isSuccess(decoded['success'])) {
-        // Backend returned an object with success/data
-        return {
-          'success': true,
-          'data': decoded['data'],
-          'message': 'Follower thoughts posts retrieved successfully',
-        };
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/thoughts/followers/$userId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      print('Raw response.body: ${response.body}');
+      final decoded = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        if (decoded is List) {
+          // Backend returned a raw array
+          return {
+            'success': true,
+            'data': decoded,
+            'message': 'Follower thoughts posts retrieved successfully',
+          };
+        } else if (decoded is Map && isSuccess(decoded['success'])) {
+          // Backend returned an object with success/data
+          return {
+            'success': true,
+            'data': decoded['data'],
+            'message': 'Follower thoughts posts retrieved successfully',
+          };
+        }
       }
+      return {
+        'success': false,
+        'message': 'Failed to retrieve follower thoughts posts',
+      };
+    } catch (e) {
+      print('Error fetching follower thoughts posts: $e');
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
     }
-    return {
-      'success': false,
-      'message': 'Failed to retrieve follower thoughts posts',
-    };
-  } catch (e) {
-    print('Error fetching follower thoughts posts: $e');
-    return {
-      'success': false,
-      'message': 'Network error: $e',
-    };
   }
-}
+
+  // Get thoughts posts for a single user (profile)
+  Future<Map<String, dynamic>> getUserThoughts(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/thoughts/user/$userId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      print('Raw response.body (getUserThoughts): ${response.body}');
+      final decoded = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        if (decoded is List) {
+          return {
+            'success': true,
+            'data': decoded,
+            'message': 'User thoughts retrieved successfully',
+          };
+        } else if (decoded is Map && isSuccess(decoded['success'])) {
+          return {
+            'success': true,
+            'data': decoded['data'],
+            'message': 'User thoughts retrieved successfully',
+          };
+        }
+      }
+      return {
+        'success': false,
+        'message': 'Failed to retrieve user thoughts',
+      };
+    } catch (e) {
+      print('Error fetching user thoughts posts: $e');
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
 
   // Like/unlike a thoughts post
   Future<bool> likeThoughts(String postId, String userId) async {

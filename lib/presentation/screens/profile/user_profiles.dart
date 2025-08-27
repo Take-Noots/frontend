@@ -5,7 +5,7 @@ import 'dart:convert';
 import '../../../data/services/profile_service.dart';
 import '../../../data/models/profile_model.dart';
 import 'tabs/album_art_posts_tab.dart';
-import 'tabs/description_posts_tab.dart';
+import 'tabs/thought_posts_tab.dart';
 import 'tabs/tagged_posts_tab.dart';
 import 'my_profile.dart';
 import 'followers_list.dart';
@@ -196,19 +196,19 @@ class _UserProfilePageState extends State<UserProfilePage>
               // Debug
               print("Header section - Tapped post ID: $postId");
 
-              // If postId is null, try to extract it from the posts list
-              String? validPostId = postId;
-              if (validPostId == null || validPostId.isEmpty) {
+              // If postId is empty, try to extract it from the posts list
+              String validPostId = postId;
+              if (validPostId.isEmpty) {
                 // Try to get the first post ID as fallback
                 if (posts.isNotEmpty) {
                   final firstPost = posts[0];
                   if (firstPost is Map<String, dynamic>) {
                     validPostId =
-                        (firstPost['id'] ?? firstPost['_id'])?.toString();
+                        (firstPost['id'] ?? firstPost['_id'])?.toString() ?? '';
                   } else if (firstPost != null) {
                     // Handle Post object if applicable
                     try {
-                      validPostId = firstPost.id?.toString();
+                      validPostId = firstPost.id?.toString() ?? '';
                     } catch (e) {
                       print("Error extracting ID: $e");
                     }
@@ -216,7 +216,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                 }
               }
 
-              if (validPostId != null && validPostId.isNotEmpty) {
+              if (validPostId.isNotEmpty) {
                 print("Header - Navigating to post ID: $validPostId");
                 Navigator.push(
                   context,
@@ -323,7 +323,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                       }
 
                       // Ensure postId is valid and convert if needed
-                      if (postId != null && postId.isNotEmpty) {
+                      if (postId.isNotEmpty) {
                         // Ensure post ID is being passed correctly
                         final String validPostId = postId.toString();
                         print("Navigating to post ID: $validPostId");
@@ -340,7 +340,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                       }
                     },
                   ),
-                  const DescriptionPostsTab(),
+                  ThoughtPostsTab(userId: widget.userId),
                   const TaggedPostsTab(),
                 ],
               ),
