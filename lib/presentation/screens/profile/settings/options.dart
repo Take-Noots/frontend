@@ -33,14 +33,16 @@ class OptionsPage extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.visibility_off, color: Colors.white),
-            title: const Text('Hide Post', style: TextStyle(color: Colors.white)),
+            title: const Text('Hidden Posts',
+                style: TextStyle(color: Colors.white)),
             onTap: () {
-              // Navigate to hide post page
+              Navigator.pushNamed(context, '/hidden-posts');
             },
           ),
           ListTile(
             leading: const Icon(Icons.bookmark, color: Colors.white),
-            title: const Text('Saved Post', style: TextStyle(color: Colors.white)),
+            title:
+                const Text('Saved Post', style: TextStyle(color: Colors.white)),
             onTap: () {
               // Navigate to saved post page
             },

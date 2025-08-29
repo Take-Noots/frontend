@@ -15,6 +15,7 @@ import 'data/services/auth_service.dart';
 import 'core/providers/theme_provider.dart';
 import 'core/providers/auth_provider.dart';
 import 'presentation/screens/profile/my_profile.dart';
+import 'presentation/screens/profile/settings/hiddenPosts/hidden_posts.dart';
 import 'presentation/screens/search/search_feed_screen.dart';
 import 'presentation/screens/fanbase/fanbase_details.dart';
 import 'presentation/screens/splash_screen.dart'; // Import the SplashScreen
@@ -124,6 +125,8 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const RequestScreen());
           case '/link-account':
             return MaterialPageRoute(builder: (_) => const LinkSpotifyScreen());
+          case '/hidden-posts':
+            return MaterialPageRoute(builder: (_) => const HiddenPostsPage());
           default:
             return MaterialPageRoute(
               builder: (_) => Scaffold(
