@@ -14,7 +14,7 @@ class HiddenPostsPage extends StatefulWidget {
 }
 
 class _HiddenPostsPageState extends State<HiddenPostsPage> {
-  Future<List<Post>> _songPostsFuture = Future.value(<Post>[]);
+  late Future<List<Post>> _songPostsFuture;
   final List<Post> _songPosts = [];
   final SongPostService _service = SongPostService();
 
