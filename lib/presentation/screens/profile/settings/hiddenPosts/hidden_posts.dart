@@ -17,6 +17,8 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
   late Future<List<Post>> _songPostsFuture;
   final List<Post> _songPosts = [];
   final SongPostService _service = SongPostService();
+  final Map<String, bool> _undoMap =
+      {}; // tracks if undo was pressed for a post id
 
   @override
   void initState() {
@@ -94,6 +96,9 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
 
   void _unhideSongPost(Post post) async {
     final oldIndex = _songPosts.indexWhere((p) => p.id == post.id);
+    // mark undo not pressed yet for this post
+    _undoMap[post.id] = false;
+
     setState(() {
       _songPosts.removeWhere((p) => p.id == post.id);
     });
@@ -105,6 +110,8 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
       action: SnackBarAction(
         label: 'Undo',
         onPressed: () {
+          // mark undo pressed and restore locally
+          _undoMap[post.id] = true;
           setState(() {
             _songPosts.insert(oldIndex >= 0 ? oldIndex : 0, post);
           });
@@ -114,27 +121,41 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(snackbar);
 
-    print('[DEBUG] _unhideSongPost sending unhide for id: ${post.id}');
-    final res = await _service.unhidePost(post.id);
-    print('[DEBUG] _unhideSongPost response: $res');
-    if (res['success'] == true) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Post unhidden')));
+    // Schedule the unhide request with a short delay to allow Undo to cancel.
+    print('[DEBUG] _unhideSongPost scheduled unhide for id: ${post.id}');
+    Future.delayed(const Duration(seconds: 3), () async {
+      // If undo was pressed in the meantime, skip the unhide call
+      if (_undoMap[post.id] == true) {
+        print('[DEBUG] _unhideSongPost canceled by undo for id: ${post.id}');
+        _undoMap.remove(post.id);
+        return;
+      }
 
-      // Refresh the hidden posts list from server to keep UI consistent
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      final userId = auth.user?.id;
-      setState(() {
-        _songPostsFuture = _fetchHiddenSongPostsForUser(userId);
-      });
-    } else {
-      // Revert on failure
-      setState(() {
-        _songPosts.insert(oldIndex >= 0 ? oldIndex : 0, post);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to unhide: ${res['message']}')));
-    }
+      print('[DEBUG] _unhideSongPost performing unhide for id: ${post.id}');
+      final res = await _service.unhidePost(post.id);
+      print('[DEBUG] _unhideSongPost response: $res');
+      if (res['success'] == true) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Post unhidden')));
+
+        // Refresh the hidden posts list from server to keep UI consistent
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        final userId = auth.user?.id;
+        setState(() {
+          _songPostsFuture = _fetchHiddenSongPostsForUser(userId);
+        });
+      } else {
+        // Revert on failure
+        setState(() {
+          _songPosts.insert(oldIndex >= 0 ? oldIndex : 0, post);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to unhide: ${res['message']}')));
+      }
+
+      // cleanup undo tracking
+      _undoMap.remove(post.id);
+    });
   }
 
   Widget _buildSongPostsTab() {

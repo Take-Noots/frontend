@@ -167,7 +167,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
     if (userType == 'artist') {
       return const [
         Tab(icon: Icon(Icons.grid_on), text: "Posts"),
-        // Tab(icon: Icon(Icons.music_note), text: "New Releases"),
+        Tab(icon: Icon(Icons.music_note), text: "New Releases"),
         Tab(icon: Icon(Icons.description), text: "Description"),
         Tab(icon: Icon(Icons.event), text: "Concerts"),
         Tab(icon: Icon(Icons.upcoming), text: "Upcoming"),
