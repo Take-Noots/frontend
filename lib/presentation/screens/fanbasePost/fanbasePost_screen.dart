@@ -17,7 +17,7 @@ class PostDetailPage extends StatefulWidget {
   final bool isPlaying;
   final bool isCurrentTrack;
   final Color backgroundColor;
-  final String fanbaseId; // Changed from String? to String
+  final String fanbaseId;
   final int likesCount;
   final int commentsCount;
 
@@ -37,7 +37,7 @@ class PostDetailPage extends StatefulWidget {
     required this.isPlaying,
     required this.isCurrentTrack,
     required this.backgroundColor,
-    required this.fanbaseId, // Made required since it's now non-nullable
+    required this.fanbaseId,
     this.likesCount = 0,
     this.commentsCount = 0,
   });
@@ -51,7 +51,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
   final FocusNode _commentFocusNode = FocusNode();
   List<Map<String, String>> _comments = [];
   bool _isSubmittingComment = false;
-  bool _hasAddedComment = false; // Add this flag to track if comments were added
+  bool _hasAddedComment = false;
 
   @override
   void initState() {
@@ -91,7 +91,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
       if (mounted) {
         setState(() {
-          // Update comments with the new data from server
           _comments = updatedPost.comments
               .map((comment) => {
                     'username': comment.userName,
@@ -102,7 +101,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   })
               .toList();
           _isSubmittingComment = false;
-          _hasAddedComment = true; // Set flag to true when comment is added
+          _hasAddedComment = true;
         });
 
         _commentController.clear();

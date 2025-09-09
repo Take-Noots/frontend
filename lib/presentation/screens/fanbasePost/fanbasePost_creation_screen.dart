@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// import 'package:dio/dio.dart';
 import 'dart:async';
 
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/fanbase_post_service.dart';
-// import '../../../data/models/fanbase_post_model.dart';
-// import '../../widgets/home/header_bar.dart';
 
 class FanbasePostCreationScreen extends StatefulWidget {
   final String fanbaseId;
@@ -148,7 +145,11 @@ class _FanbasePostCreationScreenState extends State<FanbasePostCreationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Post created successfully!')),
         );
+        // Pop and refresh the previous page, passing the created post
         Navigator.pop(context, createdPost); // Return the created post
+
+        // Optionally, you can use a callback or state management to trigger a refresh on the previous page.
+        // If using Navigator, ensure the previous page listens for the returned post and refreshes its list.
       }
     } catch (e) {
       if (mounted) {

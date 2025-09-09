@@ -1,33 +1,173 @@
 import 'package:flutter/material.dart';
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter_svg/svg.dart';
 import '../../../screens/fanbasePost/fanbasePost_screen.dart';
+import 'post_options_menu.dart'; // Use the local post_options_menu
+import 'package:lucide_icons/lucide_icons.dart';
 
 // ========== HeaderWidget ==========
 class HeaderWidget extends StatelessWidget {
   final String? username;
+  final String? userId;
+  final String? currentUserId;
   final String? userImage;
   final String? trackId;
+  final VoidCallback? onUsernameTap;
+  final VoidCallback? onMoreOptions;
+  final VoidCallback? onPlayPause; // Add play/pause callback
+  final bool isOwnPost;
+  final bool isPlaying; // Add playing state
+  final bool isCurrentTrack; // Add current track state
 
   const HeaderWidget({
     super.key,
     this.username,
+    this.userId,
+    this.currentUserId,
     this.userImage,
     this.trackId,
+    this.onUsernameTap,
+    this.onMoreOptions,
+    this.onPlayPause, // Add to constructor
+    this.isOwnPost = false,
+    this.isPlaying = false, // Add to constructor
+    this.isCurrentTrack = false, // Add to constructor
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: UserDetailWidget(
-            username: username,
-            userImage: userImage,
+    // return Container(
+    //   height: 50, // Fixed height for consistency
+    //   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+    //   child: Row(
+    //     children: [
+    //       // User details section
+    //       Expanded(
+    //         child: UserDetailWidget(
+    //           username: username,
+    //           userId: userId,
+    //           currentUserId: currentUserId,
+    //           userImage: userImage,
+    //           onUsernameTap: onUsernameTap,
+    //           onMoreOptions: onMoreOptions,
+    //           isOwnPost: isOwnPost,
+    //         ),
+    //       ),
+    //       const SizedBox(width: 12),
+    //       // Spotify control pill
+    //       SongControlWidget(
+    //         trackId: trackId,
+    //         isPlaying: isPlaying,
+    //         isCurrentTrack: isCurrentTrack,
+    //         onPlayPause: onPlayPause,
+    //       ),
+    //     ],
+    //   ),
+    // );
+
+    return Expanded(
+      flex: 120,
+      child: Row(
+        children: [
+          Expanded(
+            child: UserDetailWidget(
+              username: username,
+              userId: userId,
+              currentUserId: currentUserId,
+              userImage: userImage,
+              onUsernameTap: onUsernameTap,
+              onMoreOptions: onMoreOptions,
+              isOwnPost: isOwnPost,
+            ),
           ),
-        ),
-        const SongControlWidget(),
-      ],
+          const SizedBox(width: 12),
+          // Spotify control pill
+          SongControlWidget(
+            trackId: trackId,
+            isPlaying: isPlaying,
+            isCurrentTrack: isCurrentTrack,
+            onPlayPause: onPlayPause,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ========== SongControlWidget ==========
+class SongControlWidget extends StatefulWidget {
+  final String? trackId;
+  final bool isPlaying;
+  final bool isCurrentTrack;
+  final VoidCallback? onPlayPause;
+
+  const SongControlWidget({
+    super.key,
+    this.trackId,
+    this.isPlaying = false,
+    this.isCurrentTrack = false,
+    this.onPlayPause,
+  });
+
+  @override
+  State<SongControlWidget> createState() => _SongControlWidgetState();
+}
+
+class _SongControlWidgetState extends State<SongControlWidget> {
+  @override
+  Widget build(BuildContext context) {
+    // final parentWidth = MediaQuery.of(context).size.width;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pillColor = isDark ? Colors.grey[900] : Colors.white;
+    final iconColor = isDark ? Colors.white : Colors.black;
+    final spotifyAsset = isDark
+        ? 'assets/icons/icons-spotify-dark.svg'
+        : 'assets/icons/icons-spotify-light.svg';
+
+    return Container(
+      height: 30, // Fixed compact height
+      width: 80, // Fixed width for pill shape
+      decoration: BoxDecoration(
+        color: pillColor,
+        borderRadius:
+            BorderRadius.circular(18.0), // Half of height for perfect pill
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          // Spotify icon
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: SvgPicture.asset(
+              spotifyAsset,
+              fit: BoxFit.contain,
+            ),
+          ),
+          // Play/Pause button
+          if (widget.onPlayPause != null)
+            GestureDetector(
+              onTap: widget.onPlayPause,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                child: Icon(
+                  widget.isCurrentTrack && widget.isPlaying
+                      ? LucideIcons.pause
+                      : LucideIcons.play,
+                  color: iconColor,
+                  size: 20,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -36,13 +176,23 @@ class HeaderWidget extends StatelessWidget {
 class UserDetailWidget extends StatelessWidget {
   final Map<String, dynamic>? details;
   final String? username;
+  final String? userId;
+  final String? currentUserId;
   final String? userImage;
+  final VoidCallback? onUsernameTap;
+  final VoidCallback? onMoreOptions;
+  final bool isOwnPost;
 
   const UserDetailWidget({
     super.key,
     this.details,
     this.username,
+    this.userId,
+    this.currentUserId,
     this.userImage,
+    this.onUsernameTap,
+    this.onMoreOptions,
+    this.isOwnPost = false,
   });
 
   @override
@@ -53,9 +203,10 @@ class UserDetailWidget extends StatelessWidget {
 
     return Row(
       children: [
+        // Profile picture
         Container(
-          width: 40,
-          height: 40,
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
             color: Colors.grey.shade300,
             borderRadius: BorderRadius.circular(16.0),
@@ -69,20 +220,58 @@ class UserDetailWidget extends StatelessWidget {
                 : null,
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
+        // Username
         Expanded(
-          child: AutoSizeText(
-            username ?? 'Unknown User',
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-              fontSize: 18,
-              letterSpacing: 0.2,
+          child: GestureDetector(
+            onTap: onUsernameTap,
+            child: Text(
+              username ?? 'Unknown User',
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
-            minFontSize: 14,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.left,
+          ),
+        ),
+        // Options button
+        GestureDetector(
+          onTap: () {
+            if (onMoreOptions != null) {
+              onMoreOptions!();
+            } else {
+              PostOptionsMenu.show(
+                context,
+                postUserId: userId,
+                currentUserId: currentUserId,
+                isOwnPost: isOwnPost,
+                onCopyLink: () =>
+                    print('Copy link pressed for user: $username'),
+                onSavePost: () =>
+                    print('Save post pressed for user: $username'),
+                onUnfollow: () => print('Unfollow pressed for user: $username'),
+                onReport: () => print('Report pressed for user: $username'),
+                onEdit: isOwnPost
+                    ? () => print('Edit post pressed for user: $username')
+                    : null,
+                onDelete: isOwnPost
+                    ? () => print('Delete post pressed for user: $username')
+                    : null,
+                onHide: isOwnPost
+                    ? () => print('Hide post pressed for user: $username')
+                    : null,
+              );
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            child: Icon(
+              Icons.more_vert,
+              color: textColor.withOpacity(0.7),
+              size: 18,
+            ),
           ),
         ),
       ],
@@ -90,6 +279,7 @@ class UserDetailWidget extends StatelessWidget {
   }
 }
 
+// ========== PostArtWidget ==========
 class PostArtWidget extends StatefulWidget {
   final String albumImage;
   final String title;
@@ -162,106 +352,58 @@ class _PostArtWidgetState extends State<PostArtWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final description = widget.description ?? '';
-    final title = widget.title ?? '';
-    const fixedFontSize = 12.0;
+    final description = widget.description;
+    final title = widget.title;
+    final parentWidth = MediaQuery.of(context).size.width;
 
-    return Flexible(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final double totalWidth = constraints.maxWidth;
-            final double imageSize = totalWidth * 0.20;
-
-            return InkWell(
-              onTap: () => _navigateToPost(context),
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              LayoutBuilder(
-                                builder: (context, constraints) {
-                                  int titleLimit = constraints.maxWidth > 200
-                                      ? 35
-                                      : constraints.maxWidth > 150
-                                          ? 25
-                                          : 15;
-
-                                  String responsiveTitle = title.length >
-                                          titleLimit
-                                      ? title.substring(0, titleLimit) + '...'
-                                      : title;
-
-                                  return AutoSizeText(
-                                    responsiveTitle,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    maxLines: 1,
-                                    minFontSize: 10,
-                                    overflow: TextOverflow.ellipsis,
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 6),
-                              Flexible(
-                                child: LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    int descLimit = constraints.maxWidth > 200
-                                        ? 100
-                                        : constraints.maxWidth > 150
-                                            ? 70
-                                            : 40;
-                                    int maxLines = constraints.maxHeight > 60
-                                        ? 3
-                                        : constraints.maxHeight > 40
-                                            ? 2
-                                            : 1;
-
-                                    String responsiveDesc = description.length >
-                                            descLimit
-                                        ? description.substring(0, descLimit) +
-                                            '...'
-                                        : description;
-
-                                    return AutoSizeText(
-                                      responsiveDesc,
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: fixedFontSize,
-                                        height: 1.2,
-                                      ),
-                                      maxLines: maxLines,
-                                      minFontSize: 8,
-                                      overflow: TextOverflow.ellipsis,
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+    return Container(
+      width: parentWidth, // Fixed width to screen width
+      padding: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 2.0),
+      // decoration: BoxDecoration(
+      //   color: Colors.grey[900]?.withOpacity(0.3), // Optional background
+      //   borderRadius: BorderRadius.circular(12.0),
+      // ),
+      child: InkWell(
+        onTap: () => _navigateToPost(context),
+        borderRadius: BorderRadius.circular(12.0),
+        child: Container(
+          padding: const EdgeInsets.all(1.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title with overflow handling
+              SizedBox(
+                width: double.infinity,
+                child: Text(
+                  title.isNotEmpty ? title : "No Title",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            );
-          },
+              SizedBox(width: (parentWidth * 0.01).clamp(6.0, 20.0)),
+              // Description with overflow handling
+              SizedBox(
+                width: double.infinity,
+                child: Text(
+                  description.isNotEmpty ? description : "No Description",
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -293,9 +435,10 @@ class FooterWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final parentWidth = MediaQuery.of(context).size.width;
     return Row(
       children: [
-        const SizedBox(width: 8),
+        SizedBox(width: (parentWidth * 0.04).clamp(6.0, 20.0)),
         Expanded(
           flex: 3,
           child: TrackDetailWidget(
@@ -303,7 +446,7 @@ class FooterWidget extends StatelessWidget {
             artists: artists,
           ),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: (parentWidth * 0.01).clamp(6.0, 20.0)),
         Flexible(
           flex: 1,
           child: InteractionWidget(
@@ -333,87 +476,54 @@ class TrackDetailWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Always use white for song/artist, white70 for caption
+    const textColor = Colors.white;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          songName ?? '',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Color.fromARGB(255, 241, 241, 241),
-            fontSize: 14,
-          ),
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
-        const SizedBox(height: 2),
-        Text(
-          artists ?? '',
-          style: TextStyle(
-            fontSize: 13,
-            color: const Color.fromARGB(255, 199, 198, 198),
-          ),
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
-      ],
-    );
-  }
-}
-
-// ========== SongControlWidget ==========
-class SongControlWidget extends StatefulWidget {
-  final String? trackId;
-  final bool isPlaying;
-  final bool isCurrentTrack;
-  final VoidCallback? onPlayPause;
-
-  const SongControlWidget({
-    super.key,
-    this.trackId,
-    this.isPlaying = false,
-    this.isCurrentTrack = false,
-    this.onPlayPause,
-  });
-
-  @override
-  State<SongControlWidget> createState() => _SongControlWidgetState();
-}
-
-class _SongControlWidgetState extends State<SongControlWidget> {
-  @override
-  Widget build(BuildContext context) {
-    const iconColor = Colors.white;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Image.network(
-          'https://cdn-icons-png.flaticon.com/512/174/174872.png',
-          width: 24,
-          height: 24,
-          color: iconColor,
-          errorBuilder: (context, error, stackTrace) {
-            return const Icon(
-              Icons.music_note,
-              color: iconColor,
-              size: 24,
-            );
-          },
-        ),
-        const SizedBox(width: 8),
-        if (widget.onPlayPause != null)
-          GestureDetector(
-            onTap: widget.onPlayPause,
-            child: Icon(
-              widget.isCurrentTrack && widget.isPlaying
-                  ? Icons.pause
-                  : Icons.play_arrow,
-              color: iconColor,
-              size: 24,
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AutoSizeText(
+                    songName ?? 'Unknown Track',
+                    style: const TextStyle(
+                      color: textColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    minFontSize: 8,
+                    maxFontSize: 14,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.left,
+                  ),
+                  AutoSizeText(
+                    artists != null
+                        ? (artists!.length > 20
+                            ? '${artists!.substring(0, 20)}...'
+                            : artists!)
+                        : 'Unknown Artist',
+                    style: TextStyle(
+                      color: textColor.withOpacity(0.8),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    minFontSize: 8,
+                    maxFontSize: 13,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.left,
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
+        ),
       ],
     );
   }
@@ -442,12 +552,14 @@ class InteractionWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final iconColor = isDark ? Colors.white : Colors.black;
-    final likedColor = isDark ? Colors.purple : Colors.deepPurple;
-    final textColor = isDark ? Colors.white : Colors.black;
+    final likedColor = Color(0xFFFd535f9);
+    // final textColor = isDark ? Colors.white : Colors.black;
+    final parentWidth = MediaQuery.of(context).size.width;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // SizedBox(width: (parentWidth * 0.02).clamp(6.0, 20.0)),
         GestureDetector(
           onTap: onLike,
           child: Column(
@@ -456,50 +568,35 @@ class InteractionWidget extends StatelessWidget {
               Icon(
                 isLiked ? Icons.favorite : Icons.favorite_border,
                 color: isLiked ? likedColor : iconColor,
-                size: 18,
+                size: 24,
               ),
-              if (likesCount > 0)
-                Text(
-                  '$likesCount',
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 9,
-                  ),
-                ),
             ],
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: (parentWidth * 0.01).clamp(6.0, 20.0)),
         GestureDetector(
           onTap: onComment,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.comment_outlined,
+                LucideIcons.messageCircle,
                 color: iconColor,
-                size: 18,
+                size: 22,
               ),
-              if (commentsCount > 0)
-                Text(
-                  '$commentsCount',
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 9,
-                  ),
-                ),
             ],
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: (parentWidth * 0.01).clamp(6.0, 20.0)),
         GestureDetector(
           onTap: onShare,
           child: Icon(
-            Icons.share,
+            LucideIcons.share2,
             color: iconColor,
-            size: 18,
+            size: 22,
           ),
         ),
+        // SizedBox(width: (parentWidth * 0.02).clamp(6.0, 20.0)),
       ],
     );
   }

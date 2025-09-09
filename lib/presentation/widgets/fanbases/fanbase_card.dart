@@ -1,3 +1,4 @@
+// Fanbase Card Widget
 import 'package:flutter/material.dart';
 import 'package:frontend/data/models/fanbase_model.dart';
 import 'package:frontend/data/services/fanbase_service.dart';
@@ -27,6 +28,7 @@ class _FanbaseCardState extends State<FanbaseCard> {
   void initState() {
     super.initState();
     _fanbase = widget.initialFanbase;
+    print('Initial fanbase: ${_fanbase.toJson()}');
   }
 
   @override
@@ -35,10 +37,12 @@ class _FanbaseCardState extends State<FanbaseCard> {
     if (widget.initialFanbase != oldWidget.initialFanbase) {
       setState(() {
         _fanbase = widget.initialFanbase;
+        print('Fanbase updated: ${_fanbase.toJson()}');
       });
     }
   }
 
+  // truncates text to a specified length with optional ellipsis
   String truncateText(String text, int maxLength, {bool addEllipsis = true}) {
     if (text.length <= maxLength) return text;
     return addEllipsis
@@ -46,7 +50,7 @@ class _FanbaseCardState extends State<FanbaseCard> {
         : text.substring(0, maxLength);
   }
 
-  /// Handles toggling the join status
+  // Handles toggling the join status
   Future<void> _handleJoin() async {
     if (_isJoinLoading) return;
 
@@ -77,7 +81,7 @@ class _FanbaseCardState extends State<FanbaseCard> {
     }
   }
 
-  /// Handles toggling the like status
+  // Handles toggling the like status
   Future<void> _handleLike() async {
     if (_isLikeLoading) return;
 
@@ -114,14 +118,16 @@ class _FanbaseCardState extends State<FanbaseCard> {
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, '/fanbase/${_fanbase.id}'),
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+        margin: const EdgeInsets.symmetric(vertical: 0.0, horizontal: 16.0),
         padding: const EdgeInsets.all(12.0),
         decoration: BoxDecoration(
           color: theme.primary,
-          borderRadius: BorderRadius.circular(16.0),
-          border: Border.all(
-            color: theme.outlineVariant,
-            width: 1.2,
+          border: const Border(
+            top: BorderSide(
+              color:
+                  Colors.grey, // You can use theme.outlineVariant if preferred
+              width: 1.2,
+            ),
           ),
         ),
         child: Column(
