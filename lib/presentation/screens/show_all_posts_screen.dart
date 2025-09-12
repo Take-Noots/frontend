@@ -305,8 +305,8 @@ class _ShowAllPostsScreenState extends State<ShowAllPostsScreen> {
       }
     });
 
-    final result = await _songPostService.likePost(post.id, currentUserId);
-    if (!result['success']) {
+          final result = await _songPostService.likePost(post.id, currentUserId, context);
+          if (result['success'] != true) {
       
       setState(() {
         if (post.likedByMe) {

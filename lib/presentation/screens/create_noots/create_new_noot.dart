@@ -47,6 +47,7 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
         artists: artists,
         albumImage: albumImage,
         caption: caption.isNotEmpty ? caption : null,
+        context: context,
       );
 
       if (result['success']) {
@@ -55,7 +56,11 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(result['message']),
-              backgroundColor: const Color(0xFF8E08EF),
+              backgroundColor: const Color(0xFFA855F7),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
             ),
           );
           // Navigate back to home screen
@@ -68,6 +73,10 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
             SnackBar(
               content: Text(result['message']),
               backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -78,6 +87,10 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
           SnackBar(
             content: Text('Error: $e'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
           ),
         );
       }

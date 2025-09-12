@@ -1,6 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'auth_service.dart';
 
 class ThoughtsService {
   final String baseUrl = 'http://localhost:3000';
@@ -10,55 +14,85 @@ class ThoughtsService {
     required String text,
     String? songName,
     String? artistName,
+    BuildContext? context,
   }) async {
     try {
-      // Get user data from shared preferences 
-      final prefs = await SharedPreferences.getInstance();
-      final userDataString = prefs.getString('user_data');
-      
-      // Check if user is logged in
-      if (userDataString == null) {
-        return {
-          'success': false,
-          'message': 'User not logged in. Please log in to share thoughts.',
-        };
-      }
-      
-      final userData = jsonDecode(userDataString);
-      
-      // Validate that we have the required user data
-      if (userData['id'] == null) {
-        return {
-          'success': false,
-          'message': 'Invalid user data. Please log in again.',
-        };
-      }
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/thoughts'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'userId': userData['id'],
+      // If context is provided, use AuthService with Dio for authenticated requests
+      if (context != null) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        final dio = authService.dio;
+        
+        final postData = {
           'text': text,
           if (songName != null) 'songName': songName,
           if (artistName != null) 'artistName': artistName,
-        }),
-      );
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        return {
-          'success': true,
-          'data': responseData,
-          'message': 'Thoughts shared successfully!'
         };
+        
+        final response = await dio.post('/thoughts', data: postData);
+        
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          final responseData = response.data;
+          return {
+            'success': true,
+            'data': responseData,
+            'message': 'Thoughts shared successfully!'
+          };
+        } else {
+          return {
+            'success': false,
+            'message': 'Failed to share thoughts: ${response.statusMessage}'
+          };
+        }
       } else {
-        return {
-          'success': false,
-          'message': 'Failed to share thoughts: ${response.reasonPhrase}'
-        };
+        // Fallback to http for backward compatibility
+        // Get user data from shared preferences 
+        final prefs = await SharedPreferences.getInstance();
+        final userDataString = prefs.getString('user_data');
+        
+        // Check if user is logged in
+        if (userDataString == null) {
+          return {
+            'success': false,
+            'message': 'User not logged in. Please log in to share thoughts.',
+          };
+        }
+        
+        final userData = jsonDecode(userDataString);
+        
+        // Validate that we have the required user data
+        if (userData['id'] == null) {
+          return {
+            'success': false,
+            'message': 'Invalid user data. Please log in again.',
+          };
+        }
+
+        final response = await http.post(
+          Uri.parse('$baseUrl/thoughts'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'userId': userData['id'],
+            'text': text,
+            if (songName != null) 'songName': songName,
+            if (artistName != null) 'artistName': artistName,
+          }),
+        );
+
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          final responseData = jsonDecode(response.body);
+          return {
+            'success': true,
+            'data': responseData,
+            'message': 'Thoughts shared successfully!'
+          };
+        } else {
+          return {
+            'success': false,
+            'message': 'Failed to share thoughts: ${response.reasonPhrase}'
+          };
+        }
       }
     } catch (e) {
       print('Error creating thoughts post: $e');
@@ -88,43 +122,77 @@ class ThoughtsService {
   }
 
   // Get thoughts posts from followers
-  Future<Map<String, dynamic>> getFollowerThoughts(String userId) async {
-  try {
-    final response = await http.get(
-      Uri.parse('$baseUrl/thoughts/followers/$userId'),
-      headers: {'Content-Type': 'application/json'},
-    );
-    print('Raw response.body: ${response.body}');
-    final decoded = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      if (decoded is List) {
-        // Backend returned a raw array
+  Future<Map<String, dynamic>> getFollowerThoughts(String userId, [BuildContext? context]) async {
+    try {
+      // If context is provided, use AuthService with Dio for authenticated requests
+      if (context != null) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        final dio = authService.dio;
+        
+        final response = await dio.get('/thoughts/followers/$userId');
+        print('Raw response.body: ${response.data}');
+        
+        if (response.statusCode == 200) {
+          final decoded = response.data;
+          if (decoded is List) {
+            // Backend returned a raw array
+            return {
+              'success': true,
+              'data': decoded,
+              'message': 'Follower thoughts posts retrieved successfully',
+            };
+          } else if (decoded is Map && isSuccess(decoded['success'])) {
+            // Backend returned an object with success/data
+            return {
+              'success': true,
+              'data': decoded['data'],
+              'message': 'Follower thoughts posts retrieved successfully',
+            };
+          }
+        }
+        
         return {
-          'success': true,
-          'data': decoded,
-          'message': 'Follower thoughts posts retrieved successfully',
+          'success': false,
+          'message': 'Failed to retrieve follower thoughts posts',
         };
-      } else if (decoded is Map && isSuccess(decoded['success'])) {
-        // Backend returned an object with success/data
+      } else {
+        // Fallback to http for backward compatibility
+        final response = await http.get(
+          Uri.parse('$baseUrl/thoughts/followers/$userId'),
+          headers: {'Content-Type': 'application/json'},
+        );
+        print('Raw response.body: ${response.body}');
+        final decoded = jsonDecode(response.body);
+        if (response.statusCode == 200) {
+          if (decoded is List) {
+            // Backend returned a raw array
+            return {
+              'success': true,
+              'data': decoded,
+              'message': 'Follower thoughts posts retrieved successfully',
+            };
+          } else if (decoded is Map && isSuccess(decoded['success'])) {
+            // Backend returned an object with success/data
+            return {
+              'success': true,
+              'data': decoded['data'],
+              'message': 'Follower thoughts posts retrieved successfully',
+            };
+          }
+        }
         return {
-          'success': true,
-          'data': decoded['data'],
-          'message': 'Follower thoughts posts retrieved successfully',
+          'success': false,
+          'message': 'Failed to retrieve follower thoughts posts',
         };
       }
+    } catch (e) {
+      print('Error fetching follower thoughts posts: $e');
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
     }
-    return {
-      'success': false,
-      'message': 'Failed to retrieve follower thoughts posts',
-    };
-  } catch (e) {
-    print('Error fetching follower thoughts posts: $e');
-    return {
-      'success': false,
-      'message': 'Network error: $e',
-    };
   }
-}
 
   // Like/unlike a thoughts post
   Future<bool> likeThoughts(String postId, String userId) async {

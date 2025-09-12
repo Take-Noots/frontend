@@ -3,7 +3,10 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import '../../core/providers/auth_provider.dart';
+import 'auth_service.dart';
 
 class SongPostService {
   String get baseUrl {
@@ -19,60 +22,95 @@ class SongPostService {
     required String artists,
     String? albumImage,
     String? caption,
+    BuildContext? context,
   }) async {
     try {
-      // Get user data from shared preferences
-      final prefs = await SharedPreferences.getInstance();
-      final userDataString = prefs.getString('user_data');
-
-      // Check if user is logged in
-      if (userDataString == null) {
-        return {
-          'success': false,
-          'message': 'User not logged in. Please log in to create a post.',
-        };
-      }
-
-      final userData = jsonDecode(userDataString);
-
-      // Validate that we have the required user data
-      if (userData['id'] == null || userData['name'] == null) {
-        return {
-          'success': false,
-          'message': 'Invalid user data. Please log in again.',
-        };
-      }
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/song-posts'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
+      // If context is provided, use AuthService with Dio for authenticated requests
+      if (context != null) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        final dio = authService.dio;
+        
+        final postData = {
           'trackId': trackId,
           'songName': songName,
           'artists': artists,
-          'albumImage': albumImage,
-          'caption': caption,
-          'userId': userData['id'],
-        }),
-      );
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {
-          'success': true,
-          'data': data,
-          'message': 'Post created successfully',
+          if (albumImage != null) 'albumImage': albumImage,
+          if (caption != null) 'caption': caption,
         };
+        
+        final response = await dio.post('/song-posts', data: postData);
+        
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          final data = response.data;
+          return {
+            'success': true,
+            'data': data,
+            'message': 'Post created successfully',
+          };
+        } else {
+          final errorData = response.data;
+          return {
+            'success': false,
+            'message': errorData['error'] ??
+                errorData['message'] ??
+                'Failed to create post',
+          };
+        }
       } else {
-        final errorData = jsonDecode(response.body);
-        return {
-          'success': false,
-          'message': errorData['error'] ??
-              errorData['message'] ??
-              'Failed to create post',
-        };
+        // Fallback to http for backward compatibility
+        // Get user data from shared preferences
+        final prefs = await SharedPreferences.getInstance();
+        final userDataString = prefs.getString('user_data');
+
+        // Check if user is logged in
+        if (userDataString == null) {
+          return {
+            'success': false,
+            'message': 'User not logged in. Please log in to create a post.',
+          };
+        }
+
+        final userData = jsonDecode(userDataString);
+
+        // Validate that we have the required user data
+        if (userData['id'] == null || userData['name'] == null) {
+          return {
+            'success': false,
+            'message': 'Invalid user data. Please log in again.',
+          };
+        }
+
+        final response = await http.post(
+          Uri.parse('$baseUrl/song-posts'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'trackId': trackId,
+            'songName': songName,
+            'artists': artists,
+            'albumImage': albumImage,
+            'caption': caption,
+            'userId': userData['id'],
+          }),
+        );
+
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return {
+            'success': true,
+            'data': data,
+            'message': 'Post created successfully',
+          };
+        } else {
+          final errorData = jsonDecode(response.body);
+          return {
+            'success': false,
+            'message': errorData['error'] ??
+                errorData['message'] ??
+                'Failed to create post',
+          };
+        }
       }
     } catch (e) {
       return {
@@ -178,41 +216,190 @@ class SongPostService {
     }
   }
 
-  Future<Map<String, dynamic>> likePost(String postId, String userId) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/song-posts/$postId/like'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'userId': userId}),
-    );
-    return jsonDecode(response.body);
+  Future<Map<String, dynamic>> likePost(String postId, String userId, [BuildContext? context]) async {
+    try {
+      // If context is provided, use AuthService with Dio for authenticated requests
+      if (context != null) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        final dio = authService.dio;
+        
+        print('[DEBUG] LikePost: Using authenticated Dio for post $postId');
+        print('[DEBUG] LikePost: Dio baseUrl: ${dio.options.baseUrl}');
+        print('[DEBUG] LikePost: AuthService token: ${authService.tokenManager.accessToken}');
+        
+        final response = await dio.post('/song-posts/$postId/like');
+        
+        print('[DEBUG] LikePost: Response status: ${response.statusCode}');
+        print('[DEBUG] LikePost: Response data: ${response.data}');
+        
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          return response.data;
+        } else {
+          return {
+            'success': false,
+            'message': response.data['message'] ?? 'Failed to like post',
+          };
+        }
+      } else {
+        // Fallback to http for backward compatibility
+        print('[DEBUG] LikePost: Using fallback http for post $postId');
+        final response = await http.post(
+          Uri.parse('$baseUrl/song-posts/$postId/like'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'userId': userId}),
+        );
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print('[DEBUG] LikePost: Error occurred: $e');
+      if (e is DioException) {
+        print('[DEBUG] LikePost: DioException status: ${e.response?.statusCode}');
+        print('[DEBUG] LikePost: DioException data: ${e.response?.data}');
+      }
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
   }
 
   Future<Map<String, dynamic>> addComment(
-      String postId, String userId, String username, String text) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/song-posts/$postId/comment'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'userId': userId, 'text': text}),
-    );
-    return jsonDecode(response.body);
+      String postId, String userId, String username, String text, [BuildContext? context]) async {
+    try {
+      // If context is provided, use AuthService with Dio for authenticated requests
+      if (context != null) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        final dio = authService.dio;
+        
+        final response = await dio.post('/song-posts/$postId/comment', data: {
+          'text': text,
+        });
+        
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          return response.data;
+        } else {
+          return {
+            'success': false,
+            'message': response.data['message'] ?? 'Failed to add comment',
+          };
+        }
+      } else {
+        // Fallback to http for backward compatibility
+        final response = await http.post(
+          Uri.parse('$baseUrl/song-posts/$postId/comment'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'userId': userId, 'text': text}),
+        );
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
   }
 
   Future<Map<String, dynamic>> likeComment(
-      String postId, String commentId, String userId) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/song-posts/$postId/comment/$commentId/like'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'userId': userId}),
-    );
-    return jsonDecode(response.body);
+      String postId, String commentId, String userId, [BuildContext? context]) async {
+    try {
+      print('[DEBUG] LikeComment service: postId=$postId, commentId=$commentId, userId=$userId');
+      
+      // If context is provided, use AuthService with Dio for authenticated requests
+      if (context != null) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        final dio = authService.dio;
+        
+        final url = '/song-posts/$postId/comment/$commentId/like';
+        print('[DEBUG] LikeComment service: Making request to $url');
+        
+        final response = await dio.post(url);
+        
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          return response.data;
+        } else {
+          return {
+            'success': false,
+            'message': response.data['message'] ?? 'Failed to like comment',
+          };
+        }
+      } else {
+        // Fallback to http for backward compatibility
+        final response = await http.post(
+          Uri.parse('$baseUrl/song-posts/$postId/comment/$commentId/like'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'userId': userId}),
+        );
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
   }
 
-  Future<Map<String, dynamic>> getFollowerPosts(String userId) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/song-posts/followers/$userId'),
-      headers: {'Content-Type': 'application/json'},
-    );
-    return jsonDecode(response.body);
+  Future<Map<String, dynamic>> getFollowerPosts(String userId, [BuildContext? context]) async {
+    try {
+      // If context is provided, use AuthService with Dio for authenticated requests
+      if (context != null) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        final dio = authService.dio;
+        
+        final response = await dio.get('/song-posts/followers/$userId');
+        
+        if (response.statusCode == 200) {
+          final data = response.data;
+          if (data['success'] == true) {
+            return {
+              'success': true,
+              'data': data['data'],
+              'message': 'Follower posts retrieved successfully',
+            };
+          }
+        }
+        
+        // Handle error responses
+        final responseData = response.data;
+        return {
+          'success': false,
+          'message': responseData['message'] ?? responseData['error'] ?? 'Failed to retrieve follower posts',
+          'statusCode': response.statusCode,
+        };
+      } else {
+        // Fallback to http for backward compatibility
+        final response = await http.get(
+          Uri.parse('$baseUrl/song-posts/followers/$userId'),
+          headers: {'Content-Type': 'application/json'},
+        );
+        
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['success'] == true) {
+            return {
+              'success': true,
+              'data': data['data'],
+              'message': 'Follower posts retrieved successfully',
+            };
+          }
+        }
+        
+        // Handle error responses
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to retrieve follower posts',
+          'statusCode': response.statusCode,
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+        'statusCode': 0,
+      };
+    }
   }
 
   Future<Map<String, dynamic>> getNotifications(String userId) async {
@@ -481,25 +668,48 @@ class SongPostService {
   }
 
   // Get all saved posts for a user
-  Future<Map<String, dynamic>> getSavedPosts(String userId) async {
+  Future<Map<String, dynamic>> getSavedPosts(String userId, [BuildContext? context]) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/profile/$userId/saved-posts'),
-        headers: {'Content-Type': 'application/json'},
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {
-          'success': true,
-          'savedPosts': data['savedPosts'] ?? [],
-        };
+      // If context is provided, use AuthService with Dio for authenticated requests
+      if (context != null) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        final dio = authService.dio;
+        
+        final response = await dio.get('/profile/$userId/saved-posts');
+        
+        if (response.statusCode == 200) {
+          final data = response.data;
+          return {
+            'success': true,
+            'savedPosts': data['savedPosts'] ?? [],
+          };
+        } else {
+          return {
+            'success': false,
+            'savedPosts': [],
+            'message': 'Failed to get saved posts',
+          };
+        }
       } else {
-        return {
-          'success': false,
-          'savedPosts': [],
-          'message': 'Failed to get saved posts',
-        };
+        // Fallback to http for backward compatibility
+        final response = await http.get(
+          Uri.parse('$baseUrl/profile/$userId/saved-posts'),
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return {
+            'success': true,
+            'savedPosts': data['savedPosts'] ?? [],
+          };
+        } else {
+          return {
+            'success': false,
+            'savedPosts': [],
+            'message': 'Failed to get saved posts',
+          };
+        }
       }
     } catch (e) {
       return {

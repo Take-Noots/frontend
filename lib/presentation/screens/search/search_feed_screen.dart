@@ -200,6 +200,9 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
                                     query: _query,
                                     shrinkWrap: true,
                                     physics: const NeverScrollableScrollPhysics(),
+                                    onUserTap: (userId) {
+                                      Navigator.pushNamed(context, '/profile/$userId');
+                                    },
                                   ),
                                 if ((_searchResults['fanbases'] ?? []).isNotEmpty)
                                   Padding(
@@ -288,6 +291,9 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
                               return UserSearchResults(
                                 users: users,
                                 query: _query,
+                                onUserTap: (userId) {
+                                  Navigator.pushNamed(context, '/profile/$userId');
+                                },
                               );
                             },
                           )

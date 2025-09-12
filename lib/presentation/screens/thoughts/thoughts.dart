@@ -37,6 +37,7 @@ class _ThoughtsScreenState extends State<ThoughtsScreen> {
     try {
       final result = await _thoughtsService.createThoughts(
         text: thoughtsText,
+        context: context,
       );
 
       if (result['success']) {

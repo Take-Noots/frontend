@@ -2,6 +2,7 @@ class ThoughtsPost {
   final String id;
   final String userId;
   final String? username;
+  final String? userImage;
   final String text;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -18,6 +19,7 @@ class ThoughtsPost {
     required this.id,
     required this.userId,
     this.username,
+    this.userImage,
     required this.text,
     required this.createdAt,
     required this.updatedAt,
@@ -36,6 +38,7 @@ class ThoughtsPost {
     id: json['_id'] ?? '',
     userId: json['userId'] ?? '',
     username: json['username'],
+    userImage: json['userImage'],
     text: json['text'] ?? json['thoughtsText'] ?? '',
     createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
     updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
@@ -83,6 +86,7 @@ class ThoughtsPost {
       '_id': id,
       'userId': userId,
       'username': username,
+      'userImage': userImage,
       'text': text,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),

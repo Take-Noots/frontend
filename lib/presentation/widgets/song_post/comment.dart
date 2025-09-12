@@ -235,10 +235,12 @@ class _CommentSectionState extends State<CommentSection> with TickerProviderStat
                               children: [
                                 GestureDetector(
                                   onTap: () async {
+                                    print('[DEBUG] Comment like: postId=${widget.postId}, commentId=${comment.id}, userId=${widget.currentUserId}');
                                     final result = await widget.songPostService.likeComment(
                                       widget.postId, 
                                       comment.id, 
                                       widget.currentUserId,
+                                      context,
                                     );
                                     if (result['success'] == true) {
                                       setState(() {
