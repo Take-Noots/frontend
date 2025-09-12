@@ -49,6 +49,12 @@ dependencies:
   lucide_icons: ^0.257.0
   auto_size_text: ^3.0.0
   palette_generator: ^0.3.3+7
+  flutter_local_notifications: ^17.2.2
+  permission_handler: ^11.3.1
+  
+  # Add notification-related dependencies
+  socket_io_client: ^2.0.3+1
+  universal_html: ^2.2.4
 
 dev_dependencies:
   flutter_test:
