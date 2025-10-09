@@ -476,8 +476,8 @@ class TrackDetailWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Always use white for song/artist, white70 for caption
-    const textColor = Colors.white;
+
+    final textColor = Theme.of(context).colorScheme.onPrimary;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -491,12 +491,12 @@ class TrackDetailWidget extends StatelessWidget {
                 children: [
                   AutoSizeText(
                     songName ?? 'Unknown Track',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: textColor,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
-                    minFontSize: 8,
+                    minFontSize: 5,
                     maxFontSize: 14,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -513,7 +513,7 @@ class TrackDetailWidget extends StatelessWidget {
                       fontSize: 11,
                       fontWeight: FontWeight.w400,
                     ),
-                    minFontSize: 8,
+                    minFontSize: 4,
                     maxFontSize: 13,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

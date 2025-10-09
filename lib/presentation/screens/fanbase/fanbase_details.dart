@@ -2,17 +2,13 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-// import 'package:frontend/presentation/screens/demopost/des_post_home.dart';
 import 'package:frontend/data/models/fanbase_model.dart';
 import 'package:frontend/data/services/auth_service.dart';
 import 'package:frontend/data/services/fanbase_service.dart';
-// import 'package:frontend/presentation/widgets/fanbasepost/widgets/fanbase_post_content_widget.dart'
-//     as data_model;
 import 'package:frontend/presentation/widgets/fanbasepost/widgets/post_options_menu.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:frontend/presentation/widgets/fanbasepost/fanbase_post_feed.dart';
 import 'package:frontend/presentation/screens/fanbasePost/fanbasePost_creation_screen.dart';
-// import 'package:palette_generator/palette_generator.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,6 +19,8 @@ import '../../widgets/common/bottom_bar.dart';
 import '../fanbasePost/fanbasePost_screen.dart';
 import '../profile/user_profiles.dart';
 
+/// Fanbase detail screen showing fanbase information, posts, and management options
+/// Handles ownership checking and displays appropriate UI based on user's relationship to the fanbase
 class FanbaseDetailScreen extends StatefulWidget {
   final String fanbaseId;
   final String userId;
@@ -44,7 +42,7 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
   bool _isLoading = false;
   int _postFeedKey = 0; // Add this to track feed refreshes
   String? _error; // To capture any errors during post loading
-  String? userId; // Assuming you have a way to get the current user's ID
+  String? userId; // Current user's ID
   String? _currentlyPlayingTrackId;
   bool _isPlaying = false;
 
@@ -59,6 +57,7 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
     _fanbaseFuture = FanbaseService.getFanbaseById(widget.fanbaseId, context);
   }
 
+  /// Loads current user ID from SharedPreferences and initializes posts
   Future<void> _loadUserIdAndPosts() async {
     final prefs = await SharedPreferences.getInstance();
     final userDataString = prefs.getString('user_data');
@@ -68,15 +67,29 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
     setState(() {
       userId = userData['id'];
     });
+    print('Current user ID loaded: $userId');
     await _loadFanbasePosts();
   }
 
-  // Refresh posts after creating a new post
+  /// Checks if the current user is the owner of this fanbase
+  /// Compares current user ID with fanbase creator's ID
+  bool get _isCurrentUserOwner {
+    if (userId == null || _fanbase == null) {
+      return false;
+    }
+    
+    final isOwner = userId == _fanbase!.createdBy.id;
+    print('Ownership check: userId=$userId, createdBy.id=${_fanbase!.createdBy.id}, isOwner=$isOwner');
+    return isOwner;
+  }
+
+  /// Refresh posts after creating a new post
   Future<void> refreshPostsAfterCreation() async {
     print('Refreshing posts after new post creation...');
     await _loadFanbasePosts();
   }
 
+  /// Loads fanbase posts from the service
   Future<void> _loadFanbasePosts() async {
     if (_fanbase == null) return; // Wait for fanbase to load
 
@@ -111,10 +124,12 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
     }
   }
 
+  /// Refreshes the posts list
   Future<void> _refreshPosts() async {
     await _loadFanbasePosts();
   }
 
+  /// Handles liking/unliking a post with optimistic UI updates
   Future<void> _handleLike(FanbasePost post) async {
     try {
       print('Like button pressed for post: ${post.id}');
@@ -165,6 +180,7 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
     }
   }
 
+  /// Handles navigating to post detail page for commenting
   Future<void> _handleComment(FanbasePost post) async {
     setState(() {
       _isLoading = true;
@@ -220,9 +236,10 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
     }
   }
 
-  /// Handles toggling the join status by trusting the backend response.
+  /// Handles toggling the join status by trusting the backend response
+  /// Owners cannot join/leave their own fanbase
   Future<void> _handleJoin() async {
-    if (_isLoading || _fanbase == null) return;
+    if (_isLoading || _fanbase == null || _isCurrentUserOwner) return;
 
     setState(() => _isLoading = true);
 
@@ -252,7 +269,7 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
     }
   }
 
-  // Updated to work with FanbasePost instead of data_model.Post
+  /// Handles playing/pausing Spotify tracks
   Future<void> _handlePlay(FanbasePost post) async {
     final trackId = post.spotifyTrackId;
     if (trackId == null || trackId.isEmpty) {
@@ -291,7 +308,7 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
     }
   }
 
-  // Updated to take trackId directly
+  /// Plays a Spotify track using the backend API
   Future<void> _playTrack(String trackId) async {
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
@@ -322,6 +339,7 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
     }
   }
 
+  /// Pauses Spotify playback
   Future<void> _pausePlayback() async {
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
@@ -338,13 +356,14 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
     }
   }
 
-  // Updated to work with FanbasePost
+  /// Handles sharing a post
   void _handleShare(FanbasePost post) {
     final shareText =
         'Check out this song: ${post.songName ?? 'Unknown Song'} by ${post.artistName ?? 'Unknown Artist'}';
     Share.share(shareText, subject: 'Music from Noot');
   }
 
+  /// Handles post options menu (edit, delete, etc.)
   void _handlePostOptions(FanbasePost post) {
     print('FanbaseDetails _handlePostOptions - Post ID: ${post.id}');
     print(
@@ -392,6 +411,140 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
     );
   }
 
+  /// Builds the join/owned button based on ownership status
+  Widget _buildJoinButton() {
+    if (_isCurrentUserOwner) {
+      // Show "Owned" button for fanbase owners
+      return SizedBox(
+        width: 100,
+        child: OutlinedButton(
+          onPressed: null, // Disabled since it's owned
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.green[50],
+            foregroundColor: Colors.green[700],
+            side: BorderSide(color: Colors.green[300]!),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.verified,
+                size: 14,
+                color: Colors.green[700],
+              ),
+              const SizedBox(width: 4),
+              const Text('Owned'),
+            ],
+          ),
+        ),
+      );
+    } else {
+      // Show Join/Joined button for non-owners
+      return SizedBox(
+        width: 100,
+        child: OutlinedButton(
+          onPressed: _handleJoin,
+          style: OutlinedButton.styleFrom(
+            backgroundColor: _fanbase!.isJoined
+                ? Colors.white
+                : Colors.purple,
+            foregroundColor: _fanbase!.isJoined
+                ? Colors.purple
+                : Colors.white,
+            side: const BorderSide(color: Colors.purple),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          child: _isLoading
+              ? SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _fanbase!.isJoined
+                          ? Colors.purple
+                          : Colors.white,
+                    ),
+                  ),
+                )
+              : Text(_fanbase!.isJoined ? 'Joined' : 'Join'),
+        ),
+      );
+    }
+  }
+
+  /// Builds the header section with fanbase info and ownership indicators
+  Widget _buildHeaderSection() {
+    return Row(
+      children: [
+        CircleAvatar(
+          backgroundImage: NetworkImage(
+            _fanbase!.fanbasePhotoUrl ??
+                'https://via.placeholder.com/150',
+          ),
+          radius: 24,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          onBackgroundImageError: (exception, stackTrace) {},
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      _fanbase!.fanbaseName,
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(
+                              color: Theme.of(context).colorScheme.primary),
+                    ),
+                  ),
+                  // Crown icon for owned fanbases
+                  if (_isCurrentUserOwner) ...[
+                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.crown,
+                      size: 20,
+                      color: Colors.amber[600],
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 0.5),
+              Text(
+                '${_fanbase!.joinedUserIds.length} members',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Colors.grey),
+              ),
+              // "Creator" label for owned fanbases
+              if (_isCurrentUserOwner)
+                Text(
+                  'Creator',
+                  style: TextStyle(
+                    color: Colors.amber[700],
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -422,51 +575,14 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundImage: NetworkImage(
-                            _fanbase!.fanbasePhotoUrl ??
-                                'https://via.placeholder.com/150',
-                          ),
-                          radius: 24,
-                          backgroundColor:
-                              Theme.of(context).colorScheme.surface,
-                          onBackgroundImageError: (exception, stackTrace) {},
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _fanbase!.fanbaseName,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary),
-                              ),
-                              const SizedBox(height: 0.5),
-                              Text(
-                                '${_fanbase!.joinedUserIds.length} members',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // You can add more widgets here if needed
-                      ],
-                    ),
+                    // Enhanced header with ownership indicators
+                    _buildHeaderSection(),
+                    
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        if (_selectedTabIndex == 0)
+                        // Only show post button on Feed tab and for members/owners
+                        if (_selectedTabIndex == 0 && (_fanbase!.isJoined || _isCurrentUserOwner))
                           OutlinedButton.icon(
                             onPressed: () async {
                               final result = await Navigator.push(
@@ -495,44 +611,14 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                             ),
                           ),
                         const SizedBox(width: 8),
-                        SizedBox(
-                          width: 100,
-                          child: OutlinedButton(
-                            onPressed: _handleJoin,
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: _fanbase!.isJoined
-                                  ? Colors.white
-                                  : Colors.purple,
-                              foregroundColor: _fanbase!.isJoined
-                                  ? Colors.purple
-                                  : Colors.white,
-                              side: const BorderSide(color: Colors.purple),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
-                            child: _isLoading
-                                ? SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        _fanbase!.isJoined
-                                            ? Colors.purple
-                                            : Colors.white,
-                                      ),
-                                    ),
-                                  )
-                                : Text(_fanbase!.isJoined ? 'Joined' : 'Join'),
-                          ),
-                        ),
+                        
+                        // Dynamic join/owned button
+                        _buildJoinButton(),
                       ],
                     ),
                   ],
                 ),
               ),
-              // const SizedBox(height: 16),
 
               const SizedBox(height: 2),
               // ===== Tab Buttons =====
@@ -627,6 +713,12 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
+                          _fanbase!.fanbaseName,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        Text(
                           _fanbase!.fanbaseTopic,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
@@ -636,7 +728,54 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                               .textTheme
                               .bodySmall
                               ?.copyWith(color: Colors.grey),
-                        )
+                        ),
+                        Text(
+                          'Created by ${_fanbase!.createdBy.username}',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: Colors.grey),
+                        ),
+                        Text(
+                          'Created on ${_fanbase!.createdAt.toLocal().toString().split(' ')[0]}',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: Colors.grey),
+                        ),
+                      
+                        const SizedBox(height: 16),
+                        
+                        // Show owner-specific options
+                        if (_isCurrentUserOwner)
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              // TODO: Implement fanbase guide/rules creation logic
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Add Fanbase Guide'),
+                                  content: const Text(
+                                    'Here you can add rules or a guide for your fanbase.'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Close'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('  + Add a fanbase guide '),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                          ),
                         // Add more about info here if needed
                       ],
                     ),
@@ -644,11 +783,12 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                 ),
               ],
 
+              // Bottom member count
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Center(
                   child: Text(
-                    'Members: ${_fanbase!.joinedUserIds.length}', // Replace memberCount with your actual property
+                    'Members: ${_fanbase!.joinedUserIds.length}',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.bold,

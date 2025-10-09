@@ -243,7 +243,7 @@ class _FanbasePostFeedWidgetState extends State<FanbasePostFeedWidget> {
               children: [
                 // Layer for post_shape widget
                 CustomPaint(
-                  painter: PostShape(backgroundColor: backgroundColor),
+                  painter: PostShape(backgroundColor: backgroundColor, margin: 20.0),
                   child: Container(),
                 ),
                 // Layer for post widget
