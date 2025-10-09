@@ -108,6 +108,10 @@ class _FanbasePostCreationScreenState extends State<FanbasePostCreationScreen> {
             SnackBar(
               content: Text('Error: ${response.statusMessage}'),
               backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -119,7 +123,14 @@ class _FanbasePostCreationScreenState extends State<FanbasePostCreationScreen> {
       // Show error message for network or other errors
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error searching: $e')),
+          SnackBar(
+            content: Text('Error searching: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     }
@@ -132,8 +143,14 @@ class _FanbasePostCreationScreenState extends State<FanbasePostCreationScreen> {
     if (_titleController.text.trim().isEmpty ||
         _contentController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please fill in both topic and description')),
+        SnackBar(
+          content: const Text('Please fill in both topic and description'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
       );
       return;
     }
@@ -161,7 +178,14 @@ class _FanbasePostCreationScreenState extends State<FanbasePostCreationScreen> {
       if (mounted) {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Post created successfully!')),
+                  SnackBar(
+          content: const Text('Post created successfully!'),
+          backgroundColor: const Color(0xFFA855F7),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
         );
         // Return to previous screen with created post data
         // This allows the previous screen to refresh and show the new post
@@ -171,7 +195,14 @@ class _FanbasePostCreationScreenState extends State<FanbasePostCreationScreen> {
       // Show error message if post creation fails
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating post: $e')),
+          SnackBar(
+            content: Text('Error creating post: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     } finally {

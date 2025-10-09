@@ -6,18 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'auth_service.dart';
 
-class ThoughtsPostService {
+class ThoughtsService {
   final String baseUrl = 'http://localhost:3000';
 
   // Create a new thoughts post
   Future<Map<String, dynamic>> createThoughts({
-    required String thoughtsText,
-    String? coverImage,
+    required String text,
     String? songName,
     String? artistName,
-    String? trackId,
-    bool? inAFanbase,
-    String? fanbaseID,
     BuildContext? context,
   }) async {
     try {
@@ -27,13 +23,9 @@ class ThoughtsPostService {
         final dio = authService.dio;
         
         final postData = {
-          'thoughtsText': thoughtsText,
-          if (coverImage != null) 'coverImage': coverImage,
+          'text': text,
           if (songName != null) 'songName': songName,
           if (artistName != null) 'artistName': artistName,
-          if (trackId != null) 'trackId': trackId,
-          'inAFanbase': inAFanbase ?? false,
-          'FanbaseID': fanbaseID,
         };
         
         final response = await dio.post('/thoughts', data: postData);
@@ -68,7 +60,7 @@ class ThoughtsPostService {
         final userData = jsonDecode(userDataString);
         
         // Validate that we have the required user data
-        if (userData['id'] == null || userData['name'] == null) {
+        if (userData['id'] == null) {
           return {
             'success': false,
             'message': 'Invalid user data. Please log in again.',
@@ -82,13 +74,9 @@ class ThoughtsPostService {
           },
           body: jsonEncode({
             'userId': userData['id'],
-            'thoughtsText': thoughtsText,
-            if (coverImage != null) 'coverImage': coverImage,
+            'text': text,
             if (songName != null) 'songName': songName,
             if (artistName != null) 'artistName': artistName,
-            if (trackId != null) 'trackId': trackId,
-            'inAFanbase': inAFanbase ?? false,
-            'FanbaseID': fanbaseID,
           }),
         );
 
@@ -115,55 +103,98 @@ class ThoughtsPostService {
     }
   }
 
-  // Get all thoughts posts
-  Future<List<Map<String, dynamic>>> getAllThoughts() async {
+  // Helper to robustly check 'success' field
+  bool isSuccess(dynamic val) {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/thoughts'));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final allPosts = List<Map<String, dynamic>>.from(data);
-        
-        // Filter out hidden and deleted posts
-        final filteredPosts = allPosts.where((post) {
-          final isHidden = post['isHidden'] ?? 0;
-          final isDeleted = post['isDeleted'] ?? 0;
-          return isHidden == 0 && isDeleted == 0;
-        }).toList();
-        
-        return filteredPosts;
+      if (val is bool) return val;
+      if (val is int) return val == 1;
+      if (val is double) return val == 1.0;
+      if (val is String) {
+        final lower = val.toLowerCase();
+        return lower == 'true' || lower == '1';
       }
-      return [];
+      final str = val.toString().toLowerCase();
+      return str == 'true' || str == '1';
     } catch (e) {
-      print('Error fetching thoughts: $e');
-      return [];
+      print('isSuccess type check error: $e');
+      return false;
     }
   }
 
-  // Get thoughts by user ID
-  Future<List<Map<String, dynamic>>> getThoughtsByUser(String userId) async {
+  // Get thoughts posts from followers
+  Future<Map<String, dynamic>> getFollowerThoughts(String userId, [BuildContext? context]) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/thoughts/user/$userId'));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final allPosts = List<Map<String, dynamic>>.from(data);
+      // If context is provided, use AuthService with Dio for authenticated requests
+      if (context != null) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        final dio = authService.dio;
         
-        // Filter out hidden and deleted posts
-        final filteredPosts = allPosts.where((post) {
-          final isHidden = post['isHidden'] ?? 0;
-          final isDeleted = post['isDeleted'] ?? 0;
-          return isHidden == 0 && isDeleted == 0;
-        }).toList();
+        final response = await dio.get('/thoughts/followers/$userId');
+        print('Raw response.body: ${response.data}');
         
-        return filteredPosts;
+        if (response.statusCode == 200) {
+          final decoded = response.data;
+          if (decoded is List) {
+            // Backend returned a raw array
+            return {
+              'success': true,
+              'data': decoded,
+              'message': 'Follower thoughts posts retrieved successfully',
+            };
+          } else if (decoded is Map && isSuccess(decoded['success'])) {
+            // Backend returned an object with success/data
+            return {
+              'success': true,
+              'data': decoded['data'],
+              'message': 'Follower thoughts posts retrieved successfully',
+            };
+          }
+        }
+        
+        return {
+          'success': false,
+          'message': 'Failed to retrieve follower thoughts posts',
+        };
+      } else {
+        // Fallback to http for backward compatibility
+        final response = await http.get(
+          Uri.parse('$baseUrl/thoughts/followers/$userId'),
+          headers: {'Content-Type': 'application/json'},
+        );
+        print('Raw response.body: ${response.body}');
+        final decoded = jsonDecode(response.body);
+        if (response.statusCode == 200) {
+          if (decoded is List) {
+            // Backend returned a raw array
+            return {
+              'success': true,
+              'data': decoded,
+              'message': 'Follower thoughts posts retrieved successfully',
+            };
+          } else if (decoded is Map && isSuccess(decoded['success'])) {
+            // Backend returned an object with success/data
+            return {
+              'success': true,
+              'data': decoded['data'],
+              'message': 'Follower thoughts posts retrieved successfully',
+            };
+          }
+        }
+        return {
+          'success': false,
+          'message': 'Failed to retrieve follower thoughts posts',
+        };
       }
-      return [];
     } catch (e) {
-      print('Error fetching user thoughts: $e');
-      return [];
+      print('Error fetching follower thoughts posts: $e');
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
     }
   }
 
-  // Like a thoughts post
+  // Like/unlike a thoughts post
   Future<bool> likeThoughts(String postId, String userId) async {
     try {
       final response = await http.post(
@@ -193,76 +224,6 @@ class ThoughtsPostService {
     } catch (e) {
       print('Error adding comment: $e');
       return false;
-    }
-  }
-
-  // Delete thoughts post
-  Future<Map<String, dynamic>> deletePost(String postId) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl/thoughts/$postId'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {
-          'success': data['success'] ?? true,
-          'message': data['message'] ?? 'Post deleted successfully',
-        };
-      } else {
-        final errorData = jsonDecode(response.body);
-        return {
-          'success': false,
-          'message': errorData['error'] ??
-              errorData['message'] ??
-              'Failed to delete post',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Network error: $e',
-      };
-    }
-  }
-
-  // Hide thoughts post
-  Future<Map<String, dynamic>> hidePost(String postId) async {
-    print('[DEBUG] hidePost called with postId: $postId');
-    print('[DEBUG] Making API call to: $baseUrl/thoughts/$postId/hide');
-    
-    try {
-      final response = await http.patch(
-        Uri.parse('$baseUrl/thoughts/$postId/hide'),
-        headers: {'Content-Type': 'application/json'},
-      );
-      
-      print('[DEBUG] API response status: ${response.statusCode}');
-      print('[DEBUG] API response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {
-          'success': data['success'] ?? true,
-          'message': data['message'] ?? 'Post hidden successfully',
-        };
-      } else {
-        final errorData = jsonDecode(response.body);
-        return {
-          'success': false,
-          'message': errorData['error'] ??
-              errorData['message'] ??
-              'Failed to hide post',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Network error: $e',
-      };
     }
   }
 }

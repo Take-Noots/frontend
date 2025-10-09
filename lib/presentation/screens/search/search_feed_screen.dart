@@ -8,6 +8,7 @@ import 'package:frontend/presentation/widgets/song_post/post_shape.dart';
 import 'package:frontend/presentation/widgets/despost/widgets/des_post_content_widget.dart' as DesPost;
 import 'package:frontend/presentation/widgets/home/feed_widget.dart';
 import 'package:frontend/data/models/post_model.dart' as data_model;
+import 'package:frontend/data/models/feed_item.dart';
 
 import 'package:frontend/presentation/widgets/search/searchbar.dart';
 
@@ -199,6 +200,9 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
                                     query: _query,
                                     shrinkWrap: true,
                                     physics: const NeverScrollableScrollPhysics(),
+                                    onUserTap: (userId) {
+                                      Navigator.pushNamed(context, '/profile/$userId');
+                                    },
                                   ),
                                 if ((_searchResults['fanbases'] ?? []).isNotEmpty)
                                   Padding(
@@ -262,14 +266,14 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
                                   ),
                                 if ((_searchResults['songPosts'] ?? []).isNotEmpty)
                                   FeedWidget(
-                                    posts: (_searchResults['songPosts'] ?? []).map<data_model.Post>((post) => data_model.Post.fromJson(post)).toList(),
+                                    feedItems: (_searchResults['songPosts'] ?? []).map<FeedItem>((post) => FeedItem.song(data_model.Post.fromJson(post))).toList(),
                                     isLoading: false,
                                     error: null,
                                     onRefresh: () {},
-                                    onLike: (post) => print('Liked song post: ${post.id}'),
-                                    onComment: (post) => print('Comment song post: ${post.id}'),
-                                    onPlay: (post) => print('Play/Pause song post: ${post.id}'),
-                                    onShare: (post) => print('Share song post: ${post.id}'),
+                                    onSongLike: (post) => print('Liked song post: ${post.id}'),
+                                    onSongComment: (post) => print('Comment song post: ${post.id}'),
+                                    onSongPlay: (post) => print('Play/Pause song post: ${post.id}'),
+                                    onSongShare: (post) => print('Share song post: ${post.id}'),
                                     currentlyPlayingTrackId: null,
                                     isPlaying: false,
                                     onUserTap: (userId) => print('User tapped: $userId'),
@@ -287,6 +291,9 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
                               return UserSearchResults(
                                 users: users,
                                 query: _query,
+                                onUserTap: (userId) {
+                                  Navigator.pushNamed(context, '/profile/$userId');
+                                },
                               );
                             },
                           )
@@ -315,14 +322,14 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
                                   }
                                   // Show song posts as a vertical list
                                   return FeedWidget(
-                                    posts: songPosts.map<data_model.Post>((post) => data_model.Post.fromJson(post)).toList(),
+                                    feedItems: songPosts.map<FeedItem>((post) => FeedItem.song(data_model.Post.fromJson(post))).toList(),
                                     isLoading: false,
                                     error: null,
                                     onRefresh: () {},
-                                    onLike: (post) => print('Liked song post: ${post.id}'),
-                                    onComment: (post) => print('Comment song post: ${post.id}'),
-                                    onPlay: (post) => print('Play/Pause song post: ${post.id}'),
-                                    onShare: (post) => print('Share song post: ${post.id}'),
+                                    onSongLike: (post) => print('Liked song post: ${post.id}'),
+                                    onSongComment: (post) => print('Comment song post: ${post.id}'),
+                                    onSongPlay: (post) => print('Play/Pause song post: ${post.id}'),
+                                    onSongShare: (post) => print('Share song post: ${post.id}'),
                                     currentlyPlayingTrackId: null,
                                     isPlaying: false,
                                     onUserTap: (userId) => print('User tapped: $userId'),

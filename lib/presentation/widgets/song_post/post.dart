@@ -250,22 +250,36 @@ class UserDetailWidget extends StatelessWidget {
   final Map<String, dynamic>? details;
   final String? username;
   final String? userImage;
-  final String? userId; // Add userId parameter
-  final String? currentUserId; // Add currentUserId parameter
+  final String? userId; 
+  final String? currentUserId; 
+  final String? postId;
   final VoidCallback? onUsernameTap;
   final VoidCallback? onOptionsTap;
+  final VoidCallback? onDelete;
+  final VoidCallback? onHide;
+  final VoidCallback? onEdit;
   final bool isOwnPost;
+  final VoidCallback? onSavePost;
+  final VoidCallback? onUnsavePost;
+  final bool isSaved;
 
   const UserDetailWidget({
     super.key,
     this.details,
     this.username,
     this.userImage,
-    this.userId, // Add userId parameter
-    this.currentUserId, // Add currentUserId parameter
+    this.userId, 
+    this.currentUserId, 
+    this.postId,
     this.onUsernameTap,
     this.onOptionsTap,
+    this.onDelete,
+    this.onHide,
+    this.onEdit,
     this.isOwnPost = false,
+    this.onSavePost,
+    this.onUnsavePost,
+    this.isSaved = false,
   });
 
   @override
@@ -338,11 +352,16 @@ class UserDetailWidget extends StatelessWidget {
                       postUserId: userId, // Pass userId
                       currentUserId: currentUserId, // Pass currentUserId
                       isOwnPost: isOwnPost,
+                      isSaved: isSaved,
+                      postId: postId,
                       onCopyLink: () {
                         print('Copy link pressed for user: $username');
                       },
-                      onSavePost: () {
+                      onSavePost: onSavePost ?? () {
                         print('Save post pressed for user: $username');
+                      },
+                      onUnsavePost: onUnsavePost ?? () {
+                        print('Unsave post pressed for user: $username');
                       },
                       onUnfollow: () {
                         print('Unfollow pressed for user: $username');
@@ -350,21 +369,11 @@ class UserDetailWidget extends StatelessWidget {
                       onReport: () {
                         print('Report pressed for user: $username');
                       },
-                      onEdit: isOwnPost
-                          ? () {
-                              print('Edit post pressed for user: $username');
-                            }
-                          : null,
+                      onEdit: isOwnPost ? onEdit : null,
                       onDelete: isOwnPost
-                          ? () {
-                              print('Delete post pressed for user: $username');
-                            }
+                          ? onDelete
                           : null,
-                      onHide: isOwnPost
-                          ? () {
-                              print('Hide post pressed for user: $username');
-                            }
-                          : null,
+                      onHide: isOwnPost ? onHide : null,
                     );
                   }
                 },
@@ -584,29 +593,43 @@ class FooterWidget extends StatelessWidget {
 class HeaderWidget extends StatelessWidget {
   final String? username;
   final String? userImage;
-  final String? userId; // Add userId parameter
-  final String? currentUserId; // Add currentUserId parameter
+  final String? userId; 
+  final String? currentUserId; 
   final String? trackId;
+  final String? postId;
   final bool isPlaying;
   final bool isCurrentTrack;
   final VoidCallback? onPlayPause;
   final VoidCallback? onUsernameTap;
   final VoidCallback? onOptionsTap;
+  final VoidCallback? onDelete;
   final bool isOwnPost;
+  final VoidCallback? onHide;
+  final VoidCallback? onEdit;
+  final VoidCallback? onSavePost;
+  final VoidCallback? onUnsavePost;
+  final bool isSaved;
 
   const HeaderWidget({
     super.key,
     this.username,
     this.userImage,
-    this.userId, // Add userId parameter
-    this.currentUserId, // Add currentUserId parameter
+    this.userId, 
+    this.currentUserId,
     this.trackId,
+    this.postId,
     this.isPlaying = false,
     this.isCurrentTrack = false,
     this.onPlayPause,
     this.onUsernameTap,
     this.onOptionsTap,
+    this.onDelete, 
     this.isOwnPost = false,
+    this.onHide,
+    this.onEdit,
+    this.onSavePost,
+    this.onUnsavePost,
+    this.isSaved = false,
   });
 
   @override
@@ -618,11 +641,18 @@ class HeaderWidget extends StatelessWidget {
           UserDetailWidget(
             username: username,
             userImage: userImage,
-            userId: userId, // Pass userId
-            currentUserId: currentUserId, // Pass currentUserId
+            userId: userId, 
+            currentUserId: currentUserId, 
+            postId: postId,
             onUsernameTap: onUsernameTap,
             onOptionsTap: onOptionsTap,
+            onDelete: onDelete,
             isOwnPost: isOwnPost,
+            onHide: onHide != null ? () { print('[DEBUG] HeaderWidget: onHide called'); onHide!(); } : null,
+            onEdit: onEdit,
+            onSavePost: onSavePost,
+            onUnsavePost: onUnsavePost,
+            isSaved: isSaved,
           ),
           SongControlWidget(
             trackId: trackId,
@@ -666,8 +696,9 @@ class Post extends StatelessWidget {
   final String? caption;
   final String username;
   final String? userId;
-  final String? currentUserId; // Add currentUserId parameter
+  final String? currentUserId; 
   final String userImage;
+  final String? postId;
 
   final VoidCallback? onLike;
   final VoidCallback? onComment;
@@ -675,9 +706,15 @@ class Post extends StatelessWidget {
   final VoidCallback? onShare;
   final VoidCallback? onMoreOptions;
   final VoidCallback? onUsernameTap;
+  final VoidCallback? onDelete;
+  final VoidCallback? onHide;
+  final VoidCallback? onEdit;
+  final VoidCallback? onSavePost;
+  final VoidCallback? onUnsavePost;
   final bool isLiked;
   final bool isPlaying;
   final bool isCurrentTrack;
+  final bool isSaved;
   final int? likeCount;
   final int? commentCount;
   final bool isOwnPost;
@@ -691,17 +728,24 @@ class Post extends StatelessWidget {
     this.caption,
     required this.username,
     this.userId,
-    this.currentUserId, // Add currentUserId parameter
+    this.currentUserId, 
     required this.userImage,
+    this.postId,
     this.onLike,
     this.onComment,
     this.onPlayPause,
     this.onShare,
     this.onMoreOptions,
     this.onUsernameTap,
+    this.onDelete,
+    this.onHide,
+    this.onEdit,
+    this.onSavePost,
+    this.onUnsavePost,
     this.isLiked = false,
     this.isPlaying = false,
     this.isCurrentTrack = false,
+    this.isSaved = false,
     this.likeCount,
     this.commentCount,
     this.isOwnPost = false,
@@ -712,21 +756,29 @@ class Post extends StatelessWidget {
     // Directly calculate isOwnPost if not provided
     final bool calculatedIsOwnPost = isOwnPost ||
         (userId != null && currentUserId != null && userId == currentUserId);
+    print('[DEBUG] Post.build: userId=$userId, currentUserId=$currentUserId, calculatedIsOwnPost=$calculatedIsOwnPost');
 
     return Column(
       children: [
         HeaderWidget(
           username: username,
           userImage: userImage,
-          userId: userId, // Pass userId
-          currentUserId: currentUserId, // Pass currentUserId
+          userId: userId, 
+          currentUserId: currentUserId, 
           trackId: trackId,
+          postId: postId,
           isPlaying: isPlaying,
           isCurrentTrack: isCurrentTrack,
           onPlayPause: onPlayPause,
           onUsernameTap: onUsernameTap,
           onOptionsTap: onMoreOptions,
-          isOwnPost: calculatedIsOwnPost, // Pass calculated value
+          onDelete: onDelete,
+          isOwnPost: calculatedIsOwnPost, 
+          onHide: onHide, 
+          onEdit: onEdit,
+          onSavePost: onSavePost,
+          onUnsavePost: onUnsavePost,
+          isSaved: isSaved,
         ),
         PostArtWidget(albumImage: albumImage),
         FooterWidget(

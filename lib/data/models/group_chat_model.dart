@@ -1,11 +1,11 @@
-class ChatUser {
+class GroupChatUser {
   final String id;
   final String username;
   final String? profileImage;
   final bool isOnline;
   final String lastSeen;
 
-  ChatUser({
+  GroupChatUser({
     required this.id,
     required this.username,
     this.profileImage,
@@ -13,8 +13,8 @@ class ChatUser {
     required this.lastSeen,
   });
 
-  factory ChatUser.fromJson(Map<String, dynamic> json) {
-    return ChatUser(
+  factory GroupChatUser.fromJson(Map<String, dynamic> json) {
+    return GroupChatUser(
       id: json['_id'] ?? json['id'] ?? '',
       username: json['username'] ?? 'Unknown User',
       profileImage: json['profileImage'],
@@ -24,33 +24,7 @@ class ChatUser {
   }
 }
 
-class SearchUser {
-  final String id;
-  final String username;
-  final String email;
-  final String? profileImage;
-  final bool isOnline;
-
-  SearchUser({
-    required this.id,
-    required this.username,
-    required this.email,
-    this.profileImage,
-    required this.isOnline,
-  });
-
-  factory SearchUser.fromJson(Map<String, dynamic> json) {
-    return SearchUser(
-      id: json['_id'] ?? json['id'] ?? '',
-      username: json['username'] ?? 'Unknown User',
-      email: json['email'] ?? '',
-      profileImage: json['profileImage'],
-      isOnline: json['isOnline'] ?? false,
-    );
-  }
-}
-
-class Message {
+class GroupMessage {
   final String id;
   final String senderId;
   final String senderUsername;
@@ -58,7 +32,7 @@ class Message {
   final DateTime timestamp;
   final bool isMe;
 
-  Message({
+  GroupMessage({
     required this.id,
     required this.senderId,
     required this.senderUsername,
@@ -67,8 +41,8 @@ class Message {
     required this.isMe,
   });
 
-  factory Message.fromJson(Map<String, dynamic> json, String currentUserId) {
-    return Message(
+  factory GroupMessage.fromJson(Map<String, dynamic> json, String currentUserId) {
+    return GroupMessage(
       id: json['_id'] ?? json['id'] ?? '',
       senderId: json['senderId'] ?? '',
       senderUsername: json['senderUsername'] ?? 'Unknown',
@@ -79,33 +53,44 @@ class Message {
   }
 }
 
-class Chat {
+class GroupChat {
   final String id;
-  final ChatUser user;
-  final Message? lastMessage;
+  final String name;
+  final String? description;
+  final String? groupIcon;
+  final List<GroupChatUser> members;
+  final GroupMessage? lastMessage;
+  final String createdBy;
+  final DateTime createdAt;
   final int unreadCount;
 
-  Chat({
+  GroupChat({
     required this.id,
-    required this.user,
+    required this.name,
+    this.description,
+    this.groupIcon,
+    required this.members,
     this.lastMessage,
+    required this.createdBy,
+    required this.createdAt,
     this.unreadCount = 0,
   });
 
-  factory Chat.fromJson(Map<String, dynamic> json, String currentUserId) {
-    // Find the other user (not the current user)
-    final participants = json['participants'] as List<dynamic>;
-    final otherUser = participants.firstWhere(
-      (participant) => participant['_id'] != currentUserId,
-      orElse: () => participants.first,
-    );
+  factory GroupChat.fromJson(Map<String, dynamic> json, String currentUserId) {
+    final membersData = json['members'] as List<dynamic>? ?? [];
+    final members = membersData.map((member) => GroupChatUser.fromJson(member)).toList();
 
-    return Chat(
+    return GroupChat(
       id: json['_id'] ?? json['id'] ?? '',
-      user: ChatUser.fromJson(otherUser),
+      name: json['name'] ?? 'Unnamed Group',
+      description: json['description'],
+      groupIcon: json['groupIcon'],
+      members: members,
       lastMessage: json['lastMessage'] != null 
-          ? Message.fromJson(json['lastMessage'], currentUserId)
+          ? GroupMessage.fromJson(json['lastMessage'], currentUserId)
           : null,
+      createdBy: json['createdBy'] ?? '',
+      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
       unreadCount: json['unreadCount'] ?? 0,
     );
   }

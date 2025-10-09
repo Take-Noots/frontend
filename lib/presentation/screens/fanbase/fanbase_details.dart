@@ -7,7 +7,6 @@ import 'package:frontend/data/services/auth_service.dart';
 import 'package:frontend/data/services/fanbase_service.dart';
 import 'package:frontend/presentation/widgets/fanbasepost/widgets/post_options_menu.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:frontend/presentation/widgets/fanbasepost/fanbase_post_feed.dart';
 import 'package:frontend/presentation/screens/fanbasePost/fanbasePost_creation_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -796,6 +795,7 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                   ),
                 ),
               ),
+
             ],
           );
         },

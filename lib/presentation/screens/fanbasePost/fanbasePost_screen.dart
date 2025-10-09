@@ -83,10 +83,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
     try {
       final updatedPost = await FanbasePostService.addComment(
-        widget.fanbaseId,
         widget.postId,
         commentText,
         context,
+        fanbaseId: widget.fanbaseId,
       );
 
       if (mounted) {
