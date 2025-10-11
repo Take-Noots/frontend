@@ -88,8 +88,11 @@ class MyApp extends StatelessWidget {
         final uri = Uri.parse(settings.name ?? '');
         if (uri.pathSegments.length == 2 && uri.pathSegments[0] == 'fanbase') {
           final id = uri.pathSegments[1];
+          // Get the current user ID from the auth provider
+          final currentUserId = authProvider.user?.id ?? '';
           return MaterialPageRoute(
-            builder: (_) => FanbaseDetailScreen(fanbaseId: id),
+            builder: (_) =>
+                FanbaseDetailScreen(fanbaseId: id, userId: currentUserId),
           );
         }
 
