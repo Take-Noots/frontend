@@ -89,22 +89,29 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      final songResult = await _songPostService.getFollowerPosts(userId!);
-      final thoughtsResult = await _thoughtsService.getFollowerThoughts(userId!);
+      final songResult = await _songPostService.getFollowerPosts(userId!, context);
+      final thoughtsResult = await _thoughtsService.getFollowerThoughts(userId!, context);
       //print('Fetched thoughtsResult: ' + thoughtsResult.toString());
 
       List<FeedItem> feedItems = [];
 
-      if (songResult['success']) {
+      // Check if songResult is valid and has success field
+      if (songResult != null && songResult['success'] == true && songResult['data'] != null) {
         final List<dynamic> postsData = songResult['data'];
+        print('[DEBUG] Song posts data length: ${postsData.length}');
+        
         final posts = postsData.map((json) {
           final post = data_model.Post.fromJson(json);
           post.likedByMe =
               (json['likedBy'] as List<dynamic>?)?.contains(userId) ?? false;
           return FeedItem.song(post);
         }).where((item) => item.songPost == null || 
-          (item.songPost!.isHidden == 0 && item.songPost!.isDeleted == 0));
+          ((item.songPost!.isHidden ?? 0) == 0 && (item.songPost!.isDeleted ?? 0) == 0));
+        
+        print('[DEBUG] Filtered song posts length: ${posts.length}');
         feedItems.addAll(posts);
+      } else {
+        print('[DEBUG] Song result not successful: $songResult');
       }
 
       // Check saved status for all posts if user is logged in
@@ -112,21 +119,31 @@ class _HomeScreenState extends State<HomeScreen> {
         await _checkSavedStatusForPosts(feedItems);
       }
 
-      if (thoughtsResult['success']) {
+      // Check if thoughtsResult is valid and has success field
+      if (thoughtsResult != null && thoughtsResult['success'] == true && thoughtsResult['data'] != null) {
         final List<dynamic> thoughtsData = thoughtsResult['data'];
-        //print('Parsed thoughtsData: ' + thoughtsData.toString());
+        print('[DEBUG] Thoughts data length: ${thoughtsData.length}');
+        print('[DEBUG] Parsed thoughtsData: $thoughtsData');
+        
         final thoughtsPosts = thoughtsData.map((json) {
           final post = ThoughtsPost.fromJson(json);
-          //print('Parsed ThoughtsPost: ' + post.toString());
+          print('[DEBUG] Parsed ThoughtsPost: $post');
           return FeedItem.thought(post);
         }).where((item) => item.thoughtsPost == null || 
-          (item.thoughtsPost!.isHidden == 0 && item.thoughtsPost!.isDeleted == 0));
+          ((item.thoughtsPost!.isHidden ?? 0) == 0 && (item.thoughtsPost!.isDeleted ?? 0) == 0));
+        
+        print('[DEBUG] Filtered thoughts posts length: ${thoughtsPosts.length}');
         feedItems.addAll(thoughtsPosts);
+      } else {
+        print('[DEBUG] Thoughts result not successful: $thoughtsResult');
       }
 
 
       // Sort all by createdAt, newest first
       feedItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      print('[DEBUG] Final feed items count: ${feedItems.length}');
+      print('[DEBUG] Feed items types: ${feedItems.map((item) => item.type).toList()}');
 
       setState(() {
         _feedItems = feedItems;
@@ -134,8 +151,15 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (e) {
       print('Error in _loadPosts: $e');
+      String errorMessage = 'Error loading posts: $e';
+      
+      // Check if it's an authentication error
+      if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      }
+      
       setState(() {
-        _error = 'Error loading posts: $e';
+        _error = errorMessage;
         _isLoading = false;
       });
     }
@@ -148,11 +172,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       print('[DEBUG] Checking saved status for ${feedItems.length} feed items');
-      final savedPostsResult = await _songPostService.getSavedPosts(userId!);
+      final savedPostsResult = await _songPostService.getSavedPosts(userId!, context);
       print('[DEBUG] Saved posts result: $savedPostsResult');
       
-      if (savedPostsResult['success']) {
-        final List<String> savedPostsIds = List<String>.from(savedPostsResult['savedPosts'] ?? []);
+      if (savedPostsResult != null && savedPostsResult['success'] == true && savedPostsResult['savedPosts'] != null) {
+        final List<String> savedPostsIds = List<String>.from(savedPostsResult['savedPosts']);
         print('[DEBUG] Saved posts IDs: $savedPostsIds');
         
         for (var item in feedItems) {
@@ -199,8 +223,13 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-    final result = await _songPostService.likePost(post.id, currentUserId);
-    if (result['success']) {
+          print('[DEBUG] HomeScreen: Attempting to like post ${post.id}');
+          print('[DEBUG] HomeScreen: Current user ID: $currentUserId');
+          
+          final result = await _songPostService.likePost(post.id, currentUserId, context);
+          print('[DEBUG] HomeScreen: Like result: $result');
+          
+          if (result['success']) {
       if (post.userId != null) {
         await _songPostService.addRecentlyLikedUser(
           currentUserId,
@@ -208,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     }
-    if (!result['success']) {
+    if (result['success'] != true) {
       setState(() {
         if (post.likedByMe) {
           post.likedByMe = false;
@@ -246,8 +275,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? jsonDecode(userDataString)
                 : {'id': '685fb750cc084ba7e0ef8533', 'name': 'owl'};
             final result = await _songPostService.addComment(
-                post.id, userData['id'], userData['name'], text);
-            if (result['success']) {
+                post.id, userData['id'], userData['name'], text, context);
+            if (result['success'] == true) {
               final updatedComments =
                   (result['data']['comments'] as List<dynamic>)
                       .map((c) => data_model.Comment.fromJson(c))
@@ -257,7 +286,7 @@ class _HomeScreenState extends State<HomeScreen> {
               });
               return updatedComments; 
               return updatedComments; 
-            } else {
+            } else if (result['success'] == false) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(result['message'] ?? 'Failed to add comment'),
@@ -391,16 +420,37 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Post deleted successfully'), backgroundColor: Colors.purple),
+                          SnackBar(
+              content: const Text('Post deleted successfully'),
+              backgroundColor: const Color(0xFFA855F7),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(result['message'] ?? 'Failed to delete post')),
+              SnackBar(
+                content: Text(result['message'] ?? 'Failed to delete post'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
             );
           }
         } catch (e) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting post: $e')),
+            SnackBar(
+              content: Text('Error deleting post: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
           );
         }
       },
@@ -415,9 +465,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _handleSavePost(data_model.Post post) async {
     if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to save posts')),
-      );
+              ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+          content: const Text('Please log in to save posts'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+        );
       return;
     }
 
@@ -425,7 +482,14 @@ class _HomeScreenState extends State<HomeScreen> {
       final result = await _songPostService.savePost(userId!, post.id);
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Post saved successfully'), backgroundColor: Colors.purple),
+                  SnackBar(
+          content: const Text('Post saved successfully'),
+          backgroundColor: const Color(0xFFA855F7),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
         );
         // Update the post's saved status in the feed
         setState(() {
@@ -440,12 +504,26 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Failed to save post')),
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to save post'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving post: $e')),
+        SnackBar(
+          content: Text('Error saving post: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
       );
     }
   }
@@ -453,7 +531,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _handleUnsavePost(data_model.Post post) async {
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to unsave posts')),
+        SnackBar(
+          content: const Text('Please log in to unsave posts'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
       );
       return;
     }
@@ -462,7 +547,14 @@ class _HomeScreenState extends State<HomeScreen> {
       final result = await _songPostService.unsavePost(userId!, post.id);
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Post unsaved successfully'), backgroundColor: Colors.orange),
+                  SnackBar(
+          content: const Text('Post unsaved successfully'),
+          backgroundColor: const Color(0xFFA855F7),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
         );
         // Update the post's saved status in the feed
         setState(() {
@@ -477,12 +569,26 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Failed to unsave post')),
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to unsave post'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error unsaving post: $e')),
+        SnackBar(
+          content: Text('Error unsaving post: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
       );
     }
   }
@@ -574,7 +680,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      // OLD NAVIGATION: Bottom bar will be provided by ShellScreen in the future
+      // Bottom bar will be provided by ShellScreen in the future
       bottomNavigationBar: const BottomBar(),
     );
     // END LEGACY NAVIGATION SUPPORT

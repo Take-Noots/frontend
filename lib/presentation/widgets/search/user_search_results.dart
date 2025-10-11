@@ -6,6 +6,7 @@ class UserSearchResults extends StatelessWidget {
   final String? query;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
+  final Function(String) onUserTap;
 
   const UserSearchResults({
     Key? key,
@@ -13,6 +14,7 @@ class UserSearchResults extends StatelessWidget {
     this.query,
     this.shrinkWrap = false,
     this.physics,
+    required this.onUserTap,
   }) : super(key: key);
 
   @override
@@ -41,9 +43,7 @@ class UserSearchResults extends StatelessWidget {
         final userImage =
             user['userImage'] ?? 'assets/images/profile_picture.jpg';
         final isNetworkImage = userImage.startsWith('http');
-        final userId = user['id'] ??
-            user['_id'] ??
-            user['userId']; // Get user ID from available fields
+        final userId = user['id'] ?? user['userId'] ?? '';
 
         return ListTile(
           leading: CircleAvatar(
@@ -60,25 +60,9 @@ class UserSearchResults extends StatelessWidget {
             },
             child: const Text('Follow'),
           ),
-          onTap: () {
-            if (userId != null) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => UserProfilePage(
-                    userId: userId,
-                  ),
-                ),
-              );
-            } else {
-              // Show a snackbar if the user ID is not available
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Cannot view profile: User ID not available'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            }
-          },
+          onTap: userId.isNotEmpty 
+              ? () => onUserTap(userId)
+              : null,
         );
       },
     );

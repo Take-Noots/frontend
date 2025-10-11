@@ -317,13 +317,29 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
       },
       onSavePost: () {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Post saved')),
+          SnackBar(
+            content: Text('Post saved'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
         );
       },
       onUnfollow: () {
         // Implement unfollow user functionality
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unfollowed ${post.username ?? "user"}')),
+          SnackBar(
+            content: Text('Unfollowed ${post.username ?? "user"}'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
         );
       },
       onReport: () {
@@ -400,21 +416,41 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             if (result['success']) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                    content: Text('Post deleted successfully'),
-                    backgroundColor: Colors.purple),
+                  content: const Text('Post deleted successfully'),
+                  backgroundColor: const Color(0xFFA855F7),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  margin: const EdgeInsets.all(10),
+                  duration: const Duration(seconds: 2),
+                ),
               );
               // Refresh posts after deletion
               _loadProfilePosts();
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                    content:
-                        Text(result['message'] ?? 'Failed to delete post')),
+                  content: Text(result['message'] ?? 'Failed to delete post'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  margin: const EdgeInsets.all(10),
+                  duration: const Duration(seconds: 2),
+                ),
               );
             }
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error deleting post: $e')),
+              SnackBar(
+                content: Text('Error deleting post: $e'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
             );
           }
         }
@@ -425,19 +461,40 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
           if (result['success'] == true) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                  content: Text('Post hidden from your feed'),
-                  backgroundColor: Colors.purple),
+                content: const Text('Post hidden from your feed'),
+                backgroundColor: const Color(0xFFA855F7),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
             );
             _loadProfilePosts(); // Refresh posts
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                  content: Text(result['message'] ?? 'Failed to hide post')),
+                content: Text(result['message'] ?? 'Failed to hide post'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
             );
           }
         } catch (e) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error hiding post: $e')),
+            SnackBar(
+              content: Text('Error hiding post: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
           );
         }
       },
