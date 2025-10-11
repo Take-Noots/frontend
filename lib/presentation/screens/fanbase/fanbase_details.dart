@@ -18,6 +18,8 @@ import '../../widgets/common/bottom_bar.dart';
 import '../fanbasePost/fanbasePost_screen.dart';
 import '../profile/user_profiles.dart';
 import '../../widgets/fanbasepost/fanbase_post_feed.dart';
+import 'fanbase_details_creator_about.dart';
+import 'fanbase_details_user_about.dart';
 
 /// Fanbase detail screen showing fanbase information, posts, and management options
 /// Handles ownership checking and displays appropriate UI based on user's relationship to the fanbase
@@ -445,42 +447,42 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                 onTabChanged: (index) =>
                     setState(() => _selectedTabIndex = index),
                 onPostCreated: () async {
-                  setState(() => _postFeedKey++);
-                  await _refreshPosts();
+                  final createdPost = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FanbasePostCreationScreen(
+                        fanbaseId: _fanbase!.id,
+                        fanbaseName: _fanbase!.fanbaseName,
+                      ),
+                    ),
+                  );
+                  if (createdPost != null) {
+                    setState(() => _postFeedKey++);
+                    await _refreshPosts();
+                  }
                 },
                 onJoinPressed: _handleJoin,
                 isLoading: _isLoading,
               ),
               // Tab block separated from the header (white card with subtle shadow)
               Container(
-                margin: const EdgeInsets.fromLTRB(0.0, 8.0, 0.0, 0.0),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                  border: Border.all(color: Colors.grey.shade100),
-                ),
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(0),
+                ),  
                 child: Row(
                   children: [
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _selectedTabIndex == 0
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.grey[300],
+                              ? Colors.grey[500]
+                              : Theme.of(context).colorScheme.primary,
                           foregroundColor: _selectedTabIndex == 0
-                              ? Theme.of(context).colorScheme.onPrimary
-                              : Colors.black,
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(0),
                           ),
                           elevation: 0,
                         ),
@@ -488,18 +490,18 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                         child: const Text('Feed'),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    // const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _selectedTabIndex == 1
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.grey[300],
+                              ? Colors.grey[500]
+                              : Theme.of(context).colorScheme.primary,
                           foregroundColor: _selectedTabIndex == 1
-                              ? Theme.of(context).colorScheme.onPrimary
-                              : Colors.black,
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(0),
                           ),
                           elevation: 0,
                         ),
@@ -510,7 +512,7 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
+              // const SizedBox(height: ),
               if (_selectedTabIndex == 0)
                 Expanded(
                   child: FanbaseDetailsFeed(
@@ -629,10 +631,10 @@ class FanbaseDetailsHeader extends StatelessWidget {
                         ),
                         if (isCurrentUserOwner) ...[
                           const SizedBox(width: 6),
-                          Icon(
+                          const Icon(
                             Icons.verified,
                             size: 20,
-                            color: Colors.amber[600],
+                            color: Color(0xFFC20BF5),
                           ),
                         ],
                       ],
@@ -646,10 +648,10 @@ class FanbaseDetailsHeader extends StatelessWidget {
                           ?.copyWith(color: Colors.grey),
                     ),
                     if (isCurrentUserOwner)
-                      Text(
+                      const Text(
                         'Creator',
                         style: TextStyle(
-                          color: Colors.amber[700],
+                          color: Color(0xFFC20BF5),
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -697,16 +699,16 @@ class FanbaseDetailsHeader extends StatelessWidget {
                           padding: EdgeInsets.zero,
                           minimumSize: Size(btnW, 36),
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            IconTheme(
-                              data: const IconThemeData(size: 14),
-                              child: Icon(Icons.verified,
-                                  color: Colors.green[700]),
+                            Text(
+                              'Owner',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.purple
+                              ),
                             ),
-                            const SizedBox(width: 4),
-                            const Text('Owner', style: TextStyle(fontSize: 14)),
                           ],
                         ),
                       )
@@ -816,129 +818,129 @@ class FanbaseDetailsFeed extends StatelessWidget {
 }
 
 // =================== ABOUT TAB (OWNER) ===================
-class FanbaseDetailsCreatorAbout extends StatelessWidget {
-  final Fanbase fanbase;
+// class FanbaseDetailsCreatorAbout extends StatelessWidget {
+//   final Fanbase fanbase;
 
-  const FanbaseDetailsCreatorAbout({super.key, required this.fanbase});
+//   const FanbaseDetailsCreatorAbout({super.key, required this.fanbase});
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            fanbase.fanbaseName,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          Text(
-            fanbase.fanbaseTopic,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          Text(
-            '${fanbase.joinedUserIds.length} members',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: Colors.grey),
-          ),
-          Text(
-            'Created by ${fanbase.createdBy.username}',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: Colors.grey),
-          ),
-          Text(
-            'Created on ${fanbase.createdAt.toLocal().toString().split(' ')[0]}',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: Colors.grey),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Add Fanbase Guide'),
-                  content: const Text(
-                      'Here you can add rules or a guide for your fanbase.'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
-                    ),
-                  ],
-                ),
-              );
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('  + Add a fanbase guide '),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Padding(
+//       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Text(
+//             fanbase.fanbaseName,
+//             style: Theme.of(context).textTheme.titleMedium?.copyWith(
+//                   fontWeight: FontWeight.bold,
+//                 ),
+//           ),
+//           Text(
+//             fanbase.fanbaseTopic,
+//             style: Theme.of(context).textTheme.bodyMedium,
+//           ),
+//           Text(
+//             '${fanbase.joinedUserIds.length} members',
+//             style: Theme.of(context)
+//                 .textTheme
+//                 .bodySmall
+//                 ?.copyWith(color: Colors.grey),
+//           ),
+//           Text(
+//             'Created by ${fanbase.createdBy.username}',
+//             style: Theme.of(context)
+//                 .textTheme
+//                 .bodySmall
+//                 ?.copyWith(color: Colors.grey),
+//           ),
+//           Text(
+//             'Created on ${fanbase.createdAt.toLocal().toString().split(' ')[0]}',
+//             style: Theme.of(context)
+//                 .textTheme
+//                 .bodySmall
+//                 ?.copyWith(color: Colors.grey),
+//           ),
+//           const SizedBox(height: 16),
+//           ElevatedButton.icon(
+//             onPressed: () {
+//               showDialog(
+//                 context: context,
+//                 builder: (context) => AlertDialog(
+//                   title: const Text('Add Fanbase Guide'),
+//                   content: const Text(
+//                       'Here you can add rules or a guide for your fanbase.'),
+//                   actions: [
+//                     TextButton(
+//                       onPressed: () => Navigator.pop(context),
+//                       child: const Text('Close'),
+//                     ),
+//                   ],
+//                 ),
+//               );
+//             },
+//             icon: const Icon(Icons.add),
+//             label: const Text('  + Add a fanbase guide '),
+//             style: ElevatedButton.styleFrom(
+//               backgroundColor: Theme.of(context).colorScheme.primary,
+//               foregroundColor: Theme.of(context).colorScheme.onPrimary,
+//               shape: RoundedRectangleBorder(
+//                 borderRadius: BorderRadius.circular(20),
+//               ),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
 
 // =================== ABOUT TAB (USER) ===================
-class FanbaseDetailsUserAbout extends StatelessWidget {
-  final Fanbase fanbase;
+// class FanbaseDetailsUserAbout extends StatelessWidget {
+//   final Fanbase fanbase;
 
-  const FanbaseDetailsUserAbout({super.key, required this.fanbase});
+//   const FanbaseDetailsUserAbout({super.key, required this.fanbase});
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            fanbase.fanbaseName,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          Text(
-            fanbase.fanbaseTopic,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          Text(
-            '${fanbase.joinedUserIds.length} members',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: Colors.grey),
-          ),
-          Text(
-            'Created by ${fanbase.createdBy.username}',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: Colors.grey),
-          ),
-          Text(
-            'Created on ${fanbase.createdAt.toLocal().toString().split(' ')[0]}',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Padding(
+//       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Text(
+//             fanbase.fanbaseName,
+//             style: Theme.of(context).textTheme.titleMedium?.copyWith(
+//                   fontWeight: FontWeight.bold,
+//                 ),
+//           ),
+//           Text(
+//             fanbase.fanbaseTopic,
+//             style: Theme.of(context).textTheme.bodyMedium,
+//           ),
+//           Text(
+//             '${fanbase.joinedUserIds.length} members',
+//             style: Theme.of(context)
+//                 .textTheme
+//                 .bodySmall
+//                 ?.copyWith(color: Colors.grey),
+//           ),
+//           Text(
+//             'Created by ${fanbase.createdBy.username}',
+//             style: Theme.of(context)
+//                 .textTheme
+//                 .bodySmall
+//                 ?.copyWith(color: Colors.grey),
+//           ),
+//           Text(
+//             'Created on ${fanbase.createdAt.toLocal().toString().split(' ')[0]}',
+//             style: Theme.of(context)
+//                 .textTheme
+//                 .bodySmall
+//                 ?.copyWith(color: Colors.grey),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }

@@ -152,23 +152,23 @@ class _FanbaseCardState extends State<FanbaseCard> {
       return OutlinedButton(
         onPressed: null, // Disabled since it's owned
         style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.green[50],
-          foregroundColor: Colors.green[700],
-          side: BorderSide(color: Colors.green[300]!),
+          backgroundColor: Colors.purple[50],
+          foregroundColor: Colors.purple[700],
+          side: BorderSide(color: Colors.purple[300]!),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10.0),
           ),
         ),
-        child: Row(
+        child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.verified,
               size: 16,
-              color: Colors.green[700],
+              color: Colors.purple,
             ),
-            const SizedBox(width: 4),
-            const Text('Owned'),
+            // const SizedBox(width: 4),
+            // const Text('Owned'),
           ],
         ),
       );
@@ -232,15 +232,6 @@ class _FanbaseCardState extends State<FanbaseCard> {
                       ),
                     ),
                   ),
-                  // Crown icon for owned fanbases
-                  // if (_isOwner) ...[
-                  //   const SizedBox(width: 4),
-                  //   Icon(
-                  //     Icons.cro,
-                  //     size: 18,
-                  //     color: Colors.amber[600],
-                  //   ),
-                  // ],
                 ],
               ),
               // "Creator" label for owned fanbases

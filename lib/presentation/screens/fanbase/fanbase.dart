@@ -219,13 +219,13 @@ class _FanbasePageState extends State<FanbasePage>
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _selectedTabIndex == 0
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.grey[300],
+                    ? Colors.grey[500]
+                    : Theme.of(context).colorScheme.primary,
                 foregroundColor: _selectedTabIndex == 0
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Colors.black,
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: BorderRadius.circular(0),
                 ),
               ),
               onPressed: () {
@@ -242,13 +242,13 @@ class _FanbasePageState extends State<FanbasePage>
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _selectedTabIndex == 1
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.grey[300],
+                    ? Colors.grey[500]
+                    : Theme.of(context).colorScheme.primary,
                 foregroundColor: _selectedTabIndex == 1
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Colors.black,
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: BorderRadius.circular(0),
                 ),
               ),
               onPressed: () {
@@ -539,7 +539,7 @@ class _FanbasePageState extends State<FanbasePage>
 
           // Tab bar with button style
           _buildTabBar(),
-          const SizedBox(height: 2),
+          const SizedBox(height: 0),
 
           // Tab view content
           Expanded(
