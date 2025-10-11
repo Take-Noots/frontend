@@ -10,18 +10,22 @@ class Post extends StatelessWidget {
   final String albumImage;
   final String caption;
   final String username;
+  final String? userId; // Add userId parameter
+  final String? currentUserId; // Add currentUserId parameter
   final String userImage;
   final String descriptionTitle;
   final String description;
-  final List<Map<String, String>> comments; // Add this line
+  final List<Map<String, String>> comments;
   final VoidCallback? onLike;
   final VoidCallback? onComment;
   final VoidCallback? onShare;
   final VoidCallback? onPlayPause;
   final VoidCallback? onUsernameTap;
+  final VoidCallback? onMoreOptions; // Add onMoreOptions parameter
   final bool isLiked;
   final bool isPlaying;
   final bool isCurrentTrack;
+  final bool isOwnPost; // Add isOwnPost parameter
   final Color backgroundColor;
   final int likesCount;
   final int commentsCount;
@@ -36,22 +40,26 @@ class Post extends StatelessWidget {
     this.albumImage = '',
     this.caption = '',
     required this.username,
+    this.userId, // Add userId parameter
+    this.currentUserId, // Add currentUserId parameter
     this.userImage = '',
     this.descriptionTitle = '',
     this.description = '',
-    this.comments = const [], // Add this line
+    this.comments = const [],
     this.onLike,
     this.onComment,
     this.onShare,
     this.onPlayPause,
     this.onUsernameTap,
+    this.onMoreOptions, // Add onMoreOptions parameter
     this.isLiked = false,
     this.isPlaying = false,
     this.isCurrentTrack = false,
+    this.isOwnPost = false, // Add isOwnPost parameter
     this.backgroundColor = Colors.black,
     this.likesCount = 0,
     this.commentsCount = 0,
-    required this.fanbaseId, // Make this required, not empty string default
+    required this.fanbaseId,
   });
 
   @override
@@ -60,8 +68,13 @@ class Post extends StatelessWidget {
       children: [
         HeaderWidget(
           username: username,
+          userId: userId, // Pass userId to HeaderWidget
+          currentUserId: currentUserId, // Pass currentUserId to HeaderWidget
           userImage: userImage,
           trackId: trackId,
+          onUsernameTap: onUsernameTap,
+          onMoreOptions: onMoreOptions, // Pass onMoreOptions to HeaderWidget
+          isOwnPost: isOwnPost, // Pass isOwnPost to HeaderWidget
         ),
         PostArtWidget(
           albumImage: albumImage,
@@ -71,19 +84,19 @@ class Post extends StatelessWidget {
           trackId: trackId,
           songName: songName,
           artists: artists,
-          comments: comments, // Update this line to pass the actual comments
+          comments: comments,
           username: username,
           userImage: userImage,
           isLiked: isLiked,
           isPlaying: isPlaying,
           isCurrentTrack: isCurrentTrack,
           backgroundColor: backgroundColor,
-          fanbaseId: fanbaseId, // Add the missing fanbaseId parameter
+          fanbaseId: fanbaseId,
         ),
         FooterWidget(
           songName: songName,
           artists: artists,
-          onLike: onLike, // Add the missing callbacks
+          onLike: onLike,
           onComment: onComment,
           onShare: onShare,
           isLiked: isLiked,

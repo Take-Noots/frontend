@@ -36,7 +36,7 @@ class FanbasePostService {
         if (albumArt != null) 'albumArt': albumArt,
       };
 
-      final response = await dio.post('/fanbase/posts', data: postData);
+      final response = await dio.post('/fanbase/$fanbaseId/posts', data: postData);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return FanbasePost.fromJson(response.data);
