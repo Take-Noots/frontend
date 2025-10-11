@@ -137,17 +137,17 @@ class _PostDetailPageState extends State<PostDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).primaryColor,
-      appBar: NootAppBar(),
+      // appBar: NootAppBar(),
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 16,
-              bottom: 80,
-            ),
+            // padding: const EdgeInsets.only(
+            //   left: 16,
+            //   right: 16,
+            //   top: 16,
+            //   bottom: 80,
+            // ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
