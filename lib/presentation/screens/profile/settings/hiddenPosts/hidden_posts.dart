@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../../data/services/song_post_service.dart';
 import '../../../../../data/models/post_model.dart';
 import 'package:provider/provider.dart';
@@ -23,10 +24,28 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
   @override
   void initState() {
     super.initState();
-    // Initialize the future synchronously to avoid build-time races
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final userId = auth.user?.id;
-    _songPostsFuture = _fetchHiddenSongPostsForUser(userId);
+    _loadHiddenPosts();
+  }
+
+  Future<void> _loadHiddenPosts() async {
+    // Get userId from SharedPreferences
+    String? userId;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        userId = userData['id'];
+      }
+    } catch (e) {
+      print('[DEBUG] HiddenPosts: Error reading SharedPreferences: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _songPostsFuture = _fetchHiddenSongPostsForUser(userId);
+      });
+    }
   }
 
   Future<List<Post>> _fetchHiddenSongPostsForUser(String? userId) async {
@@ -134,8 +153,19 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
             .showSnackBar(const SnackBar(content: Text('Post unhidden')));
 
         // Refresh the hidden posts list from server to keep UI consistent
-        final auth = Provider.of<AuthProvider>(context, listen: false);
-        final userId = auth.user?.id;
+        String? userId;
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final userDataString = prefs.getString('user_data');
+          if (userDataString != null) {
+            final userData = jsonDecode(userDataString);
+            userId = userData['id'];
+          }
+        } catch (e) {
+          print(
+              '[DEBUG] HiddenPosts unhide: Error reading SharedPreferences: $e');
+        }
+
         if (mounted) {
           setState(() {
             _songPostsFuture = _fetchHiddenSongPostsForUser(userId);
@@ -191,8 +221,19 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
 
         return RefreshIndicator(
           onRefresh: () async {
-            final auth = Provider.of<AuthProvider>(context, listen: false);
-            final userId = auth.user?.id;
+            String? userId;
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              final userDataString = prefs.getString('user_data');
+              if (userDataString != null) {
+                final userData = jsonDecode(userDataString);
+                userId = userData['id'];
+              }
+            } catch (e) {
+              print(
+                  '[DEBUG] HiddenPosts refresh: Error reading SharedPreferences: $e');
+            }
+
             final fresh = await _fetchHiddenSongPostsForUser(userId);
             if (mounted) {
               setState(() {
