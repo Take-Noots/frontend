@@ -100,11 +100,7 @@ class _MusicPlayerBarState extends State<MusicPlayerBar> {
   @override
   void initState() {
     super.initState();
-
-    // Wait until didChangeDependencies to access providers
-
-    // Initialize the refresh timer
-    _resetRefreshTimer();
+    // Timer will be initialized in didChangeDependencies
   }
 
   @override
@@ -114,6 +110,11 @@ class _MusicPlayerBarState extends State<MusicPlayerBar> {
     // Initialize auth service and DIO
     _authService = Provider.of<AuthService>(context, listen: false);
     _dio = _authService.dio;
+
+    // Ensure timer is always active (handles hot restart case)
+    if (_refreshTimer == null || !_refreshTimer!.isActive) {
+      _resetRefreshTimer();
+    }
 
     // Fetch initial track data
     _fetchCurrentTrack();
@@ -126,6 +127,21 @@ class _MusicPlayerBarState extends State<MusicPlayerBar> {
   }
 
   @override
+  void reassemble() {
+    super.reassemble();
+    // This is called during hot restart in development mode
+    _refreshTimer?.cancel();
+    _resetRefreshTimer();
+
+    // Wait a bit for AuthProvider to reload state from storage after hot restart
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _fetchCurrentTrack();
+      }
+    });
+  }
+
+  @override
   void didUpdateWidget(MusicPlayerBar oldWidget) {
     super.didUpdateWidget(oldWidget);
 
@@ -133,15 +149,14 @@ class _MusicPlayerBarState extends State<MusicPlayerBar> {
     if (oldWidget.isHidden != widget.isHidden) {
       _resetRefreshTimer();
     }
+
+    // Ensure timer is still active after hot restart
+    if (_refreshTimer == null || !_refreshTimer!.isActive) {
+      _resetRefreshTimer();
+    }
   }
 
   Future<void> _fetchCurrentTrack() async {
-    // Only fetch if user is authenticated
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    if (!authProvider.isAuthenticated || !authProvider.isSpotifyLinked) {
-      return;
-    }
-
     try {
       final response = await _dio.get(
         '/spotify/player/current-track',
@@ -189,12 +204,9 @@ class _MusicPlayerBarState extends State<MusicPlayerBar> {
             widget.onSessionStatusChanged!(_hasActiveSession);
           }
         }
-      } else {
-        print(
-            '[At Musicplayer.Bar] Failed to load current track: ${response.statusCode}');
       }
     } catch (e) {
-      print('[At Musicplayer.Bar] Error fetching current track: $e');
+      // Silently fail - will retry on next poll
     }
   }
 
@@ -246,14 +258,12 @@ class _MusicPlayerBarState extends State<MusicPlayerBar> {
         setState(() {
           _controlsLocked = false;
         });
-        print('Failed to skip to previous track: ${response.statusCode}');
       }
     } catch (e) {
       // Unlock controls in case of error
       setState(() {
         _controlsLocked = false;
       });
-      print('Error skipping to previous track: $e');
     }
   }
 
@@ -291,14 +301,12 @@ class _MusicPlayerBarState extends State<MusicPlayerBar> {
         setState(() {
           _controlsLocked = false;
         });
-        print('Failed to skip to next track: ${response.statusCode}');
       }
     } catch (e) {
       // Unlock controls in case of error
       setState(() {
         _controlsLocked = false;
       });
-      print('Error skipping to next track: $e');
     }
   }
 
@@ -344,15 +352,12 @@ class _MusicPlayerBarState extends State<MusicPlayerBar> {
         setState(() {
           _controlsLocked = false;
         });
-        print(
-            'Failed to ${shouldPause ? 'pause' : 'resume'} playback: ${response.statusCode}');
       }
     } catch (e) {
       // Unlock controls in case of error
       setState(() {
         _controlsLocked = false;
       });
-      print('Error toggling playback: $e');
     }
   }
 

@@ -33,7 +33,6 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
     if (userId == null || userId.isEmpty) return <Post>[];
 
     final res = await _service.getHiddenPostsByUserId(userId);
-    print('[DEBUG] _fetchHiddenSongPostsForUser raw service response: $res');
     if (res['success'] == true && res['data'] is List) {
       final rawList = res['data'] as List;
       final converted = <Post>[];
@@ -85,10 +84,6 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
 
       _songPosts.clear();
       _songPosts.addAll(converted);
-      print(
-          '[DEBUG] _fetchHiddenSongPostsForUser converted ${converted.length} posts');
-      print(
-          '[DEBUG] converted post ids: ${converted.map((p) => p.id).toList()}');
       return _songPosts;
     }
     return <Post>[];
@@ -99,9 +94,11 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
     // mark undo not pressed yet for this post
     _undoMap[post.id] = false;
 
-    setState(() {
-      _songPosts.removeWhere((p) => p.id == post.id);
-    });
+    if (mounted) {
+      setState(() {
+        _songPosts.removeWhere((p) => p.id == post.id);
+      });
+    }
 
     ScaffoldMessenger.of(context).clearSnackBars();
 
@@ -112,9 +109,11 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
         onPressed: () {
           // mark undo pressed and restore locally
           _undoMap[post.id] = true;
-          setState(() {
-            _songPosts.insert(oldIndex >= 0 ? oldIndex : 0, post);
-          });
+          if (mounted) {
+            setState(() {
+              _songPosts.insert(oldIndex >= 0 ? oldIndex : 0, post);
+            });
+          }
         },
       ),
     );
@@ -122,18 +121,14 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
     ScaffoldMessenger.of(context).showSnackBar(snackbar);
 
     // Schedule the unhide request with a short delay to allow Undo to cancel.
-    print('[DEBUG] _unhideSongPost scheduled unhide for id: ${post.id}');
     Future.delayed(const Duration(seconds: 3), () async {
       // If undo was pressed in the meantime, skip the unhide call
       if (_undoMap[post.id] == true) {
-        print('[DEBUG] _unhideSongPost canceled by undo for id: ${post.id}');
         _undoMap.remove(post.id);
         return;
       }
 
-      print('[DEBUG] _unhideSongPost performing unhide for id: ${post.id}');
       final res = await _service.unhidePost(post.id);
-      print('[DEBUG] _unhideSongPost response: $res');
       if (res['success'] == true) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('Post unhidden')));
@@ -141,14 +136,18 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
         // Refresh the hidden posts list from server to keep UI consistent
         final auth = Provider.of<AuthProvider>(context, listen: false);
         final userId = auth.user?.id;
-        setState(() {
-          _songPostsFuture = _fetchHiddenSongPostsForUser(userId);
-        });
+        if (mounted) {
+          setState(() {
+            _songPostsFuture = _fetchHiddenSongPostsForUser(userId);
+          });
+        }
       } else {
         // Revert on failure
-        setState(() {
-          _songPosts.insert(oldIndex >= 0 ? oldIndex : 0, post);
-        });
+        if (mounted) {
+          setState(() {
+            _songPosts.insert(oldIndex >= 0 ? oldIndex : 0, post);
+          });
+        }
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Failed to unhide: ${res['message']}')));
       }
@@ -175,8 +174,9 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
         // Sync internal list after future completes to keep other actions (unhide)
         if (snapshot.hasData) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!listEquals(_songPosts.map((p) => p.id).toList(),
-                posts.map((p) => p.id).toList())) {
+            if (mounted &&
+                !listEquals(_songPosts.map((p) => p.id).toList(),
+                    posts.map((p) => p.id).toList())) {
               setState(() {
                 _songPosts.clear();
                 _songPosts.addAll(posts);
@@ -194,11 +194,13 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
             final auth = Provider.of<AuthProvider>(context, listen: false);
             final userId = auth.user?.id;
             final fresh = await _fetchHiddenSongPostsForUser(userId);
-            setState(() {
-              // replace list contents
-              _songPosts.clear();
-              _songPosts.addAll(fresh);
-            });
+            if (mounted) {
+              setState(() {
+                // replace list contents
+                _songPosts.clear();
+                _songPosts.addAll(fresh);
+              });
+            }
           },
           child: ListView.separated(
             padding: const EdgeInsets.all(12),

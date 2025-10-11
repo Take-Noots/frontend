@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/router/route_names.dart';
 
 class BottomBar extends StatelessWidget {
   /// The currently selected index for highlighting the active tab
@@ -35,8 +37,7 @@ class BottomBar extends StatelessWidget {
               if (onTap != null) {
                 onTap!(0);
               } else {
-                // Legacy support - will be removed when shell is fully implemented
-                Navigator.pushNamed(context, '/home');
+                context.go(AppRoutes.home);
               }
             },
           ),
@@ -54,8 +55,7 @@ class BottomBar extends StatelessWidget {
               if (onTap != null) {
                 onTap!(1);
               } else {
-                // Legacy support
-                Navigator.pushNamed(context, '/search');
+                context.go(AppRoutes.search);
               }
             },
           ),
@@ -73,7 +73,7 @@ class BottomBar extends StatelessWidget {
               if (onTap != null) {
                 onTap!(2);
               } else {
-                // Legacy support
+                // Use legacy Navigator for create (complex flow)
                 Navigator.pushNamed(context, '/create');
               }
             },
@@ -91,8 +91,7 @@ class BottomBar extends StatelessWidget {
               if (onTap != null) {
                 onTap!(3);
               } else {
-                // Legacy support
-                Navigator.pushNamed(context, '/fanbases');
+                context.go(AppRoutes.fanbaseList);
               }
             },
           ),
@@ -103,8 +102,7 @@ class BottomBar extends StatelessWidget {
               if (onTap != null) {
                 onTap!(4);
               } else {
-                // Legacy support
-                Navigator.pushNamed(context, '/profile');
+                context.go(AppRoutes.profile);
               }
             },
             child: Stack(

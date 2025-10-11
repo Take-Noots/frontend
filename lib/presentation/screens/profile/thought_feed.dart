@@ -3,7 +3,6 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../data/models/thoughts_model.dart';
 import '../../widgets/thoughts/thoughts_feed_card.dart';
 import '../../widgets/home/header_bar.dart';
-import '../../widgets/common/bottom_bar.dart';
 
 class ThoughtFeedScreen extends StatefulWidget {
   final List<ThoughtsPost> posts;
@@ -72,7 +71,6 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
           );
         },
       ),
-      bottomNavigationBar: const BottomBar(),
     );
   }
 }

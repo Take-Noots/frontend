@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../widgets/home/header_bar.dart';
-import '../../widgets/common/bottom_bar.dart';
 import '../../widgets/home/feed_widget.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../data/models/post_model.dart' as data_model;
@@ -559,7 +558,6 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
         itemPositionsListener: _itemPositionsListener,
         initialIndex: _initialIndex,
       ),
-      bottomNavigationBar: const BottomBar(),
       backgroundColor: Colors.black,
     );
   }

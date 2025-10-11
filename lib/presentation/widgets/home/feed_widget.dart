@@ -26,7 +26,7 @@ class FeedWidget extends StatefulWidget {
   final void Function(String userId)? onUserTap;
 
   final String? currentUserId;
-  final Future<void> Function(data_model.Post post)? onHidePost; 
+  final Future<void> Function(data_model.Post post)? onHidePost;
 
   final bool shrinkWrap;
   final ScrollPhysics? physics;
@@ -151,25 +151,34 @@ class _FeedWidgetState extends State<FeedWidget> {
             if (extractedColor != null) {
               // Ensure the color is dark enough
               if (_isDarkEnough(extractedColor)) {
-                setState(() {
-                  _extractedColors[albumImageUrl] = extractedColor!;
-                });
+                if (mounted) {
+                  setState(() {
+                    _extractedColors[albumImageUrl] = extractedColor!;
+                  });
+                }
               } else {
                 // Darken the color if it's not dark enough
-                setState(() {
-                  _extractedColors[albumImageUrl] = _darkenColor(extractedColor!);
-                });
+                if (mounted) {
+                  setState(() {
+                    _extractedColors[albumImageUrl] =
+                        _darkenColor(extractedColor!);
+                  });
+                }
               }
             } else {
+              if (mounted) {
+                setState(() {
+                  _extractedColors[albumImageUrl] = _defaultColor;
+                });
+              }
+            }
+          } catch (e) {
+            print('Error extracting color from $albumImageUrl: $e');
+            if (mounted) {
               setState(() {
                 _extractedColors[albumImageUrl] = _defaultColor;
               });
             }
-          } catch (e) {
-            print('Error extracting color from $albumImageUrl: $e');
-            setState(() {
-              _extractedColors[albumImageUrl] = _defaultColor;
-            });
           }
         }
       }
@@ -270,7 +279,10 @@ class _FeedWidgetState extends State<FeedWidget> {
   }
 
   Widget _buildFeedItem(FeedItem item) {
-    print('Building FeedItem of type: ' + item.type.toString() + ', data: ' + item.toString());
+    print('Building FeedItem of type: ' +
+        item.type.toString() +
+        ', data: ' +
+        item.toString());
     if (item.type == FeedItemType.song && item.songPost != null) {
       return _buildSongPostItem(item.songPost!);
     } else if (item.type == FeedItemType.thought && item.thoughtsPost != null) {
@@ -300,8 +312,10 @@ class _FeedWidgetState extends State<FeedWidget> {
     final bool isOwnPost = post.userId != null &&
         widget.currentUserId != null &&
         post.userId == widget.currentUserId;
-    print('[DEBUG] FeedWidget._buildSongPostItem: post.userId=${post.userId}, currentUserId=${widget.currentUserId}, isOwnPost=$isOwnPost');
-    print('[DEBUG] FeedWidget._buildSongPostItem: post.userId=${post.userId}, currentUserId=${widget.currentUserId}, isOwnPost=$isOwnPost');
+    print(
+        '[DEBUG] FeedWidget._buildSongPostItem: post.userId=${post.userId}, currentUserId=${widget.currentUserId}, isOwnPost=$isOwnPost');
+    print(
+        '[DEBUG] FeedWidget._buildSongPostItem: post.userId=${post.userId}, currentUserId=${widget.currentUserId}, isOwnPost=$isOwnPost');
 
     print(
         'FeedWidget - Building post from user: ${post.username}, userId: ${post.userId}');
@@ -331,10 +345,11 @@ class _FeedWidgetState extends State<FeedWidget> {
                   caption: post.caption ?? '',
                   username: post.username ?? '',
                   userId: post.userId,
-                  currentUserId: widget.currentUserId, 
-                  postId: post.id, 
-                  userImage: post.userImage ?? 'assets/images/profile_picture.jpg',
-                  isOwnPost: isOwnPost, 
+                  currentUserId: widget.currentUserId,
+                  postId: post.id,
+                  userImage:
+                      post.userImage ?? 'assets/images/profile_picture.jpg',
+                  isOwnPost: isOwnPost,
                   onLike: () {
                     if (widget.onSongLike != null) {
                       widget.onSongLike!(post);
@@ -365,19 +380,24 @@ class _FeedWidgetState extends State<FeedWidget> {
                   isSaved: post.isSaved,
                   onUsernameTap: () {
                     if (widget.onUserTap != null && post.userId != null) {
-                      widget
-                          .onUserTap!(post.userId!); 
+                      widget.onUserTap!(post.userId!);
                     }
                   },
                   onDelete: isOwnPost && widget.onPostOptions != null
                       ? () => widget.onPostOptions!(post)
                       : null,
-                  onHide: widget.onHidePost != null ? () async {
-                    print('[DEBUG] FeedWidget: onHide called from HeaderWidget');
-                    print('[DEBUG] FeedWidget: onHide callback triggered for post ID: ${post.id}');
-                    await widget.onHidePost!(post);
-                    setState(() {});
-                  } : null,
+                  onHide: widget.onHidePost != null
+                      ? () async {
+                          print(
+                              '[DEBUG] FeedWidget: onHide called from HeaderWidget');
+                          print(
+                              '[DEBUG] FeedWidget: onHide callback triggered for post ID: ${post.id}');
+                          await widget.onHidePost!(post);
+                          if (mounted) {
+                            setState(() {});
+                          }
+                        }
+                      : null,
                   // likeCount and commentCount intentionally omitted for home/feed
                 ),
               ],
