@@ -66,7 +66,7 @@ class HeaderWidget extends StatelessWidget {
     // );
 
     return Expanded(
-      flex: 120,
+      // flex: 100,
       child: Row(
         children: [
           Expanded(
@@ -205,8 +205,8 @@ class UserDetailWidget extends StatelessWidget {
       children: [
         // Profile picture
         Container(
-          width: 32,
-          height: 32,
+          width: 24,
+          height: 24,
           decoration: BoxDecoration(
             color: Colors.grey.shade300,
             borderRadius: BorderRadius.circular(16.0),
@@ -360,10 +360,6 @@ class _PostArtWidgetState extends State<PostArtWidget> {
       width: parentWidth, // Fixed width to screen width
       padding: const EdgeInsets.all(16.0),
       margin: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 2.0),
-      // decoration: BoxDecoration(
-      //   color: Colors.grey[900]?.withOpacity(0.3), // Optional background
-      //   borderRadius: BorderRadius.circular(12.0),
-      // ),
       child: InkWell(
         onTap: () => _navigateToPost(context),
         borderRadius: BorderRadius.circular(12.0),
@@ -380,7 +376,7 @@ class _PostArtWidgetState extends State<PostArtWidget> {
                   title.isNotEmpty ? title : "No Title",
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 14,
+                    fontSize: 17,
                     fontWeight: FontWeight.bold,
                   ),
                   maxLines: 1,
@@ -398,7 +394,7 @@ class _PostArtWidgetState extends State<PostArtWidget> {
                     fontSize: 12,
                     height: 1.2,
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),

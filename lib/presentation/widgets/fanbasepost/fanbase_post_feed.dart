@@ -241,12 +241,27 @@ class _FanbasePostFeedWidgetState extends State<FanbasePostFeedWidget> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // Layer for post_shape widget
-                CustomPaint(
-                  painter: PostShape(backgroundColor: backgroundColor, margin: 20.0),
-                  child: Container(),
+                Column(
+                  children: [
+                    SizedBox(
+                      // width: MediaQuery.of(context).size.width * 0.95,
+                      // height: MediaQuery.of(context).size.height * 0.25,
+                      height:
+                          (MediaQuery.of(context).size.width * 0.13) /
+                              postAspectRatio,
+                    ),
+                    Expanded(
+                      child: CustomPaint(
+                        painter: PostShape(
+                          backgroundColor: backgroundColor,
+                          // margin: 20.0,
+                        ),
+                        child: Container(),
+                      ),
+                    ),
+                  ],
                 ),
-                // Layer for post widget
+                // Layer for post widget (unchanged)
                 Post(
                   trackId: post.spotifyTrackId ?? '',
                   postId: post.id,
