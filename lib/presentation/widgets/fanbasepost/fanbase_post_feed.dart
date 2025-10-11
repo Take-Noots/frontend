@@ -121,9 +121,7 @@ class _FanbasePostFeedWidgetState extends State<FanbasePostFeedWidget> {
   @override
   Widget build(BuildContext context) {
     if (widget.isLoading && widget.posts.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (widget.error != null && widget.posts.isEmpty) {
@@ -185,9 +183,7 @@ class _FanbasePostFeedWidgetState extends State<FanbasePostFeedWidget> {
 
     return RefreshIndicator(
       onRefresh: () async {
-        if (widget.onRefresh != null) {
-          widget.onRefresh!();
-        }
+        if (widget.onRefresh != null) widget.onRefresh!();
       },
       child: Center(
         child: ConstrainedBox(
@@ -208,7 +204,16 @@ class _FanbasePostFeedWidgetState extends State<FanbasePostFeedWidget> {
   Widget _buildPostItem(FanbasePost post) {
     final albumImageUrl = post.albumArt ?? '';
     final backgroundColor = _extractedColors[albumImageUrl] ?? _defaultColor;
-    const double postAspectRatio = 490 / 223;
+    const double postAspectRatio = 490 / 250;
+
+    // responsive outer margins
+    final screenW = MediaQuery.of(context).size.width;
+    final horizontalMargin = (screenW * 0.04).clamp(8.0, 32.0);
+    final topSpacerHeight =
+        (((screenW) * 0.10) / postAspectRatio).clamp(35.0, 120.0);
+
+    // Compute a responsive margin for PostShape (kept clamped)
+    final double painterMargin = (screenW * 0.04).clamp(6.0, 40.0);
 
     // Check if the post belongs to the current user - same logic as feed_widget
     final bool isOwnPost = post.createdBy['userId'] != null &&
@@ -233,7 +238,8 @@ class _FanbasePostFeedWidgetState extends State<FanbasePostFeedWidget> {
         .toList();
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      margin:
+          EdgeInsets.symmetric(horizontal: horizontalMargin, vertical: 12.0),
       child: Column(
         children: [
           AspectRatio(
@@ -244,17 +250,13 @@ class _FanbasePostFeedWidgetState extends State<FanbasePostFeedWidget> {
                 Column(
                   children: [
                     SizedBox(
-                      // width: MediaQuery.of(context).size.width * 0.95,
-                      // height: MediaQuery.of(context).size.height * 0.25,
-                      height:
-                          (MediaQuery.of(context).size.width * 0.13) /
-                              postAspectRatio,
+                      height: topSpacerHeight,
                     ),
                     Expanded(
                       child: CustomPaint(
                         painter: PostShape(
                           backgroundColor: backgroundColor,
-                          // margin: 20.0,
+                          margin: painterMargin,
                         ),
                         child: Container(),
                       ),

@@ -432,29 +432,35 @@ class FooterWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final parentWidth = MediaQuery.of(context).size.width;
-    return Row(
-      children: [
-        SizedBox(width: (parentWidth * 0.04).clamp(6.0, 20.0)),
-        Expanded(
-          flex: 3,
-          child: TrackDetailWidget(
-            songName: songName,
-            artists: artists,
+    // responsive top margin: ~1% of width, clamped between 6 and 12 px
+    final double topMargin = (parentWidth * 0.02).clamp(6.0, 12.0);
+
+    return Padding(
+      padding: EdgeInsets.only(top: topMargin),
+      child: Row(
+        children: [
+          SizedBox(width: (parentWidth * 0.02).clamp(3.0, 20.0)),
+          Expanded(
+            flex: 3,
+            child: TrackDetailWidget(
+              songName: songName,
+              artists: artists,
+            ),
           ),
-        ),
-        SizedBox(width: (parentWidth * 0.01).clamp(6.0, 20.0)),
-        Flexible(
-          flex: 1,
-          child: InteractionWidget(
-            onLike: onLike, // Pass the callbacks to InteractionWidget
-            onComment: onComment,
-            onShare: onShare,
-            isLiked: isLiked,
-            likesCount: likesCount,
-            commentsCount: commentsCount,
+          SizedBox(width: (parentWidth * 0.01).clamp(6.0, 20.0)),
+          Flexible(
+            flex: 1,
+            child: InteractionWidget(
+              onLike: onLike,
+              onComment: onComment,
+              onShare: onShare,
+              isLiked: isLiked,
+              likesCount: likesCount,
+              commentsCount: commentsCount,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -472,7 +478,6 @@ class TrackDetailWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final textColor = Theme.of(context).colorScheme.onPrimary;
 
     return Column(

@@ -12,9 +12,9 @@ class PostShape extends CustomPainter {
   const PostShape({
     this.backgroundColor = const Color(0xff423E4E),
     this.margin = 20.0,
-    this.cornerRadius = 20.0,
+    this.cornerRadius = 40.0,
     this.widthScale = 1.09,
-    this.heightScale = 0.98,
+    this.heightScale = 0.90,
   });
 
   @override
@@ -25,12 +25,18 @@ class PostShape extends CustomPainter {
 
     final path = Path();
 
-    // Apply scaling and margin
+    // Make margin and corner radius relative to available size so the
+    // shape looks consistent across screen sizes.
+    final double relativeMargin = (margin <= 0)
+        ? (size.height * 0.08)
+        : margin.clamp(4.0, size.height * 0.25);
+    // widthScale and heightScale remain as stylistic overrides
     double w = (size.width * widthScale).clamp(0, double.infinity);
-    double h = ((size.height - (margin * 2)) * heightScale).clamp(0, double.infinity);
+    double h = ((size.height - (relativeMargin * 2)) * heightScale)
+        .clamp(0, double.infinity);
 
     double offsetX = (size.width - w) / 2; // keep centered horizontally
-    double offsetY = margin;
+    double offsetY = relativeMargin;
 
     // Base original SVG or reference dimensions
     const double origW = 492;
@@ -39,7 +45,11 @@ class PostShape extends CustomPainter {
     double scaleX = w / origW;
     double scaleY = h / origH;
 
-    final r = cornerRadius;
+    // Scale corner radius relative to the smallest scale to keep consistent rounding
+    final double effectiveCorner =
+        (cornerRadius * (scaleX < scaleY ? scaleX : scaleY)).clamp(2.0, 40.0);
+
+    final r = effectiveCorner;
 
     // Path definition (preserves your original design)
     path.moveTo((307.5 * scaleX) + offsetX, (1 * scaleY) + offsetY);
@@ -98,8 +108,6 @@ class PostShape extends CustomPainter {
         heightScale != oldDelegate.heightScale;
   }
 }
-
-
 
 // class PostShape extends CustomPainter {
 //   final Color backgroundColor;

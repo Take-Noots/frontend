@@ -590,6 +590,9 @@ class FanbaseDetailsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenW = MediaQuery.of(context).size.width;
+    final btnW = (screenW * 0.22).clamp(80.0, 140.0);
+
     return Container(
       color: Theme.of(context).colorScheme.onPrimary,
       padding: const EdgeInsets.fromLTRB(8.0, 20.0, 8.0, 8.0),
@@ -663,7 +666,7 @@ class FanbaseDetailsHeader extends StatelessWidget {
               if (selectedTabIndex == 0 &&
                   (fanbase.isJoined || isCurrentUserOwner))
                 SizedBox(
-                  width: 100,
+                  width: btnW,
                   child: OutlinedButton.icon(
                     onPressed: onPostCreated,
                     icon: const Icon(LucideIcons.plus, size: 16),
@@ -672,13 +675,15 @@ class FanbaseDetailsHeader extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size(btnW, 36),
                     ),
                   ),
                 ),
               const SizedBox(width: 8),
               // --- "Owner"/"Joined"/"Join" button ---
               SizedBox(
-                width: 100,
+                width: btnW,
                 child: isCurrentUserOwner
                     ? OutlinedButton(
                         onPressed: null,
@@ -690,10 +695,10 @@ class FanbaseDetailsHeader extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           padding: EdgeInsets.zero,
+                          minimumSize: Size(btnW, 36),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.max,
                           children: [
                             IconTheme(
                               data: const IconThemeData(size: 14),
@@ -707,7 +712,7 @@ class FanbaseDetailsHeader extends StatelessWidget {
                       )
                     : fanbase.isJoined
                         ? OutlinedButton(
-                            onPressed: null,
+                            onPressed: onJoinPressed,
                             style: OutlinedButton.styleFrom(
                               backgroundColor: Colors.white,
                               foregroundColor: Colors.purple,
@@ -716,6 +721,7 @@ class FanbaseDetailsHeader extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               padding: EdgeInsets.zero,
+                              minimumSize: Size(btnW, 36),
                             ),
                             child: const Center(
                               child: Text(
@@ -734,6 +740,7 @@ class FanbaseDetailsHeader extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               padding: EdgeInsets.zero,
+                              minimumSize: Size(btnW, 36),
                             ),
                             child: const Center(
                               child: Text(
