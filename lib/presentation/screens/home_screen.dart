@@ -89,25 +89,31 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      final songResult = await _songPostService.getFollowerPosts(userId!, context);
-      final thoughtsResult = await _thoughtsService.getFollowerThoughts(userId!, context);
+      final songResult =
+          await _songPostService.getFollowerPosts(userId!, context);
+      final thoughtsResult =
+          await _thoughtsService.getFollowerThoughts(userId!, context);
       //print('Fetched thoughtsResult: ' + thoughtsResult.toString());
 
       List<FeedItem> feedItems = [];
 
       // Check if songResult is valid and has success field
-      if (songResult != null && songResult['success'] == true && songResult['data'] != null) {
+      if (songResult != null &&
+          songResult['success'] == true &&
+          songResult['data'] != null) {
         final List<dynamic> postsData = songResult['data'];
         print('[DEBUG] Song posts data length: ${postsData.length}');
-        
+
         final posts = postsData.map((json) {
           final post = data_model.Post.fromJson(json);
           post.likedByMe =
               (json['likedBy'] as List<dynamic>?)?.contains(userId) ?? false;
           return FeedItem.song(post);
-        }).where((item) => item.songPost == null || 
-          ((item.songPost!.isHidden ?? 0) == 0 && (item.songPost!.isDeleted ?? 0) == 0));
-        
+        }).where((item) =>
+            item.songPost == null ||
+            ((item.songPost!.isHidden ?? 0) == 0 &&
+                (item.songPost!.isDeleted ?? 0) == 0));
+
         print('[DEBUG] Filtered song posts length: ${posts.length}');
         feedItems.addAll(posts);
       } else {
@@ -120,48 +126,58 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       // Check if thoughtsResult is valid and has success field
-      if (thoughtsResult != null && thoughtsResult['success'] == true && thoughtsResult['data'] != null) {
+      if (thoughtsResult != null &&
+          thoughtsResult['success'] == true &&
+          thoughtsResult['data'] != null) {
         final List<dynamic> thoughtsData = thoughtsResult['data'];
         print('[DEBUG] Thoughts data length: ${thoughtsData.length}');
         print('[DEBUG] Parsed thoughtsData: $thoughtsData');
-        
+
         final thoughtsPosts = thoughtsData.map((json) {
           final post = ThoughtsPost.fromJson(json);
           print('[DEBUG] Parsed ThoughtsPost: $post');
           return FeedItem.thought(post);
-        }).where((item) => item.thoughtsPost == null || 
-          ((item.thoughtsPost!.isHidden ?? 0) == 0 && (item.thoughtsPost!.isDeleted ?? 0) == 0));
-        
-        print('[DEBUG] Filtered thoughts posts length: ${thoughtsPosts.length}');
+        }).where((item) =>
+            item.thoughtsPost == null ||
+            ((item.thoughtsPost!.isHidden ?? 0) == 0 &&
+                (item.thoughtsPost!.isDeleted ?? 0) == 0));
+
+        print(
+            '[DEBUG] Filtered thoughts posts length: ${thoughtsPosts.length}');
         feedItems.addAll(thoughtsPosts);
       } else {
         print('[DEBUG] Thoughts result not successful: $thoughtsResult');
       }
 
-
       // Sort all by createdAt, newest first
       feedItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       print('[DEBUG] Final feed items count: ${feedItems.length}');
-      print('[DEBUG] Feed items types: ${feedItems.map((item) => item.type).toList()}');
+      print(
+          '[DEBUG] Feed items types: ${feedItems.map((item) => item.type).toList()}');
 
-      setState(() {
-        _feedItems = feedItems;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _feedItems = feedItems;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       print('Error in _loadPosts: $e');
       String errorMessage = 'Error loading posts: $e';
-      
+
       // Check if it's an authentication error
-      if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
+      if (e.toString().contains('401') ||
+          e.toString().contains('Unauthorized')) {
         errorMessage = 'Authentication failed. Please log in again.';
       }
-      
-      setState(() {
-        _error = errorMessage;
-        _isLoading = false;
-      });
+
+      if (mounted) {
+        setState(() {
+          _error = errorMessage;
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -172,19 +188,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       print('[DEBUG] Checking saved status for ${feedItems.length} feed items');
-      final savedPostsResult = await _songPostService.getSavedPosts(userId!, context);
+      final savedPostsResult =
+          await _songPostService.getSavedPosts(userId!, context);
       print('[DEBUG] Saved posts result: $savedPostsResult');
-      
-      if (savedPostsResult != null && savedPostsResult['success'] == true && savedPostsResult['savedPosts'] != null) {
-        final List<String> savedPostsIds = List<String>.from(savedPostsResult['savedPosts']);
+
+      if (savedPostsResult != null &&
+          savedPostsResult['success'] == true &&
+          savedPostsResult['savedPosts'] != null) {
+        final List<String> savedPostsIds =
+            List<String>.from(savedPostsResult['savedPosts']);
         print('[DEBUG] Saved posts IDs: $savedPostsIds');
-        
+
         for (var item in feedItems) {
           if (item.type == FeedItemType.song && item.songPost != null) {
             final post = item.songPost!;
             final wasSaved = post.isSaved;
             post.isSaved = savedPostsIds.contains(post.id);
-            print('[DEBUG] Post ${post.id}: wasSaved=$wasSaved, isSaved=${post.isSaved}');
+            print(
+                '[DEBUG] Post ${post.id}: wasSaved=$wasSaved, isSaved=${post.isSaved}');
           }
         }
       }
@@ -223,13 +244,14 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-          print('[DEBUG] HomeScreen: Attempting to like post ${post.id}');
-          print('[DEBUG] HomeScreen: Current user ID: $currentUserId');
-          
-          final result = await _songPostService.likePost(post.id, currentUserId, context);
-          print('[DEBUG] HomeScreen: Like result: $result');
-          
-          if (result['success']) {
+    print('[DEBUG] HomeScreen: Attempting to like post ${post.id}');
+    print('[DEBUG] HomeScreen: Current user ID: $currentUserId');
+
+    final result =
+        await _songPostService.likePost(post.id, currentUserId, context);
+    print('[DEBUG] HomeScreen: Like result: $result');
+
+    if (result['success']) {
       if (post.userId != null) {
         await _songPostService.addRecentlyLikedUser(
           currentUserId,
@@ -238,15 +260,17 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
     if (result['success'] != true) {
-      setState(() {
-        if (post.likedByMe) {
-          post.likedByMe = false;
-          post.likes--;
-        } else {
-          post.likedByMe = true;
-          post.likes++;
-        }
-      });
+      if (mounted) {
+        setState(() {
+          if (post.likedByMe) {
+            post.likedByMe = false;
+            post.likes--;
+          } else {
+            post.likedByMe = true;
+            post.likes++;
+          }
+        });
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Failed to like post'),
@@ -284,8 +308,8 @@ class _HomeScreenState extends State<HomeScreen> {
               setState(() {
                 post.comments = updatedComments;
               });
-              return updatedComments; 
-              return updatedComments; 
+              return updatedComments;
+              return updatedComments;
             } else if (result['success'] == false) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -293,8 +317,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   backgroundColor: Theme.of(context).colorScheme.error,
                 ),
               );
-              return post.comments; 
-              return post.comments; 
+              return post.comments;
+              return post.comments;
             }
           },
           postId: post.id,
@@ -371,10 +395,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _isPlaying = false;
         });
       }
-    } catch (e) {
-      
-      
-    }
+    } catch (e) {}
   }
 
   Future<void> _handleThoughtsPlay(ThoughtsPost post) async {
@@ -603,25 +624,25 @@ class _HomeScreenState extends State<HomeScreen> {
       postUserId: post.userId,
       currentUserId: userId,
       postId: post.id,
-      isOwnPost: isUsersOwnPost, 
+      isOwnPost: isUsersOwnPost,
       onDelete: () async {
         try {
           final result = await _songPostService.deletePost(post.id);
           if (result['success'] == true) {
             setState(() {
-              _feedItems.removeWhere((item) =>
-                item is FeedItem && item.songPost?.id == post.id
-              );
+              _feedItems.removeWhere(
+                  (item) => item is FeedItem && item.songPost?.id == post.id);
             });
             ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-              content: const Text('Post deleted successfully'),
-              backgroundColor: const Color(0xFFA855F7),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              margin: const EdgeInsets.all(10),
-              duration: const Duration(seconds: 2),
-            ),
+              SnackBar(
+                content: const Text('Post deleted successfully'),
+                backgroundColor: const Color(0xFFA855F7),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -629,7 +650,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 content: Text(result['message'] ?? 'Failed to delete post'),
                 backgroundColor: Colors.red,
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
                 margin: const EdgeInsets.all(10),
                 duration: const Duration(seconds: 2),
               ),
@@ -641,7 +663,8 @@ class _HomeScreenState extends State<HomeScreen> {
               content: Text('Error deleting post: $e'),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(10),
               duration: const Duration(seconds: 2),
             ),
@@ -659,16 +682,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _handleSavePost(data_model.Post post) async {
     if (userId == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
           content: const Text('Please log in to save posts'),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
-        );
+      );
       return;
     }
 
@@ -676,14 +700,15 @@ class _HomeScreenState extends State<HomeScreen> {
       final result = await _songPostService.savePost(userId!, post.id);
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-          content: const Text('Post saved successfully'),
-          backgroundColor: const Color(0xFFA855F7),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          margin: const EdgeInsets.all(10),
-          duration: const Duration(seconds: 2),
-        ),
+          SnackBar(
+            content: const Text('Post saved successfully'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
         );
         // Update the post's saved status in the feed
         setState(() {
@@ -702,7 +727,8 @@ class _HomeScreenState extends State<HomeScreen> {
             content: Text(result['message'] ?? 'Failed to save post'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
@@ -714,7 +740,8 @@ class _HomeScreenState extends State<HomeScreen> {
           content: Text('Error saving post: $e'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
@@ -729,7 +756,8 @@ class _HomeScreenState extends State<HomeScreen> {
           content: const Text('Please log in to unsave posts'),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
@@ -741,14 +769,15 @@ class _HomeScreenState extends State<HomeScreen> {
       final result = await _songPostService.unsavePost(userId!, post.id);
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-          content: const Text('Post unsaved successfully'),
-          backgroundColor: const Color(0xFFA855F7),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          margin: const EdgeInsets.all(10),
-          duration: const Duration(seconds: 2),
-        ),
+          SnackBar(
+            content: const Text('Post unsaved successfully'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
         );
         // Update the post's saved status in the feed
         setState(() {
@@ -767,7 +796,8 @@ class _HomeScreenState extends State<HomeScreen> {
             content: Text(result['message'] ?? 'Failed to unsave post'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
@@ -779,7 +809,8 @@ class _HomeScreenState extends State<HomeScreen> {
           content: Text('Error unsaving post: $e'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
@@ -804,8 +835,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    
-    
     Widget content = FeedWidget(
       feedItems: _feedItems,
       isLoading: _isLoading,
@@ -846,11 +875,14 @@ class _HomeScreenState extends State<HomeScreen> {
               print('[DEBUG] _feedItems length before: $before, after: $after');
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Post hidden successfully'), backgroundColor: Colors.purple),
+              const SnackBar(
+                  content: Text('Post hidden successfully'),
+                  backgroundColor: Colors.purple),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(result['message'] ?? 'Failed to hide post')),
+              SnackBar(
+                  content: Text(result['message'] ?? 'Failed to hide post')),
             );
           }
         } catch (e) {
@@ -862,9 +894,12 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
 
-    // When in shell mode, only render the content without navigation elements
+    // When in shell mode, render with app bar but without bottom navigation
     if (widget.inShell) {
-      return content;
+      return Scaffold(
+        appBar: NootAppBar(),
+        body: content,
+      );
     }
 
     // LEGACY NAVIGATION SUPPORT - This code will eventually be removed

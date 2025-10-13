@@ -42,7 +42,7 @@ class PostReport {
       'reportedUserId': reportedUserId,
       'reportedPostId': reportedPostId,
       'reason': reason,
-      'status': status,
+      // 'status': status,
       'adminNotes': adminNotes,
       'reportTime': reportTime.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),

@@ -24,6 +24,8 @@ class ThoughtsFeedCard extends StatefulWidget {
   final VoidCallback? onPlayPause;
   final bool isPlaying;
   final bool isCurrentTrack;
+  final bool showCoverImage;
+  final bool? isLiked;
 
   const ThoughtsFeedCard({
     Key? key,
@@ -31,6 +33,8 @@ class ThoughtsFeedCard extends StatefulWidget {
     this.onLike,
     this.onComment,
     this.onUserTap,
+    this.showCoverImage = true,
+    this.isLiked,
     this.onPostUpdated,
     this.onPlayPause,
     this.isPlaying = false,
@@ -52,10 +56,14 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     super.initState();
     _currentPost = widget.post;
     print('[DEBUG] ThoughtsFeedCard.initState: post id: ${widget.post.id}');
-    print('[DEBUG] ThoughtsFeedCard.initState: songName: ${widget.post.songName}');
-    print('[DEBUG] ThoughtsFeedCard.initState: artistName: ${widget.post.artistName}');
-    print('[DEBUG] ThoughtsFeedCard.initState: onPlayPause is null? ${widget.onPlayPause == null}');
-    print('[DEBUG] ThoughtsFeedCard.initState: isPlaying: ${widget.isPlaying}, isCurrentTrack: ${widget.isCurrentTrack}');
+    print(
+        '[DEBUG] ThoughtsFeedCard.initState: songName: ${widget.post.songName}');
+    print(
+        '[DEBUG] ThoughtsFeedCard.initState: artistName: ${widget.post.artistName}');
+    print(
+        '[DEBUG] ThoughtsFeedCard.initState: onPlayPause is null? ${widget.onPlayPause == null}');
+    print(
+        '[DEBUG] ThoughtsFeedCard.initState: isPlaying: ${widget.isPlaying}, isCurrentTrack: ${widget.isCurrentTrack}');
     _extractColorFromCoverImage();
   }
 
@@ -106,25 +114,31 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     // Get current user ID - try AuthProvider first, then SharedPreferences as fallback
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     String? currentUserId = authProvider.user?.id;
-    
-    print('[DEBUG] ThoughtsFeedCard._handleLike: AuthProvider currentUserId = $currentUserId');
-    print('[DEBUG] ThoughtsFeedCard._handleLike: authProvider.user = ${authProvider.user}');
-    print('[DEBUG] ThoughtsFeedCard._handleLike: authProvider.isAuthenticated = ${authProvider.isAuthenticated}');
-    
+
+    print(
+        '[DEBUG] ThoughtsFeedCard._handleLike: AuthProvider currentUserId = $currentUserId');
+    print(
+        '[DEBUG] ThoughtsFeedCard._handleLike: authProvider.user = ${authProvider.user}');
+    print(
+        '[DEBUG] ThoughtsFeedCard._handleLike: authProvider.isAuthenticated = ${authProvider.isAuthenticated}');
+
     // Fallback to SharedPreferences if AuthProvider doesn't have user ID
     if (currentUserId == null) {
-      print('[DEBUG] ThoughtsFeedCard._handleLike: AuthProvider user ID is null, trying SharedPreferences');
+      print(
+          '[DEBUG] ThoughtsFeedCard._handleLike: AuthProvider user ID is null, trying SharedPreferences');
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
       final userData = userDataString != null
           ? jsonDecode(userDataString)
           : {'id': '685fb750cc084ba7e0ef8533'}; // Fallback for testing
       currentUserId = userData['id'];
-      print('[DEBUG] ThoughtsFeedCard._handleLike: SharedPreferences currentUserId = $currentUserId');
+      print(
+          '[DEBUG] ThoughtsFeedCard._handleLike: SharedPreferences currentUserId = $currentUserId');
     }
-    
+
     if (currentUserId == null || currentUserId.isEmpty) {
-      print('[DEBUG] ThoughtsFeedCard._handleLike: User ID is still null, showing login message');
+      print(
+          '[DEBUG] ThoughtsFeedCard._handleLike: User ID is still null, showing login message');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please log in to like posts'),
@@ -136,12 +150,14 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
 
     // Store original post for potential rollback
     final originalPost = _currentPost;
-    
+
     // Check if already liked
     final isCurrentlyLiked = _currentPost.likedBy.contains(currentUserId);
-    print('[DEBUG] ThoughtsFeedCard._handleLike: isCurrentlyLiked = $isCurrentlyLiked');
-    print('[DEBUG] ThoughtsFeedCard._handleLike: current likedBy = ${_currentPost.likedBy}');
-    
+    print(
+        '[DEBUG] ThoughtsFeedCard._handleLike: isCurrentlyLiked = $isCurrentlyLiked');
+    print(
+        '[DEBUG] ThoughtsFeedCard._handleLike: current likedBy = ${_currentPost.likedBy}');
+
     // Optimistic update - update UI immediately
     setState(() {
       if (isCurrentlyLiked) {
@@ -191,15 +207,16 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
 
     try {
       // Call the API
-      final result = await _thoughtsService.likeThoughts(_currentPost.id, context);
-      
+      final result =
+          await _thoughtsService.likeThoughts(_currentPost.id, context);
+
       if (result['success'] == true && result['data'] != null) {
         // Update with server response
         final updatedPost = ThoughtsPost.fromJson(result['data']);
         setState(() {
           _currentPost = updatedPost;
         });
-        
+
         // Notify parent widget of the update
         widget.onPostUpdated?.call(updatedPost);
       } else {
@@ -207,7 +224,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         setState(() {
           _currentPost = originalPost;
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -222,7 +239,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
       setState(() {
         _currentPost = originalPost;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -238,23 +255,24 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     // Get current user ID - try AuthProvider first, then SharedPreferences as fallback
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     String? currentUserId = authProvider.user?.id;
-    
+
     print('[DEBUG] _handleComment: AuthProvider user ID: $currentUserId');
     print('[DEBUG] _handleComment: AuthProvider user: ${authProvider.user}');
-    
+
     // Fallback to SharedPreferences if AuthProvider doesn't have user ID
     if (currentUserId == null) {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      print('[DEBUG] _handleComment: SharedPreferences user_data: $userDataString');
-      
+      print(
+          '[DEBUG] _handleComment: SharedPreferences user_data: $userDataString');
+
       final userData = userDataString != null
           ? jsonDecode(userDataString)
           : {'id': '685fb750cc084ba7e0ef8533'}; // Fallback for testing
       currentUserId = userData['id'];
       print('[DEBUG] _handleComment: Fallback user ID: $currentUserId');
     }
-    
+
     if (currentUserId == null || currentUserId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -266,9 +284,10 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     }
 
     // Fetch latest comments from database
-    final commentsResult = await _thoughtsService.getComments(_currentPost.id, context);
+    final commentsResult =
+        await _thoughtsService.getComments(_currentPost.id, context);
     List<ThoughtsComment> latestComments = _currentPost.comments;
-    
+
     if (commentsResult['success'] == true && commentsResult['data'] != null) {
       final postData = commentsResult['data'];
       if (postData['comments'] != null) {
@@ -308,14 +327,14 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
             print('[DEBUG] Post ID: ${_currentPost.id}');
             print('[DEBUG] User ID: $currentUserId');
             print('[DEBUG] Comment text: $text');
-            
+
             // Get current user info for optimistic update
             final prefs = await SharedPreferences.getInstance();
             final userDataString = prefs.getString('user_data');
             final userData = userDataString != null
                 ? jsonDecode(userDataString)
                 : {'id': currentUserId, 'name': 'User'};
-            
+
             // Create optimistic comment (show immediately)
             final optimisticComment = data_model.Comment(
               id: 'temp_${DateTime.now().millisecondsSinceEpoch}', // Temporary ID
@@ -326,28 +345,29 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
               likes: 0,
               likedBy: [],
             );
-            
+
             // Add optimistic comment to the list
-            final optimisticComments = List<data_model.Comment>.from(convertedComments)
-              ..add(optimisticComment);
-            
+            final optimisticComments =
+                List<data_model.Comment>.from(convertedComments)
+                  ..add(optimisticComment);
+
             print('[DEBUG] Showing optimistic comment immediately');
-            
+
             // Now add to database in background
             try {
               final result = await _thoughtsService.addComment(
-                _currentPost.id, 
-                currentUserId!, 
-                text, 
+                _currentPost.id,
+                currentUserId!,
+                text,
                 context,
               );
-              
+
               print('[DEBUG] Comment add result: $result');
               print('[DEBUG] Comment add result type: ${result.runtimeType}');
               print('[DEBUG] Comment add result keys: ${result.keys}');
               print('[DEBUG] Comment add success value: ${result['success']}');
               print('[DEBUG] Comment add data value: ${result['data']}');
-              
+
               // Check if success - handle different response formats
               bool isSuccess = false;
               if (result['success'] is bool) {
@@ -355,12 +375,13 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
               } else if (result['success'] is int) {
                 isSuccess = result['success'] == 1;
               } else if (result['success'] is String) {
-                isSuccess = result['success'].toString().toLowerCase() == 'true';
+                isSuccess =
+                    result['success'].toString().toLowerCase() == 'true';
               }
-              
+
               if (isSuccess && result['data'] != null) {
                 List<dynamic>? commentsData;
-                
+
                 // Handle different response structures
                 if (result['data']['comments'] != null) {
                   commentsData = result['data']['comments'] as List<dynamic>;
@@ -369,17 +390,19 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 } else if (result['comments'] != null) {
                   commentsData = result['comments'] as List<dynamic>;
                 }
-                
+
                 if (commentsData == null) {
-                  throw Exception('Comments data not found in response: ${result}');
+                  throw Exception(
+                      'Comments data not found in response: ${result}');
                 }
-                
+
                 final updatedComments = commentsData
                     .map((c) => ThoughtsComment.fromJson(c))
                     .toList();
-                
+
                 // Convert to Comment format
-                final convertedUpdatedComments = updatedComments.map((thoughtsComment) {
+                final convertedUpdatedComments =
+                    updatedComments.map((thoughtsComment) {
                   return data_model.Comment(
                     id: thoughtsComment.id,
                     userId: thoughtsComment.userId,
@@ -390,7 +413,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                     likedBy: thoughtsComment.likedBy,
                   );
                 }).toList();
-                
+
                 // Update the post state with real data
                 setState(() {
                   _currentPost = ThoughtsPost(
@@ -411,12 +434,12 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                     isDeleted: _currentPost.isDeleted,
                   );
                 });
-                
+
                 // Notify parent widget
                 widget.onPostUpdated?.call(_currentPost);
-                
+
                 print('[DEBUG] Comment successfully added to database');
-                
+
                 // Show success message
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -425,12 +448,12 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                     duration: Duration(seconds: 2),
                   ),
                 );
-                
+
                 return convertedUpdatedComments;
               } else {
                 // Database failed, remove optimistic comment
                 print('[DEBUG] Database failed, removing optimistic comment');
-                
+
                 // Handle error message - it might be a string or array
                 String errorMessage = 'Failed to add comment';
                 if (result['message'] != null) {
@@ -440,30 +463,30 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                     errorMessage = (result['message'] as List).join(', ');
                   }
                 }
-                
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(errorMessage),
                     backgroundColor: Colors.red,
                   ),
                 );
-                
+
                 return convertedComments; // Return original comments without optimistic one
               }
             } catch (e) {
               // Network error, remove optimistic comment
               print('[DEBUG] Network error: $e');
-              
+
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Network error. Please try again.'),
                   backgroundColor: Colors.red,
                 ),
               );
-              
+
               return convertedComments; // Return original comments without optimistic one
             }
-            
+
             // Return optimistic comments for immediate display
             return optimisticComments;
           },
@@ -483,45 +506,45 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
   @override
   Widget build(BuildContext context) {
     final Color backgroundColor = _extractedColor ?? _defaultColor;
-    const double postAspectRatio = 490 / 350; 
+    const double postAspectRatio = 490 / 350;
 
     return Stack(
       children: [
         // Main card container
         Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxHeight: 350, // Reduced height constraint
-        ),
-        child: AspectRatio(
-          aspectRatio: postAspectRatio,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Background layer with custom shape
-              CustomPaint(
-                painter: PostShape(backgroundColor: backgroundColor),
-                child: Container(),
-              ),
-                              // Content layer
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 16.0),
-                  child: _ThoughtsContent(
-                      post: _currentPost,
-                    onUserTap: widget.onUserTap,
-                    backgroundColor: _extractedColor ?? _defaultColor,
-                    onPlayPause: widget.onPlayPause,
-                    isPlaying: widget.isPlaying,
-                    isCurrentTrack: widget.isCurrentTrack,
+          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxHeight: 350, // Reduced height constraint
+            ),
+            child: AspectRatio(
+              aspectRatio: postAspectRatio,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Background layer with custom shape
+                  CustomPaint(
+                    painter: PostShape(backgroundColor: backgroundColor),
+                    child: Container(),
                   ),
-                ),
-            ],
+                  // Content layer
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 16.0),
+                    child: _ThoughtsContent(
+                      post: _currentPost,
+                      onUserTap: widget.onUserTap,
+                      backgroundColor: _extractedColor ?? _defaultColor,
+                      onPlayPause: widget.onPlayPause,
+                      isPlaying: widget.isPlaying,
+                      isCurrentTrack: widget.isCurrentTrack,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
-        ),
-        
+
         Positioned(
           bottom: 10,
           left: 16,
@@ -577,12 +600,12 @@ class _ThoughtsContent extends StatelessWidget {
           isPlaying: isPlaying,
           isCurrentTrack: isCurrentTrack,
         ),
-        const SizedBox(height: 20), 
-        // Main content area with left-right layout 
+        const SizedBox(height: 20),
+        // Main content area with left-right layout
         Expanded(
           child: Container(
             width: double.infinity,
-            margin: const EdgeInsets.only(top: 1), 
+            margin: const EdgeInsets.only(top: 1),
             child: _ThoughtsBody(
               post: post,
               backgroundColor: backgroundColor,
@@ -669,7 +692,6 @@ class _ThoughtsHeader extends StatelessWidget {
       ],
     );
   }
-
 }
 
 class _ThoughtsBody extends StatelessWidget {
@@ -695,26 +717,26 @@ class _ThoughtsBody extends StatelessWidget {
               top: 0.0,
               bottom: 4.0,
             ),
-            height: 25, 
+            height: 25,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8.0),
-            child: Image.network(
-              post.coverImage!,
-              width: 120,
-                height: 25,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
+              child: Image.network(
+                post.coverImage!,
                 width: 120,
-                    height: 25,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4A3B8A),
-                      borderRadius: BorderRadius.circular(16.0),
-                ),
-                child: const Icon(
-                  Icons.music_note,
-                  color: Colors.white,
-                      size: 30,
-                    ),
+                height: 25,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 120,
+                  height: 25,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4A3B8A),
+                    borderRadius: BorderRadius.circular(16.0),
+                  ),
+                  child: const Icon(
+                    Icons.music_note,
+                    color: Colors.white,
+                    size: 30,
+                  ),
                 ),
               ),
             ),
@@ -784,7 +806,8 @@ class _FullContentBottomSheet extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Cover image if available
-                  if (post.coverImage != null && post.coverImage!.isNotEmpty) ...[
+                  if (post.coverImage != null &&
+                      post.coverImage!.isNotEmpty) ...[
                     Center(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
@@ -793,7 +816,8 @@ class _FullContentBottomSheet extends StatelessWidget {
                           width: 150,
                           height: 150,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
                             width: 150,
                             height: 150,
                             decoration: BoxDecoration(
@@ -905,8 +929,6 @@ class _ThoughtsTextContentState extends State<_ThoughtsTextContent> {
   }
 }
 
-
-
 class _SongInfoSection extends StatelessWidget {
   final ThoughtsPost post;
 
@@ -918,38 +940,38 @@ class _SongInfoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.music_note,
-                  color: Colors.deepPurple,
-                  size: 14,
-                ),
-                const SizedBox(width: 8),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.music_note,
+            color: Colors.deepPurple,
+            size: 14,
+          ),
+          const SizedBox(width: 8),
           Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (post.songName != null && post.songName!.isNotEmpty)
-                        Text(
-                          post.songName!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      if (post.artistName != null && post.artistName!.isNotEmpty)
-                        Text(
-                          post.artistName!,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 10,
-                          ),
-                        ),
-                    ],
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (post.songName != null && post.songName!.isNotEmpty)
+                Text(
+                  post.songName!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ],
-            ),
+              if (post.artistName != null && post.artistName!.isNotEmpty)
+                Text(
+                  post.artistName!,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 10,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -982,17 +1004,16 @@ class _InteractionButtonsState extends State<_InteractionButtons> {
     // Get current user ID to check if they liked the post
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     String? userId = authProvider.user?.id;
-    
+
     // Fallback to SharedPreferences if AuthProvider doesn't have user ID
     if (userId == null || userId.isEmpty) {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      final userData = userDataString != null
-          ? jsonDecode(userDataString)
-          : {'id': ''};
+      final userData =
+          userDataString != null ? jsonDecode(userDataString) : {'id': ''};
       userId = userData['id'];
     }
-    
+
     if (mounted) {
       setState(() {
         currentUserId = userId;
@@ -1002,41 +1023,45 @@ class _InteractionButtonsState extends State<_InteractionButtons> {
 
   @override
   Widget build(BuildContext context) {
-    final isLiked = currentUserId != null && widget.post.likedBy.contains(currentUserId!);
-    
+    final isLiked =
+        currentUserId != null && widget.post.likedBy.contains(currentUserId!);
+
     print('[DEBUG] _InteractionButtons.build: currentUserId = $currentUserId');
     print('[DEBUG] _InteractionButtons.build: isLiked = $isLiked');
-    print('[DEBUG] _InteractionButtons.build: post.likedBy = ${widget.post.likedBy}');
-    
+    print(
+        '[DEBUG] _InteractionButtons.build: post.likedBy = ${widget.post.likedBy}');
+
     return Row(
-                children: [
-                  // Like button
-                  GestureDetector(
+      children: [
+        // Like button
+        GestureDetector(
           onTap: widget.onLike,
-                    child: Icon(
+          child: Icon(
             isLiked ? Icons.favorite : Icons.favorite_border,
             color: isLiked ? Colors.deepPurple : Colors.white,
             size: 24,
           ),
         ),
-        SizedBox(width: (MediaQuery.of(context).size.width * 0.02).clamp(6.0, 20.0)),
-                  // Comment button
-                  GestureDetector(
+        SizedBox(
+            width: (MediaQuery.of(context).size.width * 0.02).clamp(6.0, 20.0)),
+        // Comment button
+        GestureDetector(
           onTap: widget.onComment,
           child: Icon(
             LucideIcons.messageCircle,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                  ),
-        SizedBox(width: (MediaQuery.of(context).size.width * 0.02).clamp(6.0, 20.0)),
-                  // Share button
+            color: Colors.white,
+            size: 22,
+          ),
+        ),
+        SizedBox(
+            width: (MediaQuery.of(context).size.width * 0.02).clamp(6.0, 20.0)),
+        // Share button
         Icon(
           LucideIcons.share2,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                ],
+          color: Colors.white,
+          size: 22,
+        ),
+      ],
     );
   }
 }
@@ -1046,7 +1071,7 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
   final VoidCallback? onPlayPause;
   final bool isPlaying;
   final bool isCurrentTrack;
-  
+
   const _ThoughtsSpotifyControl({
     required this.post,
     this.onPlayPause,
@@ -1064,7 +1089,7 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
         : 'assets/icons/icons-spotify-light.svg';
 
     return Container(
-      margin: const EdgeInsets.only(left:40.0),
+      margin: const EdgeInsets.only(left: 40.0),
       child: Container(
         height: 32,
         decoration: BoxDecoration(
@@ -1087,16 +1112,21 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
             GestureDetector(
               onTap: () {
                 print('[DEBUG] _ThoughtsSpotifyControl: Play button tapped');
-                print('[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null? ${onPlayPause == null}');
-                print('[DEBUG] _ThoughtsSpotifyControl: isPlaying: $isPlaying, isCurrentTrack: $isCurrentTrack');
+                print(
+                    '[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null? ${onPlayPause == null}');
+                print(
+                    '[DEBUG] _ThoughtsSpotifyControl: isPlaying: $isPlaying, isCurrentTrack: $isCurrentTrack');
                 if (onPlayPause != null) {
                   onPlayPause!();
                 } else {
-                  print('[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null!');
+                  print(
+                      '[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null!');
                 }
               },
               child: Icon(
-                isCurrentTrack && isPlaying ? LucideIcons.pause : LucideIcons.play,
+                isCurrentTrack && isPlaying
+                    ? LucideIcons.pause
+                    : LucideIcons.play,
                 color: iconColor,
                 size: 18,
               ),
@@ -1115,8 +1145,10 @@ class _ThoughtsToSongPostAdapter extends SongPostService {
   _ThoughtsToSongPostAdapter(this._thoughtsService);
 
   @override
-  Future<Map<String, dynamic>> likeComment(String postId, String commentId, String userId, [BuildContext? context]) async {
-    return await _thoughtsService.likeComment(postId, commentId, userId, context);
+  Future<Map<String, dynamic>> likeComment(
+      String postId, String commentId, String userId,
+      [BuildContext? context]) async {
+    return await _thoughtsService.likeComment(
+        postId, commentId, userId, context);
   }
 }
-

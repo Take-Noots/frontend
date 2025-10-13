@@ -161,7 +161,7 @@ class SongPostService {
             final isDeleted = post['isDeleted'] ?? 0;
             return isHidden == 0 && isDeleted == 0;
           }).toList();
-          
+
           //print('Successfully fetched ${filteredData.length} posts from all users');
           return {
             'success': true,
@@ -205,14 +205,14 @@ class SongPostService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
+
         // Filter out hidden and deleted posts
         final filteredData = data.where((post) {
           final isHidden = post['isHidden'] ?? 0;
           final isDeleted = post['isDeleted'] ?? 0;
           return isHidden == 0 && isDeleted == 0;
         }).toList();
-        
+
         return {
           'success': true,
           'data': filteredData,
@@ -485,7 +485,7 @@ class SongPostService {
       print('[DEBUG] Updating post with ID: $postId');
       print('[DEBUG] New caption: $caption');
       print('[DEBUG] Making PUT request to: $baseUrl/song-posts/$postId');
-      
+
       final response = await http.put(
         Uri.parse('$baseUrl/song-posts/$postId'),
         headers: {
@@ -495,7 +495,7 @@ class SongPostService {
           'caption': caption,
         }),
       );
-      
+
       print('[DEBUG] Response status: ${response.statusCode}');
       print('[DEBUG] Response body: ${response.body}');
 
@@ -558,13 +558,13 @@ class SongPostService {
   Future<Map<String, dynamic>> hidePost(String postId) async {
     print('[DEBUG] hidePost called with postId: $postId');
     print('[DEBUG] Making API call to: $baseUrl/song-posts/$postId/hide');
-    
+
     try {
       final response = await http.patch(
         Uri.parse('$baseUrl/song-posts/$postId/hide'),
         headers: {'Content-Type': 'application/json'},
       );
-      
+
       print('[DEBUG] API response status: ${response.statusCode}');
       print('[DEBUG] API response body: ${response.body}');
 
@@ -735,5 +735,87 @@ class SongPostService {
       };
     }
   }
-}
 
+  Future<Map<String, dynamic>> getHiddenPostsByUserId(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/song-posts/user/$userId/hidden'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        print('[DEBUG] getHiddenPostsByUserId response body: ${response.body}');
+
+        // The backend may return either a list directly or a wrapper { success, data }
+        dynamic payload = decoded;
+        if (decoded is Map && decoded.containsKey('data')) {
+          payload = decoded['data'];
+        }
+
+        // Normalize to plain Dart structures and ensure we have a list
+        final normalized = jsonDecode(jsonEncode(payload));
+        print(
+            '[DEBUG] getHiddenPostsByUserId payload normalized type: ${normalized.runtimeType}');
+        if (normalized is List) {
+          print(
+              '[DEBUG] getHiddenPostsByUserId contains ${normalized.length} items');
+        }
+        if (normalized is List) {
+          return {
+            'success': true,
+            'data': normalized,
+            'message': 'Hidden posts retrieved successfully',
+          };
+        }
+
+        return {
+          'success': false,
+          'message': 'Invalid data format received from server',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to retrieve hidden posts',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> unhidePost(String postId) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/song-posts/$postId/unhide'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': data['success'] ?? true,
+          'message': data['message'] ?? 'Post unhidden successfully',
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['error'] ??
+              errorData['message'] ??
+              'Failed to unhide post',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+}
