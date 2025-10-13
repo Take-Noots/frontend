@@ -222,7 +222,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
           
         },
         onShareThoughts: () {
-         
           Navigator.push(
             context,
             MaterialPageRoute(

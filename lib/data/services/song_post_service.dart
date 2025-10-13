@@ -19,18 +19,18 @@ class SongPostService {
     BuildContext? context,
   }) async {
     try {
-      // If context is provided, use AuthService with Dio for authenticated requests
+      // use AuthService with Dio for authenticated requests
       if (context != null) {
         final authService = Provider.of<AuthService>(context, listen: false);
         final dio = authService.dio;
         
-        // Get user ID from AuthProvider or SharedPreferences
+        // Get user ID from AuthProvider
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         String? currentUserId = authProvider.user?.id;
         
-        // Fallback to SharedPreferences if AuthProvider doesn't have user ID
+        
         if (currentUserId == null) {
-          final prefs = await SharedPreferences.getInstance();
+          final prefs = await SharedPreferences.getInstance(); //if user id not in the AuthProvider, get it from SharedPreferences(AuthProvider not ready yet)
           final userDataString = prefs.getString('user_data');
           if (userDataString != null) {
             final userData = jsonDecode(userDataString);
