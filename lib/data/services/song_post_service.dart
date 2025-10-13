@@ -19,15 +19,37 @@ class SongPostService {
     BuildContext? context,
   }) async {
     try {
-      // If context is provided, use AuthService with Dio for authenticated requests
+      // use AuthService with Dio for authenticated requests
       if (context != null) {
         final authService = Provider.of<AuthService>(context, listen: false);
         final dio = authService.dio;
+        
+        // Get user ID from AuthProvider
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        String? currentUserId = authProvider.user?.id;
+        
+        
+        if (currentUserId == null) {
+          final prefs = await SharedPreferences.getInstance(); //if user id not in the AuthProvider, get it from SharedPreferences(AuthProvider not ready yet)
+          final userDataString = prefs.getString('user_data');
+          if (userDataString != null) {
+            final userData = jsonDecode(userDataString);
+            currentUserId = userData['id'];
+          }
+        }
+        
+        if (currentUserId == null) {
+          return {
+            'success': false,
+            'message': 'User not logged in. Please log in to create a post.',
+          };
+        }
         
         final postData = {
           'trackId': trackId,
           'songName': songName,
           'artists': artists,
+          'userId': currentUserId,
           if (albumImage != null) 'albumImage': albumImage,
           if (caption != null) 'caption': caption,
         };

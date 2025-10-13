@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../widgets/common/musicplayer_bar.dart';
 import '../../../data/services/song_post_service.dart';
-import 'create_noot_preview.dart';
+import 'create_noot_preview_page.dart';
 import '../../widgets/create_post/button.dart';
 
 class CreateNewNootPage extends StatefulWidget {
@@ -51,7 +51,7 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
       );
 
       if (result['success']) {
-        // Show success message
+       
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -140,7 +140,6 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
       appBar: AppBar(title: const Text('Create New Noot')),
       body: Column(
         children: [
-          // MusicPlayerBar(title: 'Now Playing', playing: false),
           if (albumImage != null && albumImage.isNotEmpty)
             SizedBox(
               width: double.infinity,
@@ -191,7 +190,7 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
             ),
           ),
           const Spacer(),
-          // Updated button section with Preview and Share buttons
+          //Preview and Share buttons
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: PreviewShareButtonRow(
