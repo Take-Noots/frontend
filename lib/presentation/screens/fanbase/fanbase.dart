@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:convert'; // Add for JSON decoding
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Add for user data access
 
 import 'package:frontend/data/models/fanbase_model.dart';
 import 'package:frontend/data/services/fanbase_service.dart';
@@ -9,6 +11,8 @@ import 'package:frontend/presentation/widgets/common/bottom_bar.dart';
 import 'package:frontend/presentation/widgets/home/header_bar.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+/// Main fanbase page with Feed and Owned tabs
+/// Feed tab shows non-owned fanbases, Owned tab shows user's created fanbases
 class FanbasePage extends StatefulWidget {
   final bool inShell;
 
@@ -18,22 +22,82 @@ class FanbasePage extends StatefulWidget {
   State<FanbasePage> createState() => _FanbasePageState();
 }
 
-class _FanbasePageState extends State<FanbasePage> {
+class _FanbasePageState extends State<FanbasePage>
+    with SingleTickerProviderStateMixin {
   late Future<List<Fanbase>> futureFanbases;
+  late TabController _tabController;
+  String? _currentUserId; // Current user's ID for filtering
+  List<Fanbase> _allFanbases = []; // Cache all fanbases
+  int _selectedTabIndex = 0; // Track selected tab index
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {
+        _selectedTabIndex = _tabController.index;
+      });
+    });
+    _loadCurrentUserAndFanbases();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_currentUserId != null) {
+      _loadFanbases();
+    }
+  }
+
+  /// Loads current user ID and then fetches all fanbases
+  Future<void> _loadCurrentUserAndFanbases() async {
+    await _loadCurrentUserId();
     _loadFanbases();
   }
 
+  /// Retrieves current user ID from SharedPreferences
+  Future<void> _loadCurrentUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        setState(() {
+          _currentUserId = userData['id'];
+        });
+        print('Current user ID loaded: $_currentUserId');
+      }
+    } catch (e) {
+      print('Error loading current user ID: $e');
+    }
+  }
+
+  /// Fetches all fanbases from the service
   void _loadFanbases() {
     setState(() {
       futureFanbases = FanbaseService.getAllFanbases(context);
     });
   }
 
-  Widget _buildFanbaseList() {
+  /// Filters fanbases based on ownership
+  List<Fanbase> _filterFanbases(List<Fanbase> fanbases, bool showOwned) {
+    if (_currentUserId == null) return fanbases;
+
+    return fanbases.where((fanbase) {
+      bool isOwned = fanbase.createdBy.id == _currentUserId;
+      return showOwned ? isOwned : !isOwned;
+    }).toList();
+  }
+
+  /// Builds the fanbase list based on current tab
+  Widget _buildFanbaseList(bool showOwned) {
     return FutureBuilder<List<Fanbase>>(
       future: futureFanbases,
       builder: (context, snapshot) {
@@ -55,32 +119,153 @@ class _FanbasePageState extends State<FanbasePage> {
           );
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('No fanbases found.'));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  showOwned ? Icons.create : Icons.explore,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  showOwned ? 'No owned fanbases yet' : 'No fanbases found',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  showOwned
+                      ? 'Create your first fanbase!'
+                      : 'Check back later for new fanbases',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          );
         }
 
-        final fanbases = snapshot.data!;
-        return ListView.builder(
-          itemCount: fanbases.length,
-          itemBuilder: (context, index) {
-            final fanbase = fanbases[index];
-            return FanbaseCard(
-              // fanbaseId: fanbase.id,
-              // profileImageUrl: fanbase.fanbasePhotoUrl ?? '',
-              // fanbaseName: fanbase.fanbaseName,
-              // topic: fanbase.fanbaseTopic,
-              // numLikes: fanbase.numLikes,
-              // numPosts: fanbase.numPosts,
-              // isJoined: false,
-              // onJoin: () {},
-              onJoinStateChanged: _loadFanbases,
-              initialFanbase: fanbase,
-            );
+        _allFanbases = snapshot.data!;
+        final filteredFanbases = _filterFanbases(_allFanbases, showOwned);
+
+        if (filteredFanbases.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  showOwned ? Icons.create : Icons.explore,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  showOwned
+                      ? 'No owned fanbases yet'
+                      : 'No other fanbases found',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  showOwned
+                      ? 'Create your first fanbase using the + button!'
+                      : 'All visible fanbases are owned by you',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            _loadFanbases();
           },
+          child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: filteredFanbases.length,
+            itemBuilder: (context, index) {
+              final fanbase = filteredFanbases[index];
+              return FanbaseCard(
+                onJoinStateChanged: _loadFanbases,
+                initialFanbase: fanbase,
+              );
+            },
+          ),
         );
       },
     );
   }
 
+  /// Builds the tab bar with Feed and Owned tabs using button style
+  Widget _buildTabBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _selectedTabIndex == 0
+                    ? Colors.grey[500]
+                    : Theme.of(context).colorScheme.primary,
+                foregroundColor: _selectedTabIndex == 0
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(0),
+                ),
+              ),
+              onPressed: () {
+                setState(() {
+                  _selectedTabIndex = 0;
+                });
+                _tabController.animateTo(0);
+              },
+              child: const Text('Feed'),
+            ),
+          ),
+          const SizedBox(width: 1),
+          Expanded(
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _selectedTabIndex == 1
+                    ? Colors.grey[500]
+                    : Theme.of(context).colorScheme.primary,
+                foregroundColor: _selectedTabIndex == 1
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(0),
+                ),
+              ),
+              onPressed: () {
+                setState(() {
+                  _selectedTabIndex = 1;
+                });
+                _tabController.animateTo(1);
+              },
+              child: const Text('Owned'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Shows the modal bottom sheet for creating a new fanbase
   void _showCreateFanbaseSheet() {
     final nameController = TextEditingController();
     final topicController = TextEditingController();
@@ -101,6 +286,7 @@ class _FanbasePageState extends State<FanbasePage> {
           builder: (context, scrollController) {
             return StatefulBuilder(
               builder: (context, setModalState) {
+                /// Picks an image from the device gallery
                 Future<void> _pickImage() async {
                   final picker = ImagePicker();
                   final pickedFile =
@@ -113,6 +299,7 @@ class _FanbasePageState extends State<FanbasePage> {
                   }
                 }
 
+                /// Shows dialog for entering image URL
                 void _showUrlInputDialog() {
                   showDialog(
                     context: context,
@@ -167,6 +354,8 @@ class _FanbasePageState extends State<FanbasePage> {
                               fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 20),
+
+                        // Image selection section
                         GestureDetector(
                           onTap: () async {
                             final result = await showMenu<String>(
@@ -205,6 +394,7 @@ class _FanbasePageState extends State<FanbasePage> {
                           },
                           child: Column(
                             children: [
+                              // Profile image preview
                               CircleAvatar(
                                 radius: 34,
                                 backgroundColor: Colors.grey[300],
@@ -231,6 +421,8 @@ class _FanbasePageState extends State<FanbasePage> {
                           ),
                         ),
                         const SizedBox(height: 20),
+
+                        // Fanbase name input
                         TextField(
                           controller: nameController,
                           style: const TextStyle(color: Colors.black),
@@ -245,6 +437,8 @@ class _FanbasePageState extends State<FanbasePage> {
                           ),
                         ),
                         const SizedBox(height: 16),
+
+                        // Fanbase topic input
                         TextField(
                           controller: topicController,
                           maxLines: 4,
@@ -260,6 +454,8 @@ class _FanbasePageState extends State<FanbasePage> {
                           ),
                         ),
                         const SizedBox(height: 20),
+
+                        // Action buttons
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
@@ -283,10 +479,18 @@ class _FanbasePageState extends State<FanbasePage> {
                                     );
                                     if (!context.mounted) return;
                                     Navigator.pop(context);
+
+                                    // Switch to Owned tab to show the newly created fanbase
+                                    setState(() {
+                                      _selectedTabIndex = 1;
+                                    });
+                                    _tabController.animateTo(1);
                                     _loadFanbases();
+
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                          content: Text('Fanbase created')),
+                                          content: Text(
+                                              'Fanbase created successfully!')),
                                     );
                                   } catch (e) {
                                     Navigator.pop(context);
@@ -317,12 +521,11 @@ class _FanbasePageState extends State<FanbasePage> {
 
   @override
   Widget build(BuildContext context) {
-    final content = _buildFanbaseList();
-
     return Scaffold(
       appBar: NootAppBar(),
       body: Column(
         children: [
+          // Page title
           const Padding(
             padding: EdgeInsets.fromLTRB(16.0, 3.0, 0, 4.0),
             child: Align(
@@ -333,15 +536,41 @@ class _FanbasePageState extends State<FanbasePage> {
               ),
             ),
           ),
-          Expanded(child: content),
+
+          // Tab bar with button style
+          _buildTabBar(),
+          const SizedBox(height: 0),
+
+          // Tab view content
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Feed tab - shows non-owned fanbases
+                _buildFanbaseList(false),
+
+                // Owned tab - shows owned fanbases
+                _buildFanbaseList(true),
+              ],
+            ),
+          ),
         ],
       ),
+
+      // Floating action button for creating new fanbases
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCreateFanbaseSheet,
-        label: const Icon(Icons.add, size: 18),
-        backgroundColor: const Color.fromARGB(211, 217, 13, 249),
+        label: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add, size: 18),
+            SizedBox(width: 4),
+          ],
+        ),
+        backgroundColor: const Color.fromARGB(82, 221, 0, 255),
         heroTag: 'add_fanbase_fab',
       ),
+
       bottomNavigationBar: const BottomBar(),
     );
   }
