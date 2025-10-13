@@ -24,10 +24,32 @@ class SongPostService {
         final authService = Provider.of<AuthService>(context, listen: false);
         final dio = authService.dio;
         
+        // Get user ID from AuthProvider or SharedPreferences
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        String? currentUserId = authProvider.user?.id;
+        
+        // Fallback to SharedPreferences if AuthProvider doesn't have user ID
+        if (currentUserId == null) {
+          final prefs = await SharedPreferences.getInstance();
+          final userDataString = prefs.getString('user_data');
+          if (userDataString != null) {
+            final userData = jsonDecode(userDataString);
+            currentUserId = userData['id'];
+          }
+        }
+        
+        if (currentUserId == null) {
+          return {
+            'success': false,
+            'message': 'User not logged in. Please log in to create a post.',
+          };
+        }
+        
         final postData = {
           'trackId': trackId,
           'songName': songName,
           'artists': artists,
+          'userId': currentUserId,
           if (albumImage != null) 'albumImage': albumImage,
           if (caption != null) 'caption': caption,
         };
