@@ -39,6 +39,7 @@ class FeedWidget extends StatefulWidget {
   final Function(data_model.Post)? onSongPlay;
   final Function(ThoughtsPost)? onThoughtLike;
   final Function(ThoughtsPost)? onThoughtComment;
+  final Function(ThoughtsPost)? onThoughtPlay;
   final Function(data_model.Post)? onSongShare;
 
   const FeedWidget({
@@ -68,6 +69,7 @@ class FeedWidget extends StatefulWidget {
     this.onSongShare,
     this.onThoughtLike,
     this.onThoughtComment,
+    this.onThoughtPlay,
   }) : super(key: key);
 
   @override
@@ -286,14 +288,25 @@ class _FeedWidgetState extends State<FeedWidget> {
     if (item.type == FeedItemType.song && item.songPost != null) {
       return _buildSongPostItem(item.songPost!);
     } else if (item.type == FeedItemType.thought && item.thoughtsPost != null) {
+      // Create a unique identifier for thoughts posts using song name and artist name
+      final thoughtsPost = item.thoughtsPost!;
+      final thoughtsTrackId = thoughtsPost.songName != null && thoughtsPost.artistName != null
+          ? '${thoughtsPost.songName}_${thoughtsPost.artistName}'
+          : null;
+      
       return ThoughtsFeedCard(
-        post: item.thoughtsPost!,
+        post: thoughtsPost,
         onLike: widget.onThoughtLike != null
-            ? () => widget.onThoughtLike!(item.thoughtsPost!)
+            ? () => widget.onThoughtLike!(thoughtsPost)
             : null,
         onComment: widget.onThoughtComment != null
-            ? () => widget.onThoughtComment!(item.thoughtsPost!)
+            ? () => widget.onThoughtComment!(thoughtsPost)
             : null,
+        onPlayPause: widget.onThoughtPlay != null
+            ? () => widget.onThoughtPlay!(thoughtsPost)
+            : null,
+        isPlaying: widget.isPlaying && widget.currentlyPlayingTrackId == thoughtsTrackId,
+        isCurrentTrack: widget.currentlyPlayingTrackId == thoughtsTrackId,
         onUserTap: widget.onUserTap,
       );
     }

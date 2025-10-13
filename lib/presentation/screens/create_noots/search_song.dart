@@ -13,7 +13,7 @@ import '../../widgets/common/musicplayer_bar.dart';
 import 'create_new_noot.dart';
 import 'create_description_noot.dart';
 
-// Page for searching and selecting songs for posts
+
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({Key? key}) : super(key: key);
 
@@ -29,12 +29,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
   //Loading state for API calls
   bool _isLoading = false;
   
-  //Search results from Spotify API
+  //store the search results from Spotify API
   Map<String, dynamic>? _searchResults;
   
-  //Debounce timer for search input
+  //a timer to avoid searching too frequently
   Timer? _debounce;
-
 
   @override
   void initState() {
@@ -109,7 +108,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     }
   }
 
-  //Builds the Share Post interface with song search functionality
+  
   Widget _buildSharePostInterface(ColorScheme colorScheme, ThemeData theme) {
     return Column(
       children: [
@@ -223,7 +222,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
           
         },
         onShareThoughts: () {
-         
           Navigator.push(
             context,
             MaterialPageRoute(

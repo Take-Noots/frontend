@@ -63,18 +63,31 @@ class CreateNootPreviewPage extends StatelessWidget {
               style: const TextStyle(fontSize: 16),
             ),
             const Spacer(),
-            ElevatedButton(
-              onPressed: () async {
-                await createPost();
-                Navigator.of(context).pop();
-              },
-              child: const Text('Share'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF8E08EF),
-                foregroundColor: Colors.white,
-                textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await createPost();
+                    Navigator.of(context).popUntil((route) => route.isFirst); //riderct to the home screen    
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8E08EF),
+                    foregroundColor: Colors.white,
+                    textStyle: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      letterSpacing: 0.5,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                  ),
+                  child: const Text('Share'),
                 ),
               ),
             ),
