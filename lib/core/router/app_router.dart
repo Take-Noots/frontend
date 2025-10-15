@@ -20,6 +20,7 @@ import '../../presentation/screens/profile/settings/about_page.dart';
 import '../../presentation/screens/profile/settings/saved_posts_page.dart';
 import '../../presentation/screens/profile/settings/hiddenPosts/hidden_posts.dart';
 import '../../presentation/screens/request/request.dart';
+import '../../presentation/screens/advertisement/create_advertisement_screen.dart';
 import '../../presentation/screens/shell_screen_v2.dart';
 import 'route_names.dart';
 
@@ -159,6 +160,12 @@ class AppRouter {
           GoRoute(
             path: AppRoutes.requests,
             builder: (context, state) => const RequestScreen(),
+          ),
+
+          // Advertisement
+          GoRoute(
+            path: AppRoutes.createAdvertisement,
+            builder: (context, state) => const CreateAdvertisementScreen(),
           ),
         ],
       ),
