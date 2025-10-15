@@ -14,7 +14,9 @@ import 'profile_feed_screen.dart'; // Add this import for navigation
 
 class UserProfilePage extends StatefulWidget {
   final String userId;
-  const UserProfilePage({Key? key, required this.userId}) : super(key: key);
+  final String? highlightPostId;
+  const UserProfilePage({Key? key, required this.userId, this.highlightPostId})
+      : super(key: key);
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
@@ -105,6 +107,21 @@ class _UserProfilePageState extends State<UserProfilePage>
         isFollowingUser = follows;
         isLoading = false;
       });
+
+      // If highlightPostId is provided, navigate to the profile feed to show that post
+      if (widget.highlightPostId != null) {
+        Future.microtask(() {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProfileFeedScreen(
+                userId: widget.userId,
+                initialPostId: widget.highlightPostId,
+              ),
+            ),
+          );
+        });
+      }
     } else {
       setState(() {
         isLoading = false;

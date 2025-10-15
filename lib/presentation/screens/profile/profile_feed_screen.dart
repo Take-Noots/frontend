@@ -309,7 +309,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
       currentUserId: _currentUserId,
       postId: post.id,
       isOwnPost: isUsersOwnPost,
-      onCopyLink: () {
+      onSharePost: () {
         final shareText =
             'Check out this song: ${post.songName} by ${post.artists}';
         Share.share(shareText, subject: 'Music from Noot');

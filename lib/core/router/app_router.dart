@@ -117,7 +117,9 @@ class AppRouter {
                 path: 'user/:userId',
                 builder: (context, state) {
                   final userId = state.pathParameters['userId']!;
-                  return UserProfilePage(userId: userId);
+                  final postId = state.uri.queryParameters['postId'];
+                  return UserProfilePage(
+                      userId: userId, highlightPostId: postId);
                 },
               ),
               GoRoute(
