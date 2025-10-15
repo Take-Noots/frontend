@@ -136,12 +136,15 @@ class AlbumArtPostsTab extends StatelessWidget {
               if (showGrid) ...[
                 const SizedBox(height: 16),
                 albumImages.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.all(32.0),
+                    ? Padding(
+                        padding: const EdgeInsets.all(32.0),
                         child: Center(
                           child: Text(
                             'No album arts to display.',
-                            style: TextStyle(color: Colors.white54),
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant),
                           ),
                         ),
                       )

@@ -411,7 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Create a unique identifier for thoughts posts
     final thoughtsTrackId = '${post.songName}_${post.artistName}';
-    
+
     if (_currentlyPlayingTrackId == thoughtsTrackId && _isPlaying) {
       setState(() {
         _isPlaying = false;
@@ -435,8 +435,9 @@ class _HomeScreenState extends State<HomeScreen> {
         _currentlyPlayingTrackId = thoughtsTrackId;
         _isPlaying = true;
       });
-      print('[DEBUG] _handleThoughtsPlay: Optimistically updated state - isPlaying: true, trackId: $thoughtsTrackId');
-      
+      print(
+          '[DEBUG] _handleThoughtsPlay: Optimistically updated state - isPlaying: true, trackId: $thoughtsTrackId');
+
       try {
         await _playThoughtsTrack(post);
         print('[DEBUG] _handleThoughtsPlay: Successfully played track');
@@ -449,22 +450,25 @@ class _HomeScreenState extends State<HomeScreen> {
           _currentlyPlayingTrackId = null;
           _isPlaying = false;
         });
-        
+
         // Show a more user-friendly error message
         String errorMessage = 'Failed to play track';
         String detailedError = e.toString();
-        
+
         if (detailedError.contains('No Spotify token')) {
           errorMessage = 'Please connect your Spotify account to play music';
         } else if (detailedError.contains('Track not found')) {
           errorMessage = 'Track not found on Spotify';
-        } else if (detailedError.contains('401') || detailedError.contains('Unauthorized')) {
-          errorMessage = 'Spotify authentication failed. Please reconnect your account';
+        } else if (detailedError.contains('401') ||
+            detailedError.contains('Unauthorized')) {
+          errorMessage =
+              'Spotify authentication failed. Please reconnect your account';
         } else {
           // Show the actual error for debugging
-          errorMessage = 'Failed to play: ${detailedError.length > 100 ? detailedError.substring(0, 100) : detailedError}';
+          errorMessage =
+              'Failed to play: ${detailedError.length > 100 ? detailedError.substring(0, 100) : detailedError}';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -478,11 +482,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _playThoughtsTrack(ThoughtsPost post) async {
     try {
-      print('[DEBUG] _playThoughtsTrack: Starting to play track for post: ${post.songName} by ${post.artistName}');
-      
+      print(
+          '[DEBUG] _playThoughtsTrack: Starting to play track for post: ${post.songName} by ${post.artistName}');
+
       final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
-      
+
       // Search for the track first - try with both song name and artist name
       final searchQuery = '${post.songName} ${post.artistName}';
       print('[DEBUG] _playThoughtsTrack: Searching for track: $searchQuery');
@@ -490,93 +495,115 @@ class _HomeScreenState extends State<HomeScreen> {
         '/spotify/search/track',
         queryParameters: {'track_name': searchQuery},
       );
-      
-      print('[DEBUG] _playThoughtsTrack: Search response status: ${searchResponse.statusCode}');
-      print('[DEBUG] _playThoughtsTrack: Search response data: ${searchResponse.data}');
-      
+
+      print(
+          '[DEBUG] _playThoughtsTrack: Search response status: ${searchResponse.statusCode}');
+      print(
+          '[DEBUG] _playThoughtsTrack: Search response data: ${searchResponse.data}');
+
       // Check if response has the expected structure
       if (searchResponse.data == null) {
         throw Exception('Search returned null data');
       }
-      
+
       if (searchResponse.data['tracks'] == null) {
-        throw Exception('Search response missing tracks field. Data: ${searchResponse.data}');
+        throw Exception(
+            'Search response missing tracks field. Data: ${searchResponse.data}');
       }
-      
+
       if (searchResponse.data['tracks']['items'] == null) {
-        throw Exception('Search response missing items field. Data: ${searchResponse.data}');
+        throw Exception(
+            'Search response missing items field. Data: ${searchResponse.data}');
       }
-      
-      if (searchResponse.statusCode == 200 && searchResponse.data['tracks']['items'].isNotEmpty) {
+
+      if (searchResponse.statusCode == 200 &&
+          searchResponse.data['tracks']['items'].isNotEmpty) {
         // Find the track that matches both song name and artist name
         final tracks = searchResponse.data['tracks']['items'] as List;
         print('[DEBUG] _playThoughtsTrack: Found ${tracks.length} tracks');
-        
+
         String? trackId;
-        
+
         for (var track in tracks) {
           final trackName = track['name']?.toString().toLowerCase() ?? '';
-          
+
           // Handle artists - could be a list of strings or list of objects
           String trackArtists = '';
           try {
             final artistsList = track['artists'] as List;
-            trackArtists = artistsList.map((a) {
-              // If artist is a string, use it directly
-              if (a is String) return a.toLowerCase();
-              // If artist is a map/object, get the name field
-              if (a is Map && a['name'] != null) return a['name'].toString().toLowerCase();
-              return '';
-            }).where((name) => name.isNotEmpty).join(' ');
+            trackArtists = artistsList
+                .map((a) {
+                  // If artist is a string, use it directly
+                  if (a is String) return a.toLowerCase();
+                  // If artist is a map/object, get the name field
+                  if (a is Map && a['name'] != null)
+                    return a['name'].toString().toLowerCase();
+                  return '';
+                })
+                .where((name) => name.isNotEmpty)
+                .join(' ');
           } catch (e) {
             print('[DEBUG] _playThoughtsTrack: Error parsing artists: $e');
             trackArtists = '';
           }
-          
+
           final postSongName = post.songName?.toLowerCase() ?? '';
           final postArtistName = post.artistName?.toLowerCase() ?? '';
-          
-          print('[DEBUG] _playThoughtsTrack: Comparing track "$trackName" by "$trackArtists" with post "$postSongName" by "$postArtistName"');
-          
-          if (trackName.contains(postSongName) && trackArtists.contains(postArtistName)) {
+
+          print(
+              '[DEBUG] _playThoughtsTrack: Comparing track "$trackName" by "$trackArtists" with post "$postSongName" by "$postArtistName"');
+
+          if (trackName.contains(postSongName) &&
+              trackArtists.contains(postArtistName)) {
             trackId = track['id'];
-            print('[DEBUG] _playThoughtsTrack: Found matching track with ID: $trackId');
+            print(
+                '[DEBUG] _playThoughtsTrack: Found matching track with ID: $trackId');
             break;
           }
         }
-        
+
         // If no exact match found, use the first result
         if (trackId == null) {
           trackId = tracks.first['id'];
-          print('[DEBUG] _playThoughtsTrack: No exact match found, using first result: $trackId');
+          print(
+              '[DEBUG] _playThoughtsTrack: No exact match found, using first result: $trackId');
         }
-        
+
         // Play the track
-        print('[DEBUG] _playThoughtsTrack: Attempting to play track with ID: $trackId');
+        print(
+            '[DEBUG] _playThoughtsTrack: Attempting to play track with ID: $trackId');
         final playResponse = await dio.post(
           '/spotify/player/post/play',
           data: {'track_id': trackId},
         );
-        
-        print('[DEBUG] _playThoughtsTrack: Play response status: ${playResponse.statusCode}');
-        print('[DEBUG] _playThoughtsTrack: Play response data: ${playResponse.data}');
-        
+
+        print(
+            '[DEBUG] _playThoughtsTrack: Play response status: ${playResponse.statusCode}');
+        print(
+            '[DEBUG] _playThoughtsTrack: Play response data: ${playResponse.data}');
+
         // Accept any 2xx status code as success
-        if (playResponse.statusCode != null && playResponse.statusCode! >= 200 && playResponse.statusCode! < 300) {
-          print('[DEBUG] _playThoughtsTrack: Successfully started playing track');
+        if (playResponse.statusCode != null &&
+            playResponse.statusCode! >= 200 &&
+            playResponse.statusCode! < 300) {
+          print(
+              '[DEBUG] _playThoughtsTrack: Successfully started playing track');
         } else {
-          throw Exception('Failed to play track - Status: ${playResponse.statusCode}');
+          throw Exception(
+              'Failed to play track - Status: ${playResponse.statusCode}');
         }
       } else {
-        throw Exception('Track not found - Search returned ${searchResponse.statusCode} with ${searchResponse.data['tracks']['items']?.length ?? 0} results');
+        throw Exception(
+            'Track not found - Search returned ${searchResponse.statusCode} with ${searchResponse.data['tracks']['items']?.length ?? 0} results');
       }
     } on DioException catch (e) {
       print('[DEBUG] _playThoughtsTrack: DioException occurred');
-      print('[DEBUG] _playThoughtsTrack: Status code: ${e.response?.statusCode}');
+      print(
+          '[DEBUG] _playThoughtsTrack: Status code: ${e.response?.statusCode}');
       print('[DEBUG] _playThoughtsTrack: Response data: ${e.response?.data}');
       print('[DEBUG] _playThoughtsTrack: Error message: ${e.message}');
       print('[DEBUG] _playThoughtsTrack: Error type: ${e.type}');
-      
+
       if (e.response?.data != null) {
         final errorData = e.response!.data;
         if (errorData is Map && errorData['message'] != null) {
@@ -843,11 +870,13 @@ class _HomeScreenState extends State<HomeScreen> {
       onSongLike: (data_model.Post post) => _handleLike(post),
       onSongComment: (data_model.Post post) => _handleComment(post),
       onSongPlay: (data_model.Post post) => _handlePlay(post),
-      onThoughtLike: (ThoughtsPost post) {}, 
-      onThoughtComment: (ThoughtsPost post) {}, 
+      onThoughtLike: (ThoughtsPost post) {},
+      onThoughtComment: (ThoughtsPost post) {},
       onThoughtPlay: (ThoughtsPost post) {
-        print('[DEBUG] HomeScreen: onThoughtPlay callback triggered for post: ${post.id}');
-        print('[DEBUG] HomeScreen: songName: ${post.songName}, artistName: ${post.artistName}');
+        print(
+            '[DEBUG] HomeScreen: onThoughtPlay callback triggered for post: ${post.id}');
+        print(
+            '[DEBUG] HomeScreen: songName: ${post.songName}, artistName: ${post.artistName}');
         _handleThoughtsPlay(post);
       },
       currentlyPlayingTrackId: _currentlyPlayingTrackId,

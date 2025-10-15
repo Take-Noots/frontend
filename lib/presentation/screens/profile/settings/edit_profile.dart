@@ -309,8 +309,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
         '[DEBUG] EditProfilePage build called, _loading=$_loading, _saving=$_saving');
     if (_loading || _saving) {
       print('[DEBUG] EditProfilePage: Showing loading spinner');
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
     print(
@@ -318,7 +319,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Profile'),
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -329,7 +330,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ],
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           SingleChildScrollView(
@@ -349,13 +350,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         Positioned.fill(
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.5),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.5),
                               shape: BoxShape.circle,
                             ),
-                            child: const Center(
+                            child: Center(
                               child: CircularProgressIndicator(
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Theme.of(context).colorScheme.onSurface),
                               ),
                             ),
                           ),
@@ -366,9 +370,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           right: 0,
                           child: CircleAvatar(
                             radius: 16,
-                            backgroundColor: Colors.white,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.surface,
                             child: Icon(Icons.camera_alt,
-                                color: Colors.black, size: 18),
+                                color: Theme.of(context).colorScheme.onSurface,
+                                size: 18),
                           ),
                         ),
                     ],
@@ -377,61 +383,73 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 const SizedBox(height: 24),
                 TextField(
                   controller: _fullNameController,
-                  style: const TextStyle(color: Colors.white),
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   decoration: InputDecoration(
                     labelText: 'Full Name',
-                    labelStyle: const TextStyle(color: Colors.grey),
+                    labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                     enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.grey.shade700),
+                      borderSide:
+                          BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white),
+                      borderSide: BorderSide(color: Colors.transparent),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _usernameController,
-                  style: const TextStyle(color: Colors.white),
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   decoration: InputDecoration(
                     labelText: 'Username',
-                    labelStyle: const TextStyle(color: Colors.grey),
+                    labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                     enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.grey.shade700),
+                      borderSide:
+                          BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white),
+                      borderSide: BorderSide(color: Colors.transparent),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _bioController,
-                  style: const TextStyle(color: Colors.white),
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   maxLines: 3,
                   decoration: InputDecoration(
                     labelText: 'Bio',
-                    labelStyle: const TextStyle(color: Colors.grey),
+                    labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                     enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.grey.shade700),
+                      borderSide:
+                          BorderSide(color: Theme.of(context).dividerColor),
                     ),
-                    focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.transparent),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _emailController,
-                  style: const TextStyle(color: Colors.white),
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   decoration: InputDecoration(
                     labelText: 'Email',
-                    labelStyle: const TextStyle(color: Colors.grey),
+                    labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                     enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.grey.shade700),
+                      borderSide:
+                          BorderSide(color: Theme.of(context).dividerColor),
                     ),
-                    focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.transparent),
                     ),
                   ),
                 ),
@@ -441,22 +459,26 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
                   decoration: BoxDecoration(
                     border: Border(
-                      bottom: BorderSide(color: Colors.grey.shade700),
+                      bottom: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Profile Type',
-                        style: TextStyle(color: Colors.grey, fontSize: 16),
+                        style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 16),
                       ),
                       const SizedBox(height: 8),
                       DropdownButton<String>(
                         value: userType,
                         isExpanded: true,
-                        dropdownColor: Colors.black87,
-                        style: const TextStyle(color: Colors.white),
+                        dropdownColor: Theme.of(context).colorScheme.surface,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface),
                         underline: Container(), // Remove the default underline
                         onChanged: (newValue) {
                           setState(() {
@@ -469,7 +491,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             value: type['value'],
                             child: Text(
                               type['label']!,
-                              style: const TextStyle(color: Colors.white),
+                              style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface),
                             ),
                           );
                         }).toList(),
@@ -483,10 +507,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   children: [
                     OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.white),
+                        side: BorderSide(
+                            color: Theme.of(context).colorScheme.onSurface),
                       ),
-                      child: const Text('Cancel',
-                          style: TextStyle(color: Colors.white)),
+                      child: Text('Cancel',
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface)),
                       onPressed: () {
                         Navigator.pop(context);
                       },
@@ -494,14 +520,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ElevatedButton(
                       onPressed: _hasChanges ? _saveProfile : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            _hasChanges ? Colors.white : Colors.grey,
-                        disabledBackgroundColor: Colors.grey,
+                        backgroundColor: _hasChanges
+                            ? Theme.of(context).colorScheme.surface
+                            : Theme.of(context).disabledColor,
+                        disabledBackgroundColor:
+                            Theme.of(context).disabledColor,
                       ),
                       child: Text('Save',
                           style: TextStyle(
-                              color:
-                                  _hasChanges ? Colors.black : Colors.white70)),
+                              color: _hasChanges
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Theme.of(context).disabledColor)),
                     ),
                   ],
                 ),

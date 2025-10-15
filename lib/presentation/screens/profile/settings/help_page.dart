@@ -7,23 +7,25 @@ class HelpPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Help & Support'),
-        backgroundColor: Colors.black,
+        title: Text('Help & Support',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: ListView(
         children: [
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Text(
               'Frequently Asked Questions',
               style: TextStyle(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -64,20 +66,21 @@ class HelpPage extends StatelessWidget {
             description:
                 'Tap the three dots on the post and select "Report" to flag inappropriate content.',
           ),
-          const Divider(color: Colors.white24, height: 32),
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Divider(color: Theme.of(context).dividerColor, height: 32),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Text(
               'Contact Support',
               style: TextStyle(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.email, color: Colors.white),
+            leading: Icon(Icons.email,
+                color: Theme.of(context).colorScheme.onSurface),
             title: const Text(
               'Email Support',
               style: TextStyle(color: Colors.white),

@@ -49,7 +49,7 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: NootAppBar(),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: ScrollablePositionedList.builder(
         itemScrollController: _itemScrollController,
         itemPositionsListener: _itemPositionsListener,

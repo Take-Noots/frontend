@@ -117,8 +117,9 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
 
     if (_posts.isEmpty) {
       print('ThoughtPostsTab: build - no posts to show');
-      return const Center(
-        child: Text('No thought posts', style: TextStyle(color: Colors.white)),
+      return Center(
+        child: Text('No thought posts',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
       );
     }
 

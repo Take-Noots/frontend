@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/providers/theme_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 // import 'dart:math';
@@ -7,7 +9,7 @@ import '../../../data/models/profile_model.dart';
 import 'tabs/album_art_posts_tab.dart';
 import 'tabs/thought_posts_tab.dart';
 import 'tabs/tagged_posts_tab.dart';
-import 'my_profile.dart';
+// import 'my_profile.dart';
 import 'followers_list.dart';
 import 'following_list.dart';
 import 'profile_feed_screen.dart'; // Add this import for navigation
@@ -138,38 +140,53 @@ class _UserProfilePageState extends State<UserProfilePage>
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    // If viewing own profile, redirect to my profile page
-    if (loggedUserId != null && widget.userId == loggedUserId) {
-      // Use Future.microtask to avoid build context issues
-      Future.microtask(() {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const NormalUserProfilePage()),
-        );
-      });
-      return const SizedBox.shrink();
-    }
-
-    if (profile == null) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(profile?.username ?? 'User Profile'),
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor ??
+              Theme.of(context).scaffoldBackgroundColor,
+          centerTitle: true,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back,
+                color: Theme.of(context).colorScheme.onSurface),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.brightness_6,
+                  color: Theme.of(context).colorScheme.onSurface),
+              onPressed: () {
+                Provider.of<ThemeProvider>(context, listen: false)
+                    .toggleTheme();
+              },
+            ),
+          ],
+        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        // backgroundColor: Colors.black,
         body: Center(
             child: Text('Failed to load profile',
-                style: TextStyle(color: Colors.white))),
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface))),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(profile!.username),
+        title: Text(profile?.username ?? 'User Profile'),
         centerTitle: true,
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.brightness_6,
+                color: Theme.of(context).colorScheme.onSurface),
+            onPressed: () {
+              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+            },
+          ),
+        ],
       ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
           AlbumArtPostsTab(
@@ -260,11 +277,13 @@ class _UserProfilePageState extends State<UserProfilePage>
                     // TODO: Implement follow functionality
                   },
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white),
+                    side: BorderSide(
+                        color: Theme.of(context).colorScheme.onSurface),
                   ),
                   child: Text(
                     isFollowingUser ? 'Following' : 'Follow',
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -273,11 +292,13 @@ class _UserProfilePageState extends State<UserProfilePage>
                     // TODO: Implement message functionality
                   },
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white),
+                    side: BorderSide(
+                        color: Theme.of(context).colorScheme.onSurface),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Message',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                   ),
                 ),
               ],
@@ -287,10 +308,10 @@ class _UserProfilePageState extends State<UserProfilePage>
           // Only show tabs if the profile is not private or if the user follows this profile
           if (!isPrivateProfile || isFollowingUser) ...[
             Container(
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.surface,
               child: TabBar(
                 controller: _tabController,
-                indicatorColor: Colors.white,
+                indicatorColor: Theme.of(context).colorScheme.onSurface,
                 tabs: const [
                   Tab(icon: Icon(Icons.grid_on)),
                   Tab(icon: Icon(Icons.description)),
@@ -364,21 +385,21 @@ class _UserProfilePageState extends State<UserProfilePage>
             ),
           ] else
             // Show private account message when profile is private and user doesn't follow
-            const Expanded(
+            Expanded(
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.lock,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       size: 64,
                     ),
                     SizedBox(height: 16),
                     Text(
                       'This Account is Private',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -387,7 +408,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                     Text(
                       'Follow this account to see their posts',
                       style: TextStyle(
-                        color: Colors.grey,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 16,
                       ),
                       textAlign: TextAlign.center,
@@ -399,7 +420,6 @@ class _UserProfilePageState extends State<UserProfilePage>
             ),
         ],
       ),
-      backgroundColor: Colors.black,
     );
   }
 }
