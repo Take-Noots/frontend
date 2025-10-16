@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../widgets/common/musicplayer_bar.dart';
 import '../../../data/services/song_post_service.dart';
-import 'create_noot_preview.dart';
+import 'create_noot_preview_page.dart';
 import '../../widgets/create_post/button.dart';
 
 class CreateNewNootPage extends StatefulWidget {
@@ -47,15 +47,20 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
         artists: artists,
         albumImage: albumImage,
         caption: caption.isNotEmpty ? caption : null,
+        context: context,
       );
 
       if (result['success']) {
-        // Show success message
+       
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(result['message']),
-              backgroundColor: const Color(0xFF8E08EF),
+              backgroundColor: const Color(0xFFA855F7),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
             ),
           );
           // Navigate back to home screen
@@ -68,6 +73,10 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
             SnackBar(
               content: Text(result['message']),
               backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -78,6 +87,10 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
           SnackBar(
             content: Text('Error: $e'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -127,7 +140,6 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
       appBar: AppBar(title: const Text('Create New Noot')),
       body: Column(
         children: [
-          // MusicPlayerBar(title: 'Now Playing', playing: false),
           if (albumImage != null && albumImage.isNotEmpty)
             SizedBox(
               width: double.infinity,
@@ -178,7 +190,7 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
             ),
           ),
           const Spacer(),
-          // Updated button section with Preview and Share buttons
+          //Preview and Share buttons
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: PreviewShareButtonRow(

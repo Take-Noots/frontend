@@ -50,6 +50,7 @@ class Post {
   final String? caption;
   final String? userId; 
   final String? username;
+  final String? userImage;
   int likes;
   int commentsCount;
   List<String> likedBy;
@@ -70,6 +71,7 @@ class Post {
     this.caption,
     this.userId,
     this.username,
+    this.userImage,
     required this.likes,
     required this.commentsCount,
     required this.likedBy,
@@ -92,6 +94,7 @@ class Post {
       caption: json['caption'],
       userId: json['userId'] as String?,
       username: json['username'] as String?,
+      userImage: json['userImage'] as String?,
       likes: json['likes'] ?? 0,
       commentsCount: json['comments'] is int
           ? json['comments']

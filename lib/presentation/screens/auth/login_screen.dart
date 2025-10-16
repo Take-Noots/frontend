@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/router/route_names.dart';
 import '../../../data/services/auth_service.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../widgets/auth/custom_text_form_field.dart';
@@ -55,8 +57,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
           // Check if user is authenticated in auth provider
           if (authProvider.isAuthenticated && authProvider.user != null) {
-            // Navigate to home screen
-            Navigator.pushReplacementNamed(context, '/home');
+            // Navigate to home screen using GoRouter
+            context.go(AppRoutes.home);
           } else {
             print('Authentication failed: User not stored in AuthProvider');
             throw Exception('Error occurred in authentication process');

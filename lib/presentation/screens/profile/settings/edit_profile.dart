@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 // ...existing code...
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../data/models/profile_model.dart';
@@ -17,14 +19,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _fullNameController = TextEditingController();
-  String profileImage =
-      'https://i.scdn.co/image/ab6761610000e5eb02e3c8b0e6e6e6e6e6e6e6e6';
+  String profileImage = 'https://via.placeholder.com/150';
   String userType = 'public'; // Default user type
 
   final ProfileService _service = ProfileService();
 
   bool _loading = true;
   bool _saving = false;
+
+  // Store original values to detect changes
+  String _originalUsername = '';
+  String _originalBio = '';
+  String _originalEmail = '';
+  String _originalFullName = '';
+  String _originalProfileImage = '';
+  String _originalUserType = 'public';
 
   // Define profile type options
   final List<Map<String, String>> _profileTypes = [
@@ -37,45 +46,134 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.loadUserDataFromSharedPreferences();
-      _fetchProfile();
-    });
+    print('[DEBUG] EditProfilePage initState called');
+    _fetchProfile();
+    // Add listeners to detect changes
+    _usernameController.addListener(_onFieldChanged);
+    _bioController.addListener(_onFieldChanged);
+    _emailController.addListener(_onFieldChanged);
+    _fullNameController.addListener(_onFieldChanged);
+  }
+
+  void _onFieldChanged() {
+    setState(() {}); // Rebuild to update button state
+  }
+
+  bool get _hasChanges {
+    return _usernameController.text != _originalUsername ||
+        _bioController.text != _originalBio ||
+        _emailController.text != _originalEmail ||
+        _fullNameController.text != _originalFullName ||
+        profileImage != _originalProfileImage ||
+        userType != _originalUserType;
+  }
+
+  @override
+  void dispose() {
+    print('[DEBUG] EditProfilePage dispose called');
+    _usernameController.dispose();
+    _bioController.dispose();
+    _emailController.dispose();
+    _fullNameController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchProfile() async {
-    setState(() => _loading = true); // Ensure loading state is set
-    final userId = Provider.of<AuthProvider>(context, listen: false).user?.id;
+    print('[DEBUG] _fetchProfile started');
+    if (mounted) {
+      setState(() => _loading = true);
+    }
+
+    // Get userId from SharedPreferences directly
+    String? userId;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        userId = userData['id'];
+      }
+    } catch (e) {
+      print('[DEBUG] _fetchProfile: Error reading SharedPreferences: $e');
+    }
+
+    print('[DEBUG] _fetchProfile userId: $userId');
     if (userId == null) {
-      setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User not logged in')),
-      );
+      print('[DEBUG] _fetchProfile: userId is null');
+      if (mounted) {
+        setState(() => _loading = false);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User not logged in')),
+          );
+          Navigator.of(context).pop();
+        });
+      }
       return;
     }
+    print('[DEBUG] _fetchProfile: calling getUserProfile');
     final result = await _service.getUserProfile(userId);
-
-    // Debug: print the result for troubleshooting
-    // ignore: avoid_print
-    print('Profile fetch result: $result');
+    print('[DEBUG] _fetchProfile result: $result');
 
     if (result['success'] == false || result['data'] == null) {
-      setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? 'Failed to load profile')),
-      );
+      print('[DEBUG] _fetchProfile: failed or no data');
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(result['message'] ?? 'Failed to load profile')),
+        );
+      }
       return;
     }
     final data = result['data'];
-    // Defensive: check for required fields
-    _usernameController.text = data['username'] ?? '';
-    _bioController.text = data['bio'] ?? '';
-    _emailController.text = data['email'] ?? '';
-    _fullNameController.text = data['fullName'] ?? '';
-    profileImage = data['profileImage'] ?? profileImage;
-    userType = data['userType'] ?? 'public'; // Set the user type
-    setState(() => _loading = false);
+    print('[DEBUG] _fetchProfile: data received, setting controllers');
+
+    try {
+      // Defensive: check for required fields
+      _usernameController.text = data['username'] ?? '';
+      _originalUsername = _usernameController.text;
+      print('[DEBUG] _fetchProfile: username set');
+      _bioController.text = data['bio'] ?? '';
+      _originalBio = _bioController.text;
+      print('[DEBUG] _fetchProfile: bio set');
+      _emailController.text = data['email'] ?? '';
+      _originalEmail = _emailController.text;
+      print('[DEBUG] _fetchProfile: email set');
+      _fullNameController.text = data['fullName'] ?? '';
+      _originalFullName = _fullNameController.text;
+      print('[DEBUG] _fetchProfile: fullName set');
+
+      final fetchedProfileImage = data['profileImage'] as String?;
+      final fetchedUserType = data['userType'] as String?;
+
+      if (mounted) {
+        setState(() {
+          profileImage = fetchedProfileImage ?? profileImage;
+          _originalProfileImage = profileImage;
+          userType = fetchedUserType ?? 'public';
+          _originalUserType = userType;
+        });
+      }
+
+      print('[DEBUG] _fetchProfile: profileImage set to $profileImage');
+      print('[DEBUG] _fetchProfile: userType set to $userType');
+    } catch (e) {
+      print('[DEBUG] _fetchProfile ERROR setting fields: $e');
+    }
+
+    print('[DEBUG] _fetchProfile: setting _loading = false');
+    if (mounted) {
+      setState(() => _loading = false);
+      print(
+          '[DEBUG] _fetchProfile: setState called, _loading is now $_loading');
+    } else {
+      print('[DEBUG] _fetchProfile: widget not mounted, cannot call setState');
+    }
+    print('[DEBUG] _fetchProfile: completed successfully');
   }
 
   void _pickImage() async {
@@ -87,13 +185,30 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _saveProfile() async {
-    setState(() => _saving = true);
-    final userId = Provider.of<AuthProvider>(context, listen: false).user?.id;
+    if (mounted) {
+      setState(() => _saving = true);
+    }
+
+    // Get userId from SharedPreferences directly
+    String? userId;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        userId = userData['id'];
+      }
+    } catch (e) {
+      print('[DEBUG] _saveProfile: Error reading SharedPreferences: $e');
+    }
+
     if (userId == null) {
-      setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User not logged in')),
-      );
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not logged in')),
+        );
+      }
       return;
     }
     final editProfile = EditProfileModel(
@@ -105,30 +220,39 @@ class _EditProfilePageState extends State<EditProfilePage> {
       userType: userType, // Include user type in the update
     );
     final result = await _service.updateProfile(userId, editProfile.toJson());
-    setState(() => _saving = false);
+    if (mounted) {
+      setState(() => _saving = false);
+    }
     if (result['success'] == true) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
         );
-        // Navigate back with a result
+        // Navigate back with result to trigger profile refresh
         Navigator.pop(context, true);
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(result['message'] ?? 'Failed to update profile')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(result['message'] ?? 'Failed to update profile')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    print(
+        '[DEBUG] EditProfilePage build called, _loading=$_loading, _saving=$_saving');
     if (_loading || _saving) {
+      print('[DEBUG] EditProfilePage: Showing loading spinner');
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
+    print(
+        '[DEBUG] EditProfilePage: Rendering form with username=${_usernameController.text}');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Profile'),
@@ -282,12 +406,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   },
                 ),
                 ElevatedButton(
-                  onPressed: _saveProfile,
+                  onPressed: _hasChanges ? _saveProfile : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
+                    backgroundColor: _hasChanges ? Colors.white : Colors.grey,
+                    disabledBackgroundColor: Colors.grey,
                   ),
-                  child:
-                      const Text('Save', style: TextStyle(color: Colors.black)),
+                  child: Text('Save',
+                      style: TextStyle(
+                          color: _hasChanges ? Colors.black : Colors.white70)),
                 ),
               ],
             ),

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:frontend/data/services/auth_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/router/route_names.dart';
 import '../../widgets/auth/custom_button.dart';
 // Conditional import for openSpotifyAuth
 import 'link_spotify_mobile.dart'
@@ -111,7 +113,7 @@ class LinkSpotifyScreen extends StatelessWidget {
                 Center(
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/home');
+                      context.go(AppRoutes.home);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,

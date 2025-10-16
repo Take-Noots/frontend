@@ -2,6 +2,7 @@ class ThoughtsPost {
   final String id;
   final String userId;
   final String? username;
+  final String? userImage;
   final String text;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -18,6 +19,7 @@ class ThoughtsPost {
     required this.id,
     required this.userId,
     this.username,
+    this.userImage,
     required this.text,
     required this.createdAt,
     required this.updatedAt,
@@ -32,25 +34,28 @@ class ThoughtsPost {
   });
 
   factory ThoughtsPost.fromJson(Map<String, dynamic> json) {
-  return ThoughtsPost(
-    id: json['_id'] ?? '',
-    userId: json['userId'] ?? '',
-    username: json['username'],
-    text: json['text'] ?? json['thoughtsText'] ?? '',
-    createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-    updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
-    likes: json['likes'] ?? 0,
-    likedBy: List<String>.from(json['likedBy'] ?? []),
-    comments: (json['comments'] as List<dynamic>?)
-        ?.map((c) => ThoughtsComment.fromJson(c))
-        .toList() ?? [],
-    songName: json['songName'],
-    artistName: json['artistName'],
-    coverImage: json['coverImage'],
-    isHidden: _parseIsHidden(json['isHidden']),
-    isDeleted: _parseIsDeleted(json['isDeleted']),
-  );
-}
+    return ThoughtsPost(
+      id: json['_id'] ?? '',
+      userId: json['userId'] ?? '',
+      username: json['username'],
+      text: json['text'] ?? json['thoughtsText'] ?? '',
+      createdAt:
+          DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      updatedAt:
+          DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      likes: json['likes'] ?? 0,
+      likedBy: List<String>.from(json['likedBy'] ?? []),
+      comments: (json['comments'] as List<dynamic>?)
+              ?.map((c) => ThoughtsComment.fromJson(c))
+              .toList() ??
+          [],
+      songName: json['songName'],
+      artistName: json['artistName'],
+      coverImage: json['coverImage'],
+      isHidden: _parseIsHidden(json['isHidden']),
+      isDeleted: _parseIsDeleted(json['isDeleted']),
+    );
+  }
 
   // Helper method to parse isHidden field from various types
   static int _parseIsHidden(dynamic value) {
@@ -83,6 +88,7 @@ class ThoughtsPost {
       '_id': id,
       'userId': userId,
       'username': username,
+      'userImage': userImage,
       'text': text,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -125,8 +131,10 @@ class ThoughtsComment {
       userId: json['userId'] ?? '',
       username: json['username'],
       text: json['thoughtsText'] ?? json['text'] ?? '',
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      createdAt:
+          DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      updatedAt:
+          DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
       likes: json['likes'] ?? 0,
       likedBy: List<String>.from(json['likedBy'] ?? []),
     );
