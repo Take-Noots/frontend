@@ -12,6 +12,7 @@ class ThoughtsPost {
   String? songName;
   String? artistName;
   String? coverImage;
+  String? backgroundColor;
   final int isHidden; // 0 = visible, 1 = hidden
   final int isDeleted; // 0 = not deleted, 1 = deleted
 
@@ -29,6 +30,7 @@ class ThoughtsPost {
     this.songName,
     this.artistName,
     this.coverImage,
+    this.backgroundColor,
     required this.isHidden,
     required this.isDeleted,
   });
@@ -52,6 +54,7 @@ class ThoughtsPost {
       songName: json['songName'],
       artistName: json['artistName'],
       coverImage: json['coverImage'],
+      backgroundColor: json['backgroundColor'],
       isHidden: _parseIsHidden(json['isHidden']),
       isDeleted: _parseIsDeleted(json['isDeleted']),
     );
@@ -98,6 +101,7 @@ class ThoughtsPost {
       'songName': songName,
       'artistName': artistName,
       'coverImage': coverImage,
+      'backgroundColor': backgroundColor,
       'isHidden': isHidden,
       'isDeleted': isDeleted,
     };

@@ -10,14 +10,23 @@ class BottomBar extends StatelessWidget {
   /// Callback when a tab is tapped
   final Function(int)? onTap;
 
+  /// Whether to hide the bottom bar
+  final bool isHidden;
+
   const BottomBar({
     super.key,
     this.currentIndex = 0,
     this.onTap,
+    this.isHidden = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Return empty container if hidden
+    if (isHidden) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       color: Theme.of(context).colorScheme.primary,
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -73,8 +82,8 @@ class BottomBar extends StatelessWidget {
               if (onTap != null) {
                 onTap!(2);
               } else {
-                // Use legacy Navigator for create (complex flow)
-                Navigator.pushNamed(context, '/create');
+                // Navigate to create noot page
+                context.go(AppRoutes.createNoot);
               }
             },
           ),

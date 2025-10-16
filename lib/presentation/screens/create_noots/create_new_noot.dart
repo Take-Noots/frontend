@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../widgets/common/musicplayer_bar.dart';
 import '../../../data/services/song_post_service.dart';
 import 'create_noot_preview_page.dart';
 import '../../widgets/create_post/button.dart';
+import '../../../core/router/route_names.dart';
 
 class CreateNewNootPage extends StatefulWidget {
   final Map<String, dynamic> track;
@@ -64,7 +66,7 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
             ),
           );
           // Navigate back to home screen
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          context.go(AppRoutes.home);
         }
       } else {
         // Show error message

@@ -12,6 +12,7 @@ import '../../../data/services/spotify_service.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../despost/widgets/TMP_des_post_bg_container.dart';
 import '../song_post/comment.dart';
+import '../song_post/post_options_menu.dart';
 import '../../../data/models/post_model.dart' as data_model;
 import '../../../data/services/song_post_service.dart';
 
@@ -22,6 +23,7 @@ class ThoughtsFeedCard extends StatefulWidget {
   final void Function(String userId)? onUserTap;
   final Function(ThoughtsPost)? onPostUpdated;
   final VoidCallback? onPlayPause;
+  final VoidCallback? onOptionsTap;
   final bool isPlaying;
   final bool isCurrentTrack;
   final bool showCoverImage;
@@ -37,6 +39,7 @@ class ThoughtsFeedCard extends StatefulWidget {
     this.isLiked,
     this.onPostUpdated,
     this.onPlayPause,
+    this.onOptionsTap,
     this.isPlaying = false,
     this.isCurrentTrack = false,
   }) : super(key: key);
@@ -50,6 +53,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
   final Color _defaultColor = const Color(0xFF2D1B69);
   late ThoughtsPost _currentPost;
   final ThoughtsService _thoughtsService = ThoughtsService();
+  String? _currentUserId;
 
   @override
   void initState() {
@@ -64,34 +68,86 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         '[DEBUG] ThoughtsFeedCard.initState: onPlayPause is null? ${widget.onPlayPause == null}');
     print(
         '[DEBUG] ThoughtsFeedCard.initState: isPlaying: ${widget.isPlaying}, isCurrentTrack: ${widget.isCurrentTrack}');
+    _loadCurrentUserId();
     _extractColorFromCoverImage();
   }
 
   Future<void> _extractColorFromCoverImage() async {
-    if (widget.post.coverImage != null && widget.post.coverImage!.isNotEmpty) {
-      try {
-        final PaletteGenerator paletteGenerator =
-            await PaletteGenerator.fromImageProvider(
-          NetworkImage(widget.post.coverImage!),
-          size: const Size(100, 100),
-          maximumColorCount: 10,
-        );
 
-        Color? extractedColor = paletteGenerator.darkMutedColor?.color ??
-            paletteGenerator.darkVibrantColor?.color ??
-            paletteGenerator.dominantColor?.color;
+    setState(() {
+      _extractedColor = _currentPost.backgroundColor != null
+          ? Color(int.parse(_currentPost.backgroundColor!.replaceFirst('#', '0xFF')))
+          : null; // Will use default color
+    });
+  }
 
-        if (extractedColor != null) {
-          setState(() {
-            _extractedColor = _isDarkEnough(extractedColor)
-                ? extractedColor
-                : _darkenColor(extractedColor);
-          });
-        }
-      } catch (e) {
-        print('Error extracting color: $e');
-      }
+  Future<void> _loadCurrentUserId() async {
+    // Get current user ID - try AuthProvider first, then SharedPreferences as fallback
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    String? currentUserId = authProvider.user?.id;
+
+    // Fallback to SharedPreferences if AuthProvider doesn't have user ID
+    if (currentUserId == null) {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      final userData = userDataString != null
+          ? jsonDecode(userDataString)
+          : {'id': ''}; 
+      currentUserId = userData['id'];
     }
+
+    if (mounted) {
+      setState(() {
+        _currentUserId = currentUserId;
+      });
+    }
+  }
+
+  void _handleOptionsTap() {
+    if (_currentUserId == null) return;
+
+    final isOwnPost = _currentUserId == _currentPost.userId;
+
+    PostOptionsMenu.show(
+      context,
+      postUserId: _currentPost.userId,
+      currentUserId: _currentUserId,
+      isOwnPost: isOwnPost,
+      isSaved: false, 
+      postId: _currentPost.id,
+      onCopyLink: () {
+        print('Copy link pressed for thoughts post: ${_currentPost.id}');
+        // TODO: Implement copy link functionality
+      },
+      onSavePost: () {
+        print('Save post pressed for thoughts post: ${_currentPost.id}');
+        // TODO: Implement save post functionality
+      },
+      onUnsavePost: () {
+        print('Unsave post pressed for thoughts post: ${_currentPost.id}');
+        // TODO: Implement unsave post functionality
+      },
+      onUnfollow: () {
+        print('Unfollow pressed for user: ${_currentPost.username}');
+        // TODO: Implement unfollow functionality
+      },
+      onReport: () {
+        print('Report pressed for thoughts post: ${_currentPost.id}');
+        // TODO: Implement report functionality
+      },
+      onEdit: isOwnPost ? () {
+        print('Edit pressed for thoughts post: ${_currentPost.id}');
+        // TODO: Implement edit functionality
+      } : null,
+      onDelete: isOwnPost ? () {
+        print('Delete pressed for thoughts post: ${_currentPost.id}');
+        // TODO: Implement delete functionality
+      } : null,
+      onHide: isOwnPost ? () {
+        print('Hide pressed for thoughts post: ${_currentPost.id}');
+        // TODO: Implement hide functionality
+      } : null,
+    );
   }
 
   bool _isDarkEnough(Color color) {
@@ -535,6 +591,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                       onUserTap: widget.onUserTap,
                       backgroundColor: _extractedColor ?? _defaultColor,
                       onPlayPause: widget.onPlayPause,
+                      onOptionsTap: widget.onOptionsTap ?? _handleOptionsTap,
                       isPlaying: widget.isPlaying,
                       isCurrentTrack: widget.isCurrentTrack,
                     ),
@@ -575,6 +632,7 @@ class _ThoughtsContent extends StatelessWidget {
   final void Function(String userId)? onUserTap;
   final Color backgroundColor;
   final VoidCallback? onPlayPause;
+  final VoidCallback? onOptionsTap;
   final bool isPlaying;
   final bool isCurrentTrack;
 
@@ -583,6 +641,7 @@ class _ThoughtsContent extends StatelessWidget {
     this.onUserTap,
     required this.backgroundColor,
     this.onPlayPause,
+    this.onOptionsTap,
     this.isPlaying = false,
     this.isCurrentTrack = false,
   });
@@ -597,6 +656,7 @@ class _ThoughtsContent extends StatelessWidget {
           post: post,
           onUserTap: onUserTap,
           onPlayPause: onPlayPause,
+          onOptionsTap: onOptionsTap,
           isPlaying: isPlaying,
           isCurrentTrack: isCurrentTrack,
         ),
@@ -622,6 +682,7 @@ class _ThoughtsHeader extends StatelessWidget {
   final ThoughtsPost post;
   final void Function(String userId)? onUserTap;
   final VoidCallback? onPlayPause;
+  final VoidCallback? onOptionsTap;
   final bool isPlaying;
   final bool isCurrentTrack;
 
@@ -629,6 +690,7 @@ class _ThoughtsHeader extends StatelessWidget {
     required this.post,
     this.onUserTap,
     this.onPlayPause,
+    this.onOptionsTap,
     this.isPlaying = false,
     this.isCurrentTrack = false,
   });
@@ -681,6 +743,20 @@ class _ThoughtsHeader extends StatelessWidget {
             ),
           ),
         ),
+        // Add 3-dot menu
+        if (onOptionsTap != null)
+          GestureDetector(
+            onTap: onOptionsTap,
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: const Icon(
+                Icons.more_vert,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+          ),
         // Add Spotify controls if song information is available
         if (post.songName != null && post.songName!.isNotEmpty)
           _ThoughtsSpotifyControl(
@@ -1089,7 +1165,6 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
         : 'assets/icons/icons-spotify-light.svg';
 
     return Container(
-      margin: const EdgeInsets.only(left: 40.0),
       child: Container(
         height: 32,
         decoration: BoxDecoration(

@@ -221,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final userDataString = prefs.getString('user_data');
       final userData = userDataString != null
           ? jsonDecode(userDataString)
-          : {'id': '685fb750cc084ba7e0ef8533'}; // Fallback for testing
+          : {'id': ''}; 
       currentUserId = userData['id'];
     }
     if (currentUserId == null) {
@@ -244,12 +244,12 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-    print('[DEBUG] HomeScreen: Attempting to like post ${post.id}');
-    print('[DEBUG] HomeScreen: Current user ID: $currentUserId');
+    //print('[DEBUG] HomeScreen: Attempting to like post ${post.id}');
+    //print('[DEBUG] HomeScreen: Current user ID: $currentUserId');
 
     final result =
         await _songPostService.likePost(post.id, currentUserId, context);
-    print('[DEBUG] HomeScreen: Like result: $result');
+   // print('[DEBUG] HomeScreen: Like result: $result');
 
     if (result['success']) {
       if (post.userId != null) {

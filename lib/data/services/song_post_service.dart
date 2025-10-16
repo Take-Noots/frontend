@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/utils/color_extractor.dart';
 import 'auth_service.dart';
 
 class SongPostService {
@@ -45,6 +46,17 @@ class SongPostService {
           };
         }
         
+        // Extract background color from album image
+        String? backgroundColor;
+        if (albumImage != null && albumImage.isNotEmpty) {
+          backgroundColor = await ColorExtractor.extractBackgroundColor(albumImage);
+        }
+        
+        // use default color
+        if (backgroundColor == null && context != null) {
+          backgroundColor = ColorExtractor.getDefaultBackgroundColor(context);
+        }
+
         final postData = {
           'trackId': trackId,
           'songName': songName,
@@ -52,6 +64,7 @@ class SongPostService {
           'userId': currentUserId,
           if (albumImage != null) 'albumImage': albumImage,
           if (caption != null) 'caption': caption,
+          if (backgroundColor != null) 'backgroundColor': backgroundColor,
         };
         
         final response = await dio.post('/song-posts', data: postData);
@@ -78,7 +91,7 @@ class SongPostService {
         final prefs = await SharedPreferences.getInstance();
         final userDataString = prefs.getString('user_data');
 
-        // Check if user is logged in
+        // Check if user is logged 
         if (userDataString == null) {
           return {
             'success': false,
@@ -96,6 +109,17 @@ class SongPostService {
           };
         }
 
+        // Extract background color from album image 
+        String? backgroundColor;
+        if (albumImage != null && albumImage.isNotEmpty) {
+          backgroundColor = await ColorExtractor.extractBackgroundColor(albumImage);
+        }
+        
+        // use default color
+        if (backgroundColor == null && context != null) {
+          backgroundColor = ColorExtractor.getDefaultBackgroundColor(context);
+        }
+
         final response = await http.post(
           Uri.parse('$baseUrl/song-posts'),
           headers: {
@@ -108,6 +132,7 @@ class SongPostService {
             'albumImage': albumImage,
             'caption': caption,
             'userId': userData['id'],
+            if (backgroundColor != null) 'backgroundColor': backgroundColor,
           }),
         );
 
@@ -234,19 +259,19 @@ class SongPostService {
 
   Future<Map<String, dynamic>> likePost(String postId, String userId, [BuildContext? context]) async {
     try {
-      // If context is provided, use AuthService with Dio for authenticated requests
+     
       if (context != null) {
         final authService = Provider.of<AuthService>(context, listen: false);
         final dio = authService.dio;
         
-        print('[DEBUG] LikePost: Using authenticated Dio for post $postId');
-        print('[DEBUG] LikePost: Dio baseUrl: ${dio.options.baseUrl}');
-        print('[DEBUG] LikePost: AuthService token: ${authService.tokenManager.accessToken}');
+        //print('[DEBUG] LikePost: Using authenticated Dio for post $postId');
+        //print('[DEBUG] LikePost: Dio baseUrl: ${dio.options.baseUrl}');
+        //print('[DEBUG] LikePost: AuthService token: ${authService.tokenManager.accessToken}');
         
         final response = await dio.post('/song-posts/$postId/like');
         
-        print('[DEBUG] LikePost: Response status: ${response.statusCode}');
-        print('[DEBUG] LikePost: Response data: ${response.data}');
+        //print('[DEBUG] LikePost: Response status: ${response.statusCode}');
+        //print('[DEBUG] LikePost: Response data: ${response.data}');
         
         if (response.statusCode == 200 || response.statusCode == 201) {
           return response.data;
@@ -258,7 +283,7 @@ class SongPostService {
         }
       } else {
         // Fallback to http for backward compatibility
-        print('[DEBUG] LikePost: Using fallback http for post $postId');
+        //print('[DEBUG] LikePost: Using fallback http for post $postId');
         final response = await http.post(
           Uri.parse('$baseUrl/song-posts/$postId/like'),
           headers: {'Content-Type': 'application/json'},

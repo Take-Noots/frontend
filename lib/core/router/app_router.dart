@@ -21,6 +21,8 @@ import '../../presentation/screens/profile/settings/saved_posts_page.dart';
 import '../../presentation/screens/profile/settings/hiddenPosts/hidden_posts.dart';
 import '../../presentation/screens/request/request.dart';
 import '../../presentation/screens/shell_screen_v2.dart';
+import '../../presentation/screens/create_noots/search_song.dart';
+import '../../presentation/screens/create_noots/create_description_noot.dart';
 import 'route_names.dart';
 
 /// Main application router configuration using GoRouter
@@ -88,7 +90,14 @@ class AppRouter {
 
       // Main app shell with persistent bottom bar and music player
       ShellRoute(
-        builder: (context, state, child) => ShellScreenV2(child: child),
+        builder: (context, state, child) {
+          // Hide bottom bar for create noot routes
+          final isCreateRoute = state.matchedLocation.startsWith('/create-noot');
+          return ShellScreenV2(
+            hideBottomBar: isCreateRoute,
+            child: child,
+          );
+        },
         routes: [
           // Home
           GoRoute(
@@ -159,6 +168,20 @@ class AppRouter {
           GoRoute(
             path: AppRoutes.requests,
             builder: (context, state) => const RequestScreen(),
+          ),
+
+          // Create Noot routes
+          GoRoute(
+            path: AppRoutes.createNoot,
+            builder: (context, state) => const CreatePostPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.searchSong,
+            builder: (context, state) => const CreatePostPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.createDescriptionNoot,
+            builder: (context, state) => const CreateDescriptionNootPage(),
           ),
         ],
       ),

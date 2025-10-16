@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/utils/color_extractor.dart';
 import 'auth_service.dart';
 
 class ThoughtsService {
@@ -58,6 +59,17 @@ class ThoughtsService {
           };
         }
 
+        // Extract background color from cover image
+        String? backgroundColor;
+        if (coverImage != null && coverImage.isNotEmpty) {
+          backgroundColor = await ColorExtractor.extractBackgroundColor(coverImage);
+        }
+        
+        // Use default color if extraction failed
+        if (backgroundColor == null && context != null) {
+          backgroundColor = ColorExtractor.getDefaultBackgroundColor(context);
+        }
+
         final postData = {
           'userId': currentUserId,
           'thoughtsText': postText,
@@ -65,6 +77,7 @@ class ThoughtsService {
           if (songName != null) 'songName': songName,
           if (artistName != null) 'artistName': artistName,
           if (trackId != null) 'trackId': trackId,
+          if (backgroundColor != null) 'backgroundColor': backgroundColor,
           'inAFanbase': inAFanbase ?? false,
           'FanbaseID': fanbaseID,
         };
@@ -108,6 +121,17 @@ class ThoughtsService {
           };
         }
 
+        // Extract background color from cover image (fallback method)
+        String? backgroundColor;
+        if (coverImage != null && coverImage.isNotEmpty) {
+          backgroundColor = await ColorExtractor.extractBackgroundColor(coverImage);
+        }
+        
+        // Use default color if extraction failed
+        if (backgroundColor == null && context != null) {
+          backgroundColor = ColorExtractor.getDefaultBackgroundColor(context);
+        }
+
         final response = await http.post(
           Uri.parse('$baseUrl/thoughts'),
           headers: {
@@ -120,6 +144,7 @@ class ThoughtsService {
             if (songName != null) 'songName': songName,
             if (artistName != null) 'artistName': artistName,
             if (trackId != null) 'trackId': trackId,
+            if (backgroundColor != null) 'backgroundColor': backgroundColor,
             'inAFanbase': inAFanbase ?? false,
             'FanbaseID': fanbaseID,
           }),
