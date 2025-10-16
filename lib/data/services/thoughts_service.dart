@@ -638,4 +638,127 @@ class ThoughtsService {
       };
     }
   }
+
+  
+  Future<Map<String, dynamic>> savePost(String userId, String postId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/profile/$userId/save-thoughts/$postId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': data['success'] ?? true,
+          'message': data['message'] ?? 'Thoughts post saved successfully',
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['error'] ??
+              errorData['message'] ??
+              'Failed to save thoughts post',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  
+  Future<Map<String, dynamic>> unsavePost(String userId, String postId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/profile/$userId/save-thoughts/$postId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': data['success'] ?? true,
+          'message': data['message'] ?? 'Thoughts post unsaved successfully',
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['error'] ??
+              errorData['message'] ??
+              'Failed to unsave thoughts post',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+
+  Future<Map<String, dynamic>> isPostSaved(String userId, String postId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/profile/$userId/saved-thoughts/$postId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'isSaved': data['isSaved'] ?? false,
+        };
+      } else {
+        return {
+          'success': false,
+          'isSaved': false,
+          'message': 'Failed to check saved status',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'isSaved': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+ 
+  Future<Map<String, dynamic>> getSavedThoughtsPosts(
+      String userId, BuildContext context) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.get('/profile/$userId/saved-thoughts-posts');
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        return {
+          'success': true,
+          'savedPosts': data['savedPosts'] ?? [],
+        };
+      } else {
+        return {
+          'success': false,
+          'savedPosts': [],
+          'message': 'Failed to get saved thoughts posts',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'savedPosts': [],
+        'message': 'Network error: $e',
+      };
+    }
+  }
 }

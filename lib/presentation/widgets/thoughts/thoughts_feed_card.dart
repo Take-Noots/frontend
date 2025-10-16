@@ -15,6 +15,8 @@ import '../song_post/comment.dart';
 import '../song_post/post_options_menu.dart';
 import '../../../data/models/post_model.dart' as data_model;
 import '../../../data/services/song_post_service.dart';
+import '../../../data/services/thoughts_service.dart';
+import '../../../core/styles/app_colors.dart';
 
 class ThoughtsFeedCard extends StatefulWidget {
   final ThoughtsPost post;
@@ -119,13 +121,11 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         print('Copy link pressed for thoughts post: ${_currentPost.id}');
         // TODO: Implement copy link functionality
       },
-      onSavePost: () {
-        print('Save post pressed for thoughts post: ${_currentPost.id}');
-        // TODO: Implement save post functionality
+      onSavePost: () async {
+        await _handleSavePost(_currentPost);
       },
-      onUnsavePost: () {
-        print('Unsave post pressed for thoughts post: ${_currentPost.id}');
-        // TODO: Implement unsave post functionality
+      onUnsavePost: () async {
+        await _handleUnsavePost(_currentPost);
       },
       onUnfollow: () {
         print('Unfollow pressed for user: ${_currentPost.username}');
@@ -624,6 +624,126 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         ),
       ],
     );
+  }
+
+  Future<void> _handleSavePost(ThoughtsPost post) async {
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please log in to save posts'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final result = await _thoughtsService.savePost(_currentUserId!, post.id);
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Thoughts post saved successfully'),
+            backgroundColor: AppColors.primaryPurple,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        // Update the post's saved status
+        setState(() {
+          _currentPost.isSaved = true;
+        });
+        // Notify parent widget if callback is provided
+        widget.onPostUpdated?.call(_currentPost);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to save thoughts post'),
+            backgroundColor: AppColors.primaryPurple,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving thoughts post: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleUnsavePost(ThoughtsPost post) async {
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please log in to unsave posts'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final result = await _thoughtsService.unsavePost(_currentUserId!, post.id);
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Thoughts post unsaved successfully'),
+            backgroundColor: AppColors.primaryPurple,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        // Update the post's saved status
+        setState(() {
+          _currentPost.isSaved = false;
+        });
+        // Notify parent widget if callback is provided
+        widget.onPostUpdated?.call(_currentPost);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to unsave thoughts post'),
+            backgroundColor: AppColors.primaryPurple,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error unsaving thoughts post: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 }
 

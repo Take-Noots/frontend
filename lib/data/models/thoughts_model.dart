@@ -15,6 +15,7 @@ class ThoughtsPost {
   String? backgroundColor;
   final int isHidden; // 0 = visible, 1 = hidden
   final int isDeleted; // 0 = not deleted, 1 = deleted
+  bool isSaved; 
 
   ThoughtsPost({
     required this.id,
@@ -33,6 +34,7 @@ class ThoughtsPost {
     this.backgroundColor,
     required this.isHidden,
     required this.isDeleted,
+    this.isSaved = false,
   });
 
   factory ThoughtsPost.fromJson(Map<String, dynamic> json) {
@@ -57,6 +59,7 @@ class ThoughtsPost {
       backgroundColor: json['backgroundColor'],
       isHidden: _parseIsHidden(json['isHidden']),
       isDeleted: _parseIsDeleted(json['isDeleted']),
+      isSaved: json['isSaved'] ?? false,
     );
   }
 
@@ -104,6 +107,7 @@ class ThoughtsPost {
       'backgroundColor': backgroundColor,
       'isHidden': isHidden,
       'isDeleted': isDeleted,
+      'isSaved': isSaved,
     };
   }
 }
