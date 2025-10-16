@@ -1,15 +1,17 @@
-// import 'dart:convert';
-// import 'dart:ffi';
+import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../../core/providers/auth_provider.dart';
 import '../models/fanbase_model.dart';
 import '../models/fanbase_post_model.dart';
 import 'auth_service.dart';
 
 class FanbaseService {
+  static const String baseUrl = 'http://localhost:3000/fanbase';
+
   static Future<List<Fanbase>> getAllFanbases(BuildContext context) async {
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
@@ -120,11 +122,9 @@ class FanbaseService {
         throw Exception(
             'Failed to update join status: ${response.statusMessage}');
       }
-
     } on DioException catch (e) {
       final errorMessage = e.response?.data?['message'] ?? e.message;
       throw Exception('Failed to update join status: $errorMessage');
-
     } catch (e) {
       throw Exception('Failed to update join status: $e');
     }
@@ -144,11 +144,9 @@ class FanbaseService {
         throw Exception(
             'Failed to update like status: ${response.statusMessage}');
       }
-
     } on DioException catch (e) {
       final errorMessage = e.response?.data?['message'] ?? e.message;
       throw Exception('Failed to update like status: $errorMessage');
-
     } catch (e) {
       throw Exception('Failed to update like status: $e');
     }
@@ -237,7 +235,7 @@ class FanbaseService {
       final dio = authService.dio;
 
       String actualFanbaseId = fanbaseId ?? '';
-      
+
       // If fanbaseId is not provided, try to get it from the post
       if (actualFanbaseId.isEmpty) {
         try {
@@ -256,9 +254,11 @@ class FanbaseService {
       print('[DEBUG] Liking fanbase post (from fanbase_service)');
       print('[DEBUG] PostId: $postId');
       print('[DEBUG] FanbaseId: $actualFanbaseId');
-      print('[DEBUG] Making POST request to: /fanbase/$actualFanbaseId/posts/$postId/like');
-      
-      final response = await dio.post('/fanbase/$actualFanbaseId/posts/$postId/like');
+      print(
+          '[DEBUG] Making POST request to: /fanbase/$actualFanbaseId/posts/$postId/like');
+
+      final response =
+          await dio.post('/fanbase/$actualFanbaseId/posts/$postId/like');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return FanbasePost.fromJson(response.data);
@@ -270,6 +270,58 @@ class FanbaseService {
       throw Exception('Failed to like post: $errorMessage');
     } catch (e) {
       throw Exception('Failed to like post: $e');
+    }
+  }
+
+  /// Fetches the rules for a given fanbase
+  static Future<List<String>> getRules(String fanbaseId) async {
+    final url = Uri.parse('$baseUrl/$fanbaseId/rules');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data is List) {
+        return data
+            .map<String>((e) => e is Map && e.containsKey('rule')
+                ? e['rule'] ?? ''
+                : e.toString())
+            .where((rule) => rule.isNotEmpty)
+            .toList();
+      }
+      return [];
+    } else {
+      throw Exception(
+          'Failed to load fanbase rules: ${response.statusCode} ${response.reasonPhrase}');
+    }
+  }
+
+  /// Updates the rules for a given fanbase (owner only)
+  static Future<void> updateRules(
+    String fanbaseId,
+    List<String> rules, {
+    String? token,
+  }) async {
+    final url = Uri.parse('$baseUrl/$fanbaseId/rules');
+    final body = json.encode({
+      'rules': rules.map((r) => {'rule': r}).toList(),
+    });
+    final headers = {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+    final response = await http.post(
+      url,
+      headers: headers,
+      body: body,
+    );
+    if (response.statusCode != 200) {
+      String msg = 'Failed to update fanbase rules: ${response.statusCode}';
+      try {
+        final error = json.decode(response.body);
+        if (error is Map && error['message'] != null) {
+          msg += ' - ${error['message']}';
+        }
+      } catch (_) {}
+      throw Exception(msg);
     }
   }
 }

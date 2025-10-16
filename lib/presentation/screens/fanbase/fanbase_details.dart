@@ -437,6 +437,13 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
             });
           }
 
+          Widget aboutTabContent;
+          if (_isCurrentUserOwner) {
+            aboutTabContent = FanbaseDetailsCreatorAbout(fanbase: _fanbase!);
+          } else {
+            aboutTabContent = FanbaseDetailsUserAbout(fanbase: _fanbase!);
+          }
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -469,18 +476,19 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(0),
-                ),  
+                  border: Border.all(color: Colors.grey.shade500),
+                ),
                 child: Row(
                   children: [
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _selectedTabIndex == 0
-                              ? Colors.grey[500]
-                              : Theme.of(context).colorScheme.primary,
-                          foregroundColor: _selectedTabIndex == 0
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onPrimary,
+                              : Colors.grey[500],
+                          foregroundColor: _selectedTabIndex == 0
+                              ? Theme.of(context).colorScheme.onPrimary
+                              : Theme.of(context).colorScheme.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(0),
                           ),
@@ -495,11 +503,11 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _selectedTabIndex == 1
-                              ? Colors.grey[500]
-                              : Theme.of(context).colorScheme.primary,
-                          foregroundColor: _selectedTabIndex == 1
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onPrimary,
+                              : Colors.grey[500],
+                          foregroundColor: _selectedTabIndex == 1
+                              ? Theme.of(context).colorScheme.onPrimary
+                              : Theme.of(context).colorScheme.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(0),
                           ),
@@ -540,14 +548,8 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                     },
                   ),
                 )
-              else if (_isCurrentUserOwner)
-                Expanded(
-                  child: FanbaseDetailsCreatorAbout(fanbase: _fanbase!),
-                )
               else
-                Expanded(
-                  child: FanbaseDetailsUserAbout(fanbase: _fanbase!),
-                ),
+                aboutTabContent,
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Center(
@@ -596,7 +598,7 @@ class FanbaseDetailsHeader extends StatelessWidget {
     final btnW = (screenW * 0.22).clamp(80.0, 140.0);
 
     return Container(
-      color: Theme.of(context).colorScheme.onPrimary,
+      color: Theme.of(context).colorScheme.primary,
       padding: const EdgeInsets.fromLTRB(8.0, 20.0, 8.0, 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -625,8 +627,9 @@ class FanbaseDetailsHeader extends StatelessWidget {
                                 .textTheme
                                 .headlineSmall
                                 ?.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.primary),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimary),
                           ),
                         ),
                         if (isCurrentUserOwner) ...[
@@ -671,7 +674,9 @@ class FanbaseDetailsHeader extends StatelessWidget {
                   width: btnW,
                   child: OutlinedButton.icon(
                     onPressed: onPostCreated,
-                    icon: const Icon(LucideIcons.plus, size: 16),
+                    icon: Icon(LucideIcons.plus,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onPrimary),
                     label: const Text("Post"),
                     style: OutlinedButton.styleFrom(
                       shape: RoundedRectangleBorder(
@@ -679,6 +684,8 @@ class FanbaseDetailsHeader extends StatelessWidget {
                       ),
                       padding: EdgeInsets.zero,
                       minimumSize: Size(btnW, 36),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
                 ),
@@ -690,7 +697,8 @@ class FanbaseDetailsHeader extends StatelessWidget {
                     ? OutlinedButton(
                         onPressed: null,
                         style: OutlinedButton.styleFrom(
-                          backgroundColor: Colors.white,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.purple,
                           side: const BorderSide(color: Colors.purple),
                           shape: RoundedRectangleBorder(
@@ -704,10 +712,8 @@ class FanbaseDetailsHeader extends StatelessWidget {
                           children: [
                             Text(
                               'Owner',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.purple
-                              ),
+                              style:
+                                  TextStyle(fontSize: 14, color: Colors.purple),
                             ),
                           ],
                         ),
@@ -716,7 +722,8 @@ class FanbaseDetailsHeader extends StatelessWidget {
                         ? OutlinedButton(
                             onPressed: onJoinPressed,
                             style: OutlinedButton.styleFrom(
-                              backgroundColor: Colors.white,
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
                               foregroundColor: Colors.purple,
                               side: const BorderSide(color: Colors.purple),
                               shape: RoundedRectangleBorder(

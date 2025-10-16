@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../../data/services/fanbase_post_service.dart';
 import '../../widgets/home/header_bar.dart';
 
@@ -142,12 +143,12 @@ class _PostDetailPageState extends State<PostDetailPage> {
       body: Stack(
         children: [
           SingleChildScrollView(
-            // padding: const EdgeInsets.only(
-            //   left: 16,
-            //   right: 16,
-            //   top: 16,
-            //   bottom: 80,
-            // ),
+            padding: const EdgeInsets.only(
+              left: 10,
+              right: 10,
+              top: 16,
+              bottom: 80,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -173,33 +174,34 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 const SizedBox(height: 10),
                 // Song Card
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: widget.backgroundColor,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      )
-                    ],
+                    borderRadius: BorderRadius.circular(5),
+                    // boxShadow: [
+                    //   BoxShadow(
+                    //     color: Colors.black.withOpacity(0.05),
+                    //     blurRadius: 6,
+                    //     offset: const Offset(0, 3),
+                    //   )
+                    // ],
                   ),
                   child: Row(
                     children: [
+                      // const SizedBox(width: ),
                       ClipRRect(
-                        borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(12),
-                            bottomLeft: Radius.circular(12)),
+                        // borderRadius: const BorderRadius.only(
+                        //     topLeft: Radius.circular(12),
+                        //     bottomLeft: Radius.circular(12)),
                         child: Image.network(
                           widget.albumImage,
-                          width: 70,
-                          height: 70,
+                          width: 40,
+                          height: 40,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Image.asset(
                             'assets/images/song.png',
-                            width: 70,
-                            height: 70,
+                            width: 40,
+                            height: 40,
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -213,21 +215,21 @@ class _PostDetailPageState extends State<PostDetailPage> {
                               widget.songName,
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontSize: 10,
                                   color: Colors.white),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               widget.artists,
                               style: TextStyle(
-                                  color: Colors.grey.shade400, fontSize: 14),
+                                  color: Colors.grey.shade400, fontSize: 8),
                             ),
                           ],
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.play_circle_fill,
-                            color: Colors.purple, size: 32),
+                        icon: Icon(Icons.play_arrow_sharp,
+                            color: Theme.of(context).colorScheme.primary),
                         onPressed: () {},
                       ),
                       IconButton(
@@ -293,7 +295,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   for (var comment in _comments) ...[
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? Colors.grey.shade800.withOpacity(0.3)
@@ -309,9 +311,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
                                 comment['username'] ?? 'Unknown User',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                  color:
-                                      Theme.of(context).colorScheme.onPrimary,
+                                  fontSize: 10,
+                                  color: Theme.of(context).colorScheme.onPrimary,
                                 ),
                               ),
                               const Spacer(),
@@ -319,19 +320,47 @@ class _PostDetailPageState extends State<PostDetailPage> {
                                 Text(
                                   _formatDateTime(comment['createdAt']!),
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 10,
                                     color: Colors.grey.shade500,
                                   ),
                                 ),
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            comment['text'] ?? '',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context).colorScheme.onPrimary,
+                          const SizedBox(height: 2),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 15),
+                            child: Text(
+                              comment['text'] ?? '',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
                             ),
+                          ),
+                          const SizedBox(height: 3,),
+                          Row(
+                            // padding: const EdgeInsets.only(left: 15),
+                            children: [
+                              Icon(
+                                Icons.favorite_border,
+                                size: 14,
+                                color: Colors.grey.shade500,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                comment['likeCount'] ?? '0',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Icon(
+                                LucideIcons.messageCircle,
+                                size: 14,
+                                color: Colors.grey.shade500,
+                              ),
+                            ],
                           ),
                         ],
                       ),
