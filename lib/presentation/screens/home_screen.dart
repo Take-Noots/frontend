@@ -252,10 +252,10 @@ class _HomeScreenState extends State<HomeScreen> {
     print('[DEBUG] HomeScreen: Like result: $result');
 
     if (result['success']) {
-      if (post.userId != null) {
-        await _songPostService.addRecentlyLikedUser(
+      if (post.id != null) {
+        await _songPostService.addRecentlyLikedPosts(
           currentUserId,
-          post.userId!,
+          post.id,
         );
       }
     }
