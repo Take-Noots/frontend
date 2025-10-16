@@ -97,7 +97,7 @@ class _BottomBarState extends State<BottomBar> {
   @override
   Widget build(BuildContext context) {
     // Return empty container if hidden
-    if (isHidden) {
+    if (widget.isHidden) {
       return const SizedBox.shrink();
     }
 

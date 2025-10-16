@@ -115,7 +115,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
       isOwnPost: isOwnPost,
       isSaved: false, 
       postId: _currentPost.id,
-      onCopyLink: () {
+      onSharePost: () {
         print('Copy link pressed for thoughts post: ${_currentPost.id}');
         // TODO: Implement copy link functionality
       },
