@@ -1,27 +1,15 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/core/providers/auth_provider.dart';
+import 'package:frontend/core/constants/app_constants.dart';
 
 class TokenManagerService {
   // API endpoints
-  // Use localhost for mobile, but use the browser host for web
-  static String get _baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:3000'; // In production, this would be your API domain
-    } else {
-      // For mobile, use platform-specific localhost
-      if (Platform.isAndroid) {
-        // Use 10.0.2.2 for Android emulator to access local backend
-        return 'http://10.0.2.2:3000';
-      }
-      // iOS simulator or real device
-      return 'http://localhost:3000';
-    }
-  }
+  // Use AppConstants for base URL
+  static String get _baseUrl => AppConstants.baseUrl;
 
   static const String _refreshEndpoint = '/auth/refresh';
 
