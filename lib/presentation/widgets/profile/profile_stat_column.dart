@@ -16,10 +16,10 @@ class ProfileStatColumn extends StatelessWidget {
       children: [
         Text(
           count.toString(),
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 4),
@@ -27,7 +27,7 @@ class ProfileStatColumn extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 14,
-            color: Colors.grey[400],
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 // import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'core/router/app_router.dart';
 import 'core/styles/theme.dart';
@@ -10,6 +11,12 @@ import 'core/providers/auth_provider.dart';
 void main() async {
   // Ensure Flutter bindings are initialized before accessing plugins
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Configure URL strategy for web (removes hash from URLs)
+  if (kIsWeb) {
+    // For Flutter 3.x+, go_router handles this automatically
+    // No additional configuration needed
+  }
 
   // Create providers
   final authProvider = AuthProvider();

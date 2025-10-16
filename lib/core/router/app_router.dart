@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/signup_screen.dart';
@@ -17,7 +18,7 @@ import '../../presentation/screens/profile/settings/options.dart';
 import '../../presentation/screens/profile/settings/privacy_page.dart';
 import '../../presentation/screens/profile/settings/help_page.dart';
 import '../../presentation/screens/profile/settings/about_page.dart';
-import '../../presentation/screens/profile/settings/saved_posts_page.dart';
+import '../../presentation/screens/profile/settings/savedPosts/saved_posts.dart';
 import '../../presentation/screens/profile/settings/hiddenPosts/hidden_posts.dart';
 import '../../presentation/screens/request/request.dart';
 import '../../presentation/screens/shell_screen_v2.dart';
@@ -117,7 +118,9 @@ class AppRouter {
                 path: 'user/:userId',
                 builder: (context, state) {
                   final userId = state.pathParameters['userId']!;
-                  return UserProfilePage(userId: userId);
+                  final postId = state.uri.queryParameters['postId'];
+                  return UserProfilePage(
+                      userId: userId, highlightPostId: postId);
                 },
               ),
               GoRoute(
@@ -146,7 +149,12 @@ class AppRouter {
               ),
               GoRoute(
                 path: 'saved-posts',
-                builder: (context, state) => const SavedPostsPage(),
+                builder: (context, state) {
+                  final authProvider =
+                      Provider.of<AuthProvider>(context, listen: false);
+                  final userId = authProvider.user?.id ?? '';
+                  return SavedPostsPage(userId: userId);
+                },
               ),
               GoRoute(
                 path: 'hidden-posts',
