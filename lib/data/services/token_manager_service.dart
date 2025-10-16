@@ -19,6 +19,9 @@ class TokenManagerService {
   // In-memory storage
   String? _accessToken;
 
+  // Refresh lock to prevent concurrent refresh attempts
+  bool _isRefreshing = false;
+
   // Storage services
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final Dio _dio = Dio();
@@ -119,9 +122,6 @@ class TokenManagerService {
         if (accessToken != null) {
           _accessToken = accessToken;
           _authProvider.setToken(accessToken);
-
-          // Try to refresh token to validate it
-          await refreshToken();
         }
       } catch (e) {
         print('Error loading token from storage: $e');
@@ -140,9 +140,6 @@ class TokenManagerService {
       if (accessToken != null) {
         _accessToken = accessToken;
         _authProvider.setToken(accessToken);
-
-        // Try to refresh token to validate it
-        await refreshToken();
       }
     } catch (e) {
       print('Error loading token from SharedPreferences: $e');
@@ -210,13 +207,22 @@ class TokenManagerService {
 
   // Refresh token
   Future<bool> refreshToken() async {
+    // Prevent concurrent refresh attempts
+    if (_isRefreshing) {
+      print(
+          '[At Token.Manager.Service] Refresh already in progress, skipping...');
+      return false;
+    }
+
+    _isRefreshing = true;
     try {
       print('[At Token.Manager.Service] Attempting to refresh token...');
 
-      // Call the refresh endpoint
-      final response = await _dio.post(_refreshEndpoint, options: Options(
-          // Ensure cookies are sent with the request
-          extra: {'withCredentials': true}));
+      // Use unauthenticated Dio to avoid interceptor loops
+      final response =
+          await _unauthenticatedDio.post(_refreshEndpoint, options: Options(
+              // Ensure cookies are sent with the request
+              extra: {'withCredentials': true}));
 
       print(
           '[At Token.Manager.Service] Refresh response status: ${response.statusCode}');
@@ -264,6 +270,8 @@ class TokenManagerService {
       }
 
       return false;
+    } finally {
+      _isRefreshing = false;
     }
   }
 

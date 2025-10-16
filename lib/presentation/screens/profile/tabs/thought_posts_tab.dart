@@ -149,7 +149,7 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
               onComment: () {
                 // navigate to comment view if desired
               },
-              onUserTap: (userId) {},
+              onUserTap: (String userId, String? username) {},
             ),
           );
         }).toList(),

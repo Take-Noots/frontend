@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import './user_profiles.dart'; // Import the UserProfilePage
+import './my_profile.dart';
+import '../../../core/providers/auth_provider.dart';
 
 // following: List<Map<String, dynamic>> with userId, username, profileImage
 class FollowingListPage extends StatelessWidget {
   final List<dynamic> following;
+  final void Function(String userId, String? username)? onUserTap;
 
-  const FollowingListPage({Key? key, required this.following})
+  const FollowingListPage({Key? key, required this.following, this.onUserTap})
       : super(key: key);
 
   @override
@@ -54,13 +58,29 @@ class FollowingListPage extends StatelessWidget {
                       : null,
                   onTap: () {
                     if (user['userId'] != null) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => UserProfilePage(
-                            userId: user['userId'],
+                      final authProvider =
+                          Provider.of<AuthProvider>(context, listen: false);
+                      final currentUserId = authProvider.user?.id;
+                      if (user['userId'] == currentUserId) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const NormalUserProfilePage(),
                           ),
-                        ),
-                      );
+                        );
+                      } else {
+                        if (onUserTap != null) {
+                          onUserTap!(user['userId'], user['username']);
+                        } else {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => UserProfilePage(
+                                userId: user['userId'],
+                                username: user['username'],
+                              ),
+                            ),
+                          );
+                        }
+                      }
                     }
                   },
                 );

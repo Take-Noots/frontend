@@ -12,12 +12,14 @@ import './settings/options.dart';
 import 'followers_list.dart';
 import 'following_list.dart';
 import 'profile_feed_screen.dart';
+import './user_profiles.dart';
 import 'tabs/artist/new_releases_tab.dart'; // Create this for artist features
 import 'tabs/artist/concerts_tab.dart'; // Create this for artist features
 import 'tabs/artist/upcoming_tab.dart'; // Create this for artist features
 import 'tabs/artist/insights_tab.dart'; // Create this for artist features
 import 'tabs/business/ads_tab.dart'; // Create this for business features
 import 'tabs/business/ad_insights_tab.dart'; // Create this for business features
+import '../../widgets/loading_screens/profile_loading_screen.dart';
 
 import '../../../data/services/profile_service.dart';
 import '../../../data/models/profile_model.dart';
@@ -39,6 +41,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
   final ScrollController _tabScrollController = ScrollController(); // Add this
 
   String? userId;
+  String? username;
   ProfileModel? profile;
   List<dynamic> posts = [];
   List<String> albumImages = [];
@@ -76,13 +79,16 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
         if (userDataString != null) {
           final userData = jsonDecode(userDataString);
           id = userData['id'] as String?;
+          username = userData['username'] as String?;
           print("Extracted ID from SharedPrefs: $id");
+          print("Extracted username from SharedPrefs: $username");
         }
       }
 
       if (mounted) {
         setState(() {
           userId = id;
+          username = username;
         });
       }
 
@@ -307,9 +313,10 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const Center(child: CircularProgressIndicator()),
+      return ProfileLoadingScreen(
+        title: username ?? 'My Profile',
+        showSkeleton: true,
+        isMyProfile: true,
       );
     }
 
@@ -421,6 +428,30 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                   MaterialPageRoute(
                     builder: (context) => FollowersListPage(
                       followers: followersList,
+                      onUserTap: (userId, username) {
+                        final authProvider =
+                            Provider.of<AuthProvider>(context, listen: false);
+                        final currentUserId = authProvider.user?.id;
+                        if (userId == currentUserId) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const NormalUserProfilePage(),
+                            ),
+                          );
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => UserProfilePage(
+                                userId: userId,
+                                username: username,
+                              ),
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ),
                 );
@@ -436,6 +467,30 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                   MaterialPageRoute(
                     builder: (context) => FollowingListPage(
                       following: followingList,
+                      onUserTap: (userId, username) {
+                        final authProvider =
+                            Provider.of<AuthProvider>(context, listen: false);
+                        final currentUserId = authProvider.user?.id;
+                        if (userId == currentUserId) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const NormalUserProfilePage(),
+                            ),
+                          );
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => UserProfilePage(
+                                userId: userId,
+                                username: username,
+                              ),
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ),
                 );

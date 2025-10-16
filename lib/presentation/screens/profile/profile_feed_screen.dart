@@ -568,11 +568,12 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
         isPlaying: _isPlaying,
         currentUserId: _currentUserId,
         onPostOptions: _handlePostOptions,
-        onUserTap: (String userId) {
+        onUserTap: (String userId, String? username) {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => UserProfilePage(userId: userId),
+              builder: (context) =>
+                  UserProfilePage(userId: userId, username: username),
             ),
           );
         },

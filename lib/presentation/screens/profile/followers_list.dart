@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import './user_profiles.dart'; // Import the ProfileScreen
+import './my_profile.dart';
+import '../../../core/providers/auth_provider.dart';
 
 // followers: List<Map<String, dynamic>> with userId, username, profileImage
 class FollowersListPage extends StatelessWidget {
   final List<dynamic> followers;
+  final void Function(String userId, String? username)? onUserTap;
 
-  const FollowersListPage({Key? key, required this.followers})
+  const FollowersListPage({Key? key, required this.followers, this.onUserTap})
       : super(key: key);
 
   @override
@@ -57,13 +61,31 @@ class FollowersListPage extends StatelessWidget {
                         : null,
                     onTap: () {
                       if (follower['userId'] != null) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => UserProfilePage(
-                              userId: follower['userId'],
+                        final authProvider =
+                            Provider.of<AuthProvider>(context, listen: false);
+                        final currentUserId = authProvider.user?.id;
+                        if (follower['userId'] == currentUserId) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const NormalUserProfilePage(),
                             ),
-                          ),
-                        );
+                          );
+                        } else {
+                          if (onUserTap != null) {
+                            onUserTap!(
+                                follower['userId'], follower['username']);
+                          } else {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => UserProfilePage(
+                                  userId: follower['userId'],
+                                  username: follower['username'],
+                                ),
+                              ),
+                            );
+                          }
+                        }
                       }
                     },
                   );
@@ -89,13 +111,28 @@ class FollowersListPage extends StatelessWidget {
                     ),
                     onTap: () {
                       // For string entries, we'll assume the string is the userId
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => UserProfilePage(
-                            userId: follower,
+                      final authProvider =
+                          Provider.of<AuthProvider>(context, listen: false);
+                      final currentUserId = authProvider.user?.id;
+                      if (follower == currentUserId) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const NormalUserProfilePage(),
                           ),
-                        ),
-                      );
+                        );
+                      } else {
+                        if (onUserTap != null) {
+                          onUserTap!(follower, null);
+                        } else {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => UserProfilePage(
+                                userId: follower,
+                              ),
+                            ),
+                          );
+                        }
+                      }
                     },
                   );
                 } else {

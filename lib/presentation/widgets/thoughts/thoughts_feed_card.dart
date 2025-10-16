@@ -19,7 +19,7 @@ class ThoughtsFeedCard extends StatefulWidget {
   final ThoughtsPost post;
   final VoidCallback? onLike;
   final VoidCallback? onComment;
-  final void Function(String userId)? onUserTap;
+  final void Function(String userId, String? username)? onUserTap;
   final Function(ThoughtsPost)? onPostUpdated;
   final VoidCallback? onPlayPause;
   final bool isPlaying;
@@ -572,7 +572,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
 
 class _ThoughtsContent extends StatelessWidget {
   final ThoughtsPost post;
-  final void Function(String userId)? onUserTap;
+  final void Function(String userId, String? username)? onUserTap;
   final Color backgroundColor;
   final VoidCallback? onPlayPause;
   final bool isPlaying;
@@ -620,7 +620,7 @@ class _ThoughtsContent extends StatelessWidget {
 
 class _ThoughtsHeader extends StatelessWidget {
   final ThoughtsPost post;
-  final void Function(String userId)? onUserTap;
+  final void Function(String userId, String? username)? onUserTap;
   final VoidCallback? onPlayPause;
   final bool isPlaying;
   final bool isCurrentTrack;
@@ -638,7 +638,7 @@ class _ThoughtsHeader extends StatelessWidget {
     return Row(
       children: [
         GestureDetector(
-          onTap: () => onUserTap?.call(post.userId),
+          onTap: () => onUserTap?.call(post.userId, post.username),
           child: Container(
             width: 40,
             height: 40,

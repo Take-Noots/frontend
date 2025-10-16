@@ -1,23 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/providers/theme_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 // import 'dart:math';
 import '../../../data/services/profile_service.dart';
+import '../../../data/services/auth_service.dart';
+import '../../../data/services/chat_service.dart';
 import '../../../data/models/profile_model.dart';
+import '../../../data/models/chat_model.dart';
+import '../../screens/chat/chat_screen.dart';
+import '../../widgets/loading_screens/chat_loading_screen.dart';
+import '../../widgets/loading_screens/profile_loading_screen.dart';
 import 'tabs/album_art_posts_tab.dart';
 import 'tabs/thought_posts_tab.dart';
 import 'tabs/tagged_posts_tab.dart';
-// import 'my_profile.dart';
+import 'my_profile.dart';
 import 'followers_list.dart';
 import 'following_list.dart';
 import 'profile_feed_screen.dart'; // Add this import for navigation
 
 class UserProfilePage extends StatefulWidget {
   final String userId;
+  final String? username;
   final String? highlightPostId;
-  const UserProfilePage({Key? key, required this.userId, this.highlightPostId})
+  const UserProfilePage(
+      {Key? key, required this.userId, this.username, this.highlightPostId})
       : super(key: key);
 
   @override
@@ -110,6 +117,16 @@ class _UserProfilePageState extends State<UserProfilePage>
         isLoading = false;
       });
 
+      // If this is the logged user's own profile, redirect to my profile page
+      if (widget.userId == loggedUserId) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => const NormalUserProfilePage()),
+        );
+        return;
+      }
+
       // If highlightPostId is provided, navigate to the profile feed to show that post
       if (widget.highlightPostId != null) {
         Future.microtask(() {
@@ -131,18 +148,126 @@ class _UserProfilePageState extends State<UserProfilePage>
     }
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  Future<void> _handleFollow() async {
+    if (loggedUserId == null || profile == null) return;
+
+    // Prevent following yourself
+    if (loggedUserId == profile!.userId) return;
+
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final profileService = ProfileService(authService: authService);
+      final result = isFollowingUser
+          ? await profileService.unfollowUser(loggedUserId!, profile!.userId)
+          : await profileService.followUser(loggedUserId!, profile!.userId);
+
+      if (result['success'] == true) {
+        setState(() {
+          isFollowingUser = !isFollowingUser;
+          if (isFollowingUser) {
+            profile!.followers.add(loggedUserId!);
+          } else {
+            profile!.followers.remove(loggedUserId!);
+          }
+        });
+      } else {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ??
+                'Failed to ${isFollowingUser ? 'unfollow' : 'follow'} user'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Error: ${isFollowingUser ? 'unfollowing' : 'following'} user failed'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  void _handleMessage() async {
+    if (profile == null || loggedUserId == null) return;
+
+    // Prevent messaging yourself
+    if (loggedUserId == profile!.userId) return;
+
+    // Navigate immediately to loading screen with seamless transition
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            ChatLoadingScreen(
+          profile: profile,
+          loadingText: 'Starting chat...',
+          onBackPressed: () => Navigator.of(context).pop(),
+        ),
+        transitionDuration: Duration.zero, // No transition animation
+        reverseTransitionDuration: Duration.zero,
+      ),
+    );
+
+    try {
+      final chatService = ChatService();
+      final result = await chatService.createChat(profile!.userId);
+
+      if (result['success']) {
+        final chatData = result['data'];
+        final chat = Chat.fromJson(chatData, loggedUserId!);
+
+        // Replace loading screen with actual chat screen seamlessly
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => ChatScreen(
+              chat: chat,
+              currentUserId: loggedUserId!,
+            ),
+            transitionDuration: Duration.zero, // No transition animation
+            reverseTransitionDuration: Duration.zero,
+          ),
+        );
+      } else {
+        // Show error and go back to profile
+        Navigator.of(context).pop(); // Remove loading screen
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to start chat'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } catch (e) {
+      // Show error and go back to profile
+      Navigator.of(context).pop(); // Remove loading screen
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error starting chat: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
+      return ProfileLoadingScreen(
+        title: widget.username ?? 'User Profile',
+        // subtitle: 'Loading profile...',
+        onBackPressed: () => Navigator.of(context).pop(),
+        showSkeleton: true,
+      );
+    }
+    if (profile == null) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(profile?.username ?? 'User Profile'),
+          title: const Text('User Profile'),
           backgroundColor: Theme.of(context).appBarTheme.backgroundColor ??
               Theme.of(context).scaffoldBackgroundColor,
           centerTitle: true,
@@ -151,19 +276,8 @@ class _UserProfilePageState extends State<UserProfilePage>
                 color: Theme.of(context).colorScheme.onSurface),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          actions: [
-            IconButton(
-              icon: Icon(Icons.brightness_6,
-                  color: Theme.of(context).colorScheme.onSurface),
-              onPressed: () {
-                Provider.of<ThemeProvider>(context, listen: false)
-                    .toggleTheme();
-              },
-            ),
-          ],
         ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        // backgroundColor: Colors.black,
         body: Center(
             child: Text('Failed to load profile',
                 style:
@@ -176,15 +290,6 @@ class _UserProfilePageState extends State<UserProfilePage>
         title: Text(profile?.username ?? 'User Profile'),
         centerTitle: true,
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.brightness_6,
-                color: Theme.of(context).colorScheme.onSurface),
-            onPressed: () {
-              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
-            },
-          ),
-        ],
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
@@ -273,9 +378,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 OutlinedButton(
-                  onPressed: () {
-                    // TODO: Implement follow functionality
-                  },
+                  onPressed: _handleFollow,
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(
                         color: Theme.of(context).colorScheme.onSurface),
@@ -288,9 +391,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                 ),
                 const SizedBox(width: 16),
                 OutlinedButton(
-                  onPressed: () {
-                    // TODO: Implement message functionality
-                  },
+                  onPressed: _handleMessage,
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(
                         color: Theme.of(context).colorScheme.onSurface),

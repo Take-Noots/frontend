@@ -27,6 +27,7 @@ class BottomBar extends StatefulWidget {
 
 class _BottomBarState extends State<BottomBar> {
   String? userId;
+  String? username;
   String? profileImageUrl;
   bool isLoading = true;
 
@@ -49,6 +50,7 @@ class _BottomBarState extends State<BottomBar> {
         if (userDataString != null) {
           final userData = jsonDecode(userDataString);
           id = userData['id'] as String?;
+          username = userData['username'] as String?;
         }
       }
 
@@ -61,6 +63,7 @@ class _BottomBarState extends State<BottomBar> {
           if (mounted) {
             setState(() {
               userId = id;
+              username = username;
               profileImageUrl = profileData['profileImage'] as String?;
               isLoading = false;
             });
@@ -69,6 +72,7 @@ class _BottomBarState extends State<BottomBar> {
           if (mounted) {
             setState(() {
               userId = id;
+              username = username;
               isLoading = false;
             });
           }

@@ -883,11 +883,12 @@ class _HomeScreenState extends State<HomeScreen> {
       isPlaying: _isPlaying,
       currentUserId: userId,
       onPostOptions: _handlePostOptions,
-      onUserTap: (String userId) {
+      onUserTap: (String userId, String? username) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => UserProfilePage(userId: userId),
+            builder: (context) =>
+                UserProfilePage(userId: userId, username: username),
           ),
         );
       },
