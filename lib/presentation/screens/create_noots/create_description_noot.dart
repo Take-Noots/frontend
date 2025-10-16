@@ -6,7 +6,7 @@ import '/data/services/spotify_service.dart';
 import 'package:Noot/data/models/fanbase_model.dart';
 import 'package:Noot/data/services/fanbase_service.dart';
 import '../../../data/services/auth_service.dart';
-import '../../../data/services/description_post_service.dart';
+import '../../../data/services/thoughts_service.dart';
 import '../../widgets/create_post/button.dart';
 import '../../widgets/common/musicplayer_bar.dart';
 
@@ -147,7 +147,7 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
 
     try {
       // Create thoughts post service
-      final thoughtsService = ThoughtsPostService();
+      final thoughtsService = ThoughtsService();
       
       // Call API to create thoughts post
       final result = await thoughtsService.createThoughts(

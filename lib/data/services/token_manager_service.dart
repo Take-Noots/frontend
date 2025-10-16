@@ -15,13 +15,11 @@ class TokenManagerService {
     } else {
       // For mobile, use platform-specific localhost
       if (Platform.isAndroid) {
-        // Use production backend if running as an installed APK (not emulator)
-        // You can check for emulator by checking the device model or environment.
-        // Here, as a simple approach, use the production URL for Android devices.
-        return 'https://backend-nestjs-production-8204.up.railway.app';
-        // If you want to distinguish between emulator and real device, you can add more logic here.
+        // Use 10.0.2.2 for Android emulator to access local backend
+        return 'http://10.0.2.2:3000';
       }
-      return 'http://localhost:3000'; // iOS simulator or real device
+      // iOS simulator or real device
+      return 'http://localhost:3000';
     }
   }
 
