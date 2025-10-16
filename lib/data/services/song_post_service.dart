@@ -4,11 +4,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/providers/auth_provider.dart';
 import 'auth_service.dart';
 
 class SongPostService {
-  final String baseUrl = 'http://localhost:3000';
+  final String baseUrl = AppConstants.baseUrl;
 
   Future<Map<String, dynamic>> createPost({
     required String trackId,

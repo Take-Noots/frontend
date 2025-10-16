@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/providers/auth_provider.dart';
 import 'token_manager_service.dart';
 
@@ -29,7 +30,7 @@ class AuthService {
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await _tokenManager.unauthenticatedDio.post(
-        '/auth/login',
+        '${AppConstants.baseUrl}/auth/login',
         data: {
           'email': email,
           'password': password,

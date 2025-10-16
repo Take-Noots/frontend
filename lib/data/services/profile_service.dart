@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../core/constants/app_constants.dart';
 
 class ProfileService {
-  // Base URL for backend API
-  static const String baseUrl = 'http://localhost:3000/profile';
+  static String get baseUrl => '${AppConstants.baseUrl}/profile';
 
   // Fetch user profile info (username, profileImage, bio, stats)
   Future<Map<String, dynamic>> getUserProfile(String userId) async {
