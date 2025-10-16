@@ -5,7 +5,7 @@ import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/router/route_names.dart';
 import 'settings_page.dart';
 import 'privacy_page.dart';
-import 'saved_posts_page.dart';
+import 'savedPosts/saved_posts.dart';
 import 'help_page.dart';
 import 'about_page.dart';
 
@@ -16,17 +16,20 @@ class OptionsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Options'),
-        backgroundColor: Colors.black,
+        title: Text('Options',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         centerTitle: true,
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: ListView(
         children: [
           ListTile(
-            leading: const Icon(Icons.settings, color: Colors.white),
-            title:
-                const Text('Settings', style: TextStyle(color: Colors.white)),
+            leading: Icon(Icons.settings,
+                color: Theme.of(context).colorScheme.onSurface),
+            title: Text('Settings',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
             onTap: () {
               Navigator.push(
                 context,
@@ -35,8 +38,11 @@ class OptionsPage extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.lock, color: Colors.white),
-            title: const Text('Privacy', style: TextStyle(color: Colors.white)),
+            leading: Icon(Icons.lock,
+                color: Theme.of(context).colorScheme.onSurface),
+            title: Text('Privacy',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
             onTap: () {
               Navigator.push(
                 context,
@@ -45,27 +51,38 @@ class OptionsPage extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.visibility_off, color: Colors.white),
-            title: const Text('Hidden Posts',
-                style: TextStyle(color: Colors.white)),
+            leading: Icon(Icons.visibility_off,
+                color: Theme.of(context).colorScheme.onSurface),
+            title: Text('Hidden Posts',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
             onTap: () {
               context.go(AppRoutes.hiddenPosts);
             },
           ),
           ListTile(
-            leading: const Icon(Icons.bookmark, color: Colors.white),
-            title:
-                const Text('Saved Post', style: TextStyle(color: Colors.white)),
+            leading: Icon(Icons.bookmark,
+                color: Theme.of(context).colorScheme.onSurface),
+            title: Text('Saved Post',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
             onTap: () {
+              final userId =
+                  Provider.of<AuthProvider>(context, listen: false).user?.id ??
+                      '';
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SavedPostsPage()),
+                MaterialPageRoute(
+                    builder: (context) => SavedPostsPage(userId: userId)),
               );
             },
           ),
           ListTile(
-            leading: const Icon(Icons.help_outline, color: Colors.white),
-            title: const Text('Help', style: TextStyle(color: Colors.white)),
+            leading: Icon(Icons.help_outline,
+                color: Theme.of(context).colorScheme.onSurface),
+            title: Text('Help',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
             onTap: () {
               Navigator.push(
                 context,
@@ -74,8 +91,11 @@ class OptionsPage extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.info_outline, color: Colors.white),
-            title: const Text('About', style: TextStyle(color: Colors.white)),
+            leading: Icon(Icons.info_outline,
+                color: Theme.of(context).colorScheme.onSurface),
+            title: Text('About',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
             onTap: () {
               Navigator.push(
                 context,
@@ -83,21 +103,25 @@ class OptionsPage extends StatelessWidget {
               );
             },
           ),
-          const Divider(color: Colors.white54),
+          Divider(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.54)),
           Provider.of<AuthProvider>(context, listen: false).isSpotifyLinked
               ? ListTile(
-                  leading:
-                      const Icon(Icons.account_circle, color: Colors.white),
-                  title: const Text('Link Account to Spotify',
-                      style: TextStyle(color: Colors.white)),
+                  leading: Icon(Icons.account_circle,
+                      color: Theme.of(context).colorScheme.onSurface),
+                  title: Text('Link Account to Spotify',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface)),
                   onTap: () {
                     Navigator.pushNamed(context, '/link-account');
                   },
                 )
               : const SizedBox.shrink(),
           ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Logout', style: TextStyle(color: Colors.red)),
+            leading:
+                Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+            title: Text('Logout',
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
             onTap: () async {
               await Provider.of<AuthProvider>(context, listen: false).logout();
               Navigator.of(context)

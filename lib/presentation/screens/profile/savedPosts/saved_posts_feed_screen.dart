@@ -1,37 +1,36 @@
 import 'package:flutter/material.dart';
-import '../../../core/providers/theme_provider.dart';
-// import '../../widgets/home/header_bar.dart';
-import '../../widgets/home/feed_widget.dart';
+import '../../../../core/providers/theme_provider.dart';
+import '../../../widgets/home/feed_widget.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import '../../../data/models/post_model.dart' as data_model;
-import '../../../data/models/feed_item.dart';
-import '../../../data/services/profile_service.dart';
-import '../../../data/models/profile_model.dart';
-import '../../../data/services/song_post_service.dart';
+import '../../../../data/models/post_model.dart' as data_model;
+import '../../../../data/models/feed_item.dart';
+import '../../../../data/services/song_post_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
-import '../../widgets/song_post/comment.dart';
-import '../../widgets/song_post/post_options_menu.dart';
-import '../song_posts/update.dart';
+import '../../../widgets/song_post/comment.dart';
+import '../../../widgets/song_post/post_options_menu.dart';
+import '../../song_posts/update.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import './user_profiles.dart';
+import '../user_profiles.dart';
 
-class ProfileFeedScreen extends StatefulWidget {
+class SavedPostsFeedScreen extends StatefulWidget {
   final String userId;
-  final String? initialPostId; // Make this nullable
+  final List<String> savedPostIds;
+  final String? initialPostId;
 
-  const ProfileFeedScreen({
+  const SavedPostsFeedScreen({
     Key? key,
     required this.userId,
-    this.initialPostId, // Remove required keyword
+    required this.savedPostIds,
+    this.initialPostId,
   }) : super(key: key);
 
   @override
-  State<ProfileFeedScreen> createState() => _ProfileFeedScreenState();
+  State<SavedPostsFeedScreen> createState() => _SavedPostsFeedScreenState();
 }
 
-class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
+class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
   List<data_model.Post> _posts = [];
   bool _isLoading = true;
   String? _error;
@@ -51,7 +50,6 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
   }
 
   Future<void> _loadCurrentUserAndPosts() async {
-    // Get current user ID from shared preferences
     final prefs = await SharedPreferences.getInstance();
     final userDataString = prefs.getString('user_data');
     if (userDataString != null) {
@@ -59,67 +57,57 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
       _currentUserId = userData['id'];
     }
 
-    await _loadProfilePosts();
+    await _loadSavedPosts();
   }
 
-  Future<void> _loadProfilePosts() async {
+  Future<void> _loadSavedPosts() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
     try {
-      final profileService = ProfileService();
-      final postsResult = await profileService.getUserPosts(widget.userId);
-      final posts = postsResult
-          .map<data_model.Post>((json) => data_model.Post.fromJson(json))
-          .toList();
-
-      // Fetch username for the profile
-      String? username;
-      try {
-        final profileResult =
-            await profileService.getUserProfile(widget.userId);
-        if (profileResult['success'] == true && profileResult['data'] != null) {
-          final profile = ProfileModel.fromJson(profileResult['data']);
-          username = profile.username;
-        }
-      } catch (_) {}
-
-      // Handle the case where initialPostId might be null
-      int initialIndex = 0;
-      if (widget.initialPostId != null && widget.initialPostId!.isNotEmpty) {
-        initialIndex = posts.indexWhere((p) => p.id == widget.initialPostId);
-        if (initialIndex == -1) initialIndex = 0;
-        print("Initial post ID: ${widget.initialPostId}");
-        print("Found at index: $initialIndex");
+      if (widget.savedPostIds.isEmpty) {
+        setState(() {
+          _posts = [];
+          _isLoading = false;
+        });
+        return;
       }
 
-      // Patch username if missing and copyWith is available
-      final postsWithUsername = posts.map((post) {
-        if ((post.username == null || post.username!.isEmpty) &&
-            username != null) {
-          return post.copyWith(username: username);
+      final postsResult =
+          await _songPostService.getPostsByIds(widget.savedPostIds, context);
+      if (postsResult['success'] == true) {
+        final posts = (postsResult['posts'] as List)
+            .map<data_model.Post>((json) => data_model.Post.fromJson(json))
+            .toList();
+
+        int initialIndex = 0;
+        if (widget.initialPostId != null && widget.initialPostId!.isNotEmpty) {
+          initialIndex = posts.indexWhere((p) => p.id == widget.initialPostId);
+          if (initialIndex == -1) initialIndex = 0;
         }
-        return post;
-      }).toList();
 
-      setState(() {
-        _posts = postsWithUsername;
-        _initialIndex = initialIndex;
-        _isLoading = false;
-      });
+        setState(() {
+          _posts = posts;
+          _initialIndex = initialIndex;
+          _isLoading = false;
+        });
 
-      // Scroll to the tapped post after the first frame using scrollable_positioned_list
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_itemScrollController.isAttached && _initialIndex > 0) {
-          print("Scrolling to index: $_initialIndex");
-          try {
-            _itemScrollController.jumpTo(index: _initialIndex);
-          } catch (e) {
-            print("Error scrolling: $e");
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_itemScrollController.isAttached && _initialIndex > 0) {
+            try {
+              _itemScrollController.jumpTo(index: _initialIndex);
+            } catch (e) {
+              print("Error scrolling: $e");
+            }
           }
-        }
-      });
+        });
+      } else {
+        setState(() {
+          _error = 'Failed to load saved posts';
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _error = 'Failed to load posts: $e';
@@ -129,62 +117,39 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
   }
 
   void _handleLike(data_model.Post post) async {
-    
     String? currentUserId = _currentUserId;
     if (currentUserId == null) {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      final userData = userDataString != null
-          ? jsonDecode(userDataString)
-          : {'id': ''}; 
+      final userData =
+          userDataString != null ? jsonDecode(userDataString) : {'id': null};
       currentUserId = userData['id'];
     }
+    if (currentUserId == null) return;
 
-    if (currentUserId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('User ID not found. Please log in again.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-      return;
-    }
-
-    
     setState(() {
       if (post.likedByMe) {
-        post.likedByMe = false;  
+        post.likedByMe = false;
         post.likes--;
       } else {
-        post.likedByMe = true;   
+        post.likedByMe = true;
         post.likes++;
       }
     });
 
-    //print('[DEBUG] ProfileScreen: Attempting to like post ${post.id}');
-    //print('[DEBUG] ProfileScreen: Current user ID: $currentUserId');
-
-    final result = await _songPostService.likePost(post.id, currentUserId, context);
-    //print('[DEBUG] ProfileScreen: Like result: $result');
-
-   
-    if (result['success'] != true) {
-      if (mounted) {
-        setState(() {
-          if (post.likedByMe) {
-            post.likedByMe = false;
-            post.likes--;
-          } else {
-            post.likedByMe = true;
-            post.likes++;
-          }
-        });
-      }
+    final result = await _songPostService.likePost(post.id, currentUserId);
+    if (!(result['success'] == true)) {
+      setState(() {
+        if (post.likedByMe) {
+          post.likedByMe = false;
+          post.likes--;
+        } else {
+          post.likedByMe = true;
+          post.likes++;
+        }
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message'] ?? 'Failed to like post'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
+        SnackBar(content: Text(result['message'] ?? 'Failed to like post')),
       );
     }
   }
@@ -206,21 +171,10 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             final userDataString = prefs.getString('user_data');
             final userData = userDataString != null
                 ? jsonDecode(userDataString)
-                : {'id': '685fb750cc084ba7e0ef8533', 'name': 'owl'};
+                : {'id': null, 'name': 'Anonymous'};
             final result = await _songPostService.addComment(
-                post.id, userData['id'], userData['name'], text, context);
-            
-            // Handle different success response formats
-            bool isSuccess = false;
-            if (result['success'] is bool) {
-              isSuccess = result['success'];
-            } else if (result['success'] is int) {
-              isSuccess = result['success'] == 1;
-            } else if (result['success'] is String) {
-              isSuccess = result['success'].toString().toLowerCase() == 'true';
-            }
-            
-            if (isSuccess && result['data'] != null) {
+                post.id, userData['id'], userData['name'], text);
+            if (result['success']) {
               final updatedComments =
                   (result['data']['comments'] as List<dynamic>)
                       .map((c) => data_model.Comment.fromJson(c))
@@ -232,9 +186,8 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(result['message'] ?? 'Failed to add comment'),
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                ),
+                    content:
+                        Text(result['message'] ?? 'Failed to add comment')),
               );
               return post.comments;
             }
@@ -317,26 +270,9 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
   }
 
   void _handlePostOptions(data_model.Post post) {
-    print('ProfileFeedScreen _handlePostOptions - Post ID: ${post.id}');
-    print(
-        'ProfileFeedScreen _handlePostOptions - Post User ID: ${post.userId}');
-    print(
-        'ProfileFeedScreen _handlePostOptions - Current User ID: $_currentUserId');
-
-    // Check if either ID is null or empty
-    if (post.userId == null || post.userId!.isEmpty) {
-      print('WARNING: Post userId is null or empty');
-    }
-    if (_currentUserId == null || _currentUserId!.isEmpty) {
-      print('WARNING: Current userId is null or empty');
-    }
-
     bool isUsersOwnPost = false;
     if (post.userId != null && _currentUserId != null) {
       isUsersOwnPost = post.userId == _currentUserId;
-      print('Calculated isUsersOwnPost: $isUsersOwnPost');
-    } else {
-      print('Cannot determine if post is user\'s own due to null IDs');
     }
 
     PostOptionsMenu.show(
@@ -350,21 +286,29 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             'Check out this song: ${post.songName} by ${post.artists}';
         Share.share(shareText, subject: 'Music from Noot');
       },
-      onSavePost: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Post saved'),
-            backgroundColor: const Color(0xFFA855F7),
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(10),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+      onSavePost: () async {
+        // Unsave the post
+        final result =
+            await _songPostService.unsavePost(widget.userId, post.id);
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Post removed from saved'),
+              backgroundColor: const Color(0xFFA855F7),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          // Remove from list and refresh
+          setState(() {
+            _posts.removeWhere((p) => p.id == post.id);
+          });
+        }
       },
       onUnfollow: () {
-        // Implement unfollow user functionality
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Unfollowed ${post.username ?? "user"}'),
@@ -378,7 +322,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
         );
       },
       onReport: () {
-        // Report functionality is handled inside PostOptionsMenu
+        // Report functionality handled inside PostOptionsMenu
       },
       onEdit: isUsersOwnPost
           ? () async {
@@ -389,13 +333,11 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
                 ),
               );
               if (result == true) {
-                // Refresh the feed after successful edit
-                _loadProfilePosts();
+                _loadSavedPosts();
               }
             }
           : null,
       onDelete: () async {
-        // Show confirmation dialog
         final confirm = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
@@ -461,8 +403,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
                   duration: const Duration(seconds: 2),
                 ),
               );
-              // Refresh posts after deletion
-              _loadProfilePosts();
+              _loadSavedPosts();
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -506,7 +447,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
                 duration: const Duration(seconds: 2),
               ),
             );
-            _loadProfilePosts(); // Refresh posts
+            _loadSavedPosts();
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -555,7 +496,6 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
       );
     }
 
-    // Ensure scrolling to initial position happens after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_itemScrollController.isAttached && _initialIndex > 0) {
         try {
@@ -572,7 +512,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile Feed'),
+        title: const Text('Saved Posts'),
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         centerTitle: true,
         leading: IconButton(
@@ -590,31 +530,39 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
           ),
         ],
       ),
-      body: FeedWidget(
-        feedItems: _posts.map((p) => FeedItem.song(p)).toList(),
-        isLoading: false,
-        error: null,
-        onRefresh: _loadProfilePosts,
-        onSongLike: (data_model.Post post) => _handleLike(post),
-        onSongComment: (data_model.Post post) => _handleComment(post),
-        onSongPlay: (data_model.Post post) => _handlePlay(post),
-        onSongShare: (data_model.Post post) => _handleShare(post),
-        currentlyPlayingTrackId: _currentlyPlayingTrackId,
-        isPlaying: _isPlaying,
-        currentUserId: _currentUserId,
-        onPostOptions: _handlePostOptions,
-        onUserTap: (String userId) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => UserProfilePage(userId: userId),
+      body: _posts.isEmpty
+          ? Center(
+              child: Text(
+                'No saved posts',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+            )
+          : FeedWidget(
+              feedItems: _posts.map((p) => FeedItem.song(p)).toList(),
+              isLoading: false,
+              error: null,
+              onRefresh: _loadSavedPosts,
+              onSongLike: (data_model.Post post) => _handleLike(post),
+              onSongComment: (data_model.Post post) => _handleComment(post),
+              onSongPlay: (data_model.Post post) => _handlePlay(post),
+              onSongShare: (data_model.Post post) => _handleShare(post),
+              currentlyPlayingTrackId: _currentlyPlayingTrackId,
+              isPlaying: _isPlaying,
+              currentUserId: _currentUserId,
+              onPostOptions: _handlePostOptions,
+              onUserTap: (String userId) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UserProfilePage(userId: userId),
+                  ),
+                );
+              },
+              itemScrollController: _itemScrollController,
+              itemPositionsListener: _itemPositionsListener,
+              initialIndex: _initialIndex,
             ),
-          );
-        },
-        itemScrollController: _itemScrollController,
-        itemPositionsListener: _itemPositionsListener,
-        initialIndex: _initialIndex,
-      ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     );
   }

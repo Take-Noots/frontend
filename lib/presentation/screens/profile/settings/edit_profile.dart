@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 // ...existing code...
-import '../../../../core/providers/auth_provider.dart';
 import '../../../../data/models/profile_model.dart';
 import '../../../../data/services/profile_service.dart';
+import '../../../../data/services/cloudinary_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({Key? key}) : super(key: key);
@@ -23,9 +24,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
   String userType = 'public'; // Default user type
 
   final ProfileService _service = ProfileService();
+  final CloudinaryService _cloudinaryService = CloudinaryService();
+  final ImagePicker _imagePicker = ImagePicker();
 
   bool _loading = true;
   bool _saving = false;
+  bool _uploading = false;
 
   // Store original values to detect changes
   String _originalUsername = '';
@@ -177,11 +181,69 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   void _pickImage() async {
-    setState(() {
-      profileImage = profileImage.endsWith('e6e6e6e6e6e6e6e6')
-          ? 'https://i.scdn.co/image/ab6761610000e5ebc4e8e8e8e8e8e8e8e8e8e8e8'
-          : 'https://i.scdn.co/image/ab6761610000e5eb02e3c8b0e6e6e6e6e6e6e6e6';
-    });
+    try {
+      // Show options dialog
+      final source = await showDialog<ImageSource>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Select Image Source'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Gallery'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (source == null) return;
+
+      // Pick image
+      final pickedFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) return;
+
+      setState(() => _uploading = true);
+
+      // Upload to Cloudinary
+      final file = File(pickedFile.path);
+      final imageUrl = await _cloudinaryService.uploadImage(
+        file,
+        folder: 'profile_pictures',
+      );
+
+      if (mounted) {
+        setState(() {
+          profileImage = imageUrl;
+          _uploading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image uploaded successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _uploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload image: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _saveProfile() async {
@@ -247,8 +309,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
         '[DEBUG] EditProfilePage build called, _loading=$_loading, _saving=$_saving');
     if (_loading || _saving) {
       print('[DEBUG] EditProfilePage: Showing loading spinner');
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
     print(
@@ -256,7 +319,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Profile'),
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -267,158 +330,214 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ],
       ),
-      backgroundColor: Colors.black,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: _pickImage,
-              child: CircleAvatar(
-                radius: 48,
-                backgroundImage: NetworkImage(profileImage),
-                child: Align(
-                  alignment: Alignment.bottomRight,
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.white,
-                    child:
-                        Icon(Icons.camera_alt, color: Colors.black, size: 18),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _fullNameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Full Name',
-                labelStyle: const TextStyle(color: Colors.grey),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade700),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _usernameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Username',
-                labelStyle: const TextStyle(color: Colors.grey),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade700),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _bioController,
-              style: const TextStyle(color: Colors.white),
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: 'Bio',
-                labelStyle: const TextStyle(color: Colors.grey),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade700),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _emailController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Email',
-                labelStyle: const TextStyle(color: Colors.grey),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade700),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Add profile type dropdown
-            Container(
-              padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: Colors.grey.shade700),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Profile Type',
-                    style: TextStyle(color: Colors.grey, fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButton<String>(
-                    value: userType,
-                    isExpanded: true,
-                    dropdownColor: Colors.black87,
-                    style: const TextStyle(color: Colors.white),
-                    underline: Container(), // Remove the default underline
-                    onChanged: (newValue) {
-                      setState(() {
-                        userType = newValue!;
-                      });
-                    },
-                    items: _profileTypes.map<DropdownMenuItem<String>>((type) {
-                      return DropdownMenuItem<String>(
-                        value: type['value'],
-                        child: Text(
-                          type['label']!,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
               children: [
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: _uploading ? null : _pickImage,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 48,
+                        backgroundImage: NetworkImage(profileImage),
+                      ),
+                      if (_uploading)
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Theme.of(context).colorScheme.onSurface),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (!_uploading)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: CircleAvatar(
+                            radius: 16,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.surface,
+                            child: Icon(Icons.camera_alt,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                size: 18),
+                          ),
+                        ),
+                    ],
                   ),
-                  child: const Text('Cancel',
-                      style: TextStyle(color: Colors.white)),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
                 ),
-                ElevatedButton(
-                  onPressed: _hasChanges ? _saveProfile : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _hasChanges ? Colors.white : Colors.grey,
-                    disabledBackgroundColor: Colors.grey,
+                const SizedBox(height: 24),
+                TextField(
+                  controller: _fullNameController,
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    labelText: 'Full Name',
+                    labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.transparent),
+                    ),
                   ),
-                  child: Text('Save',
-                      style: TextStyle(
-                          color: _hasChanges ? Colors.black : Colors.white70)),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _usernameController,
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    labelText: 'Username',
+                    labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.transparent),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _bioController,
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Bio',
+                    labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.transparent),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _emailController,
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.transparent),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Add profile type dropdown
+                Container(
+                  padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Profile Type',
+                        style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 16),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButton<String>(
+                        value: userType,
+                        isExpanded: true,
+                        dropdownColor: Theme.of(context).colorScheme.surface,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface),
+                        underline: Container(), // Remove the default underline
+                        onChanged: (newValue) {
+                          setState(() {
+                            userType = newValue!;
+                          });
+                        },
+                        items:
+                            _profileTypes.map<DropdownMenuItem<String>>((type) {
+                          return DropdownMenuItem<String>(
+                            value: type['value'],
+                            child: Text(
+                              type['label']!,
+                              style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                            color: Theme.of(context).colorScheme.onSurface),
+                      ),
+                      child: Text('Cancel',
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface)),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    ElevatedButton(
+                      onPressed: _hasChanges ? _saveProfile : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _hasChanges
+                            ? Theme.of(context).colorScheme.surface
+                            : Theme.of(context).disabledColor,
+                        disabledBackgroundColor:
+                            Theme.of(context).disabledColor,
+                      ),
+                      child: Text('Save',
+                          style: TextStyle(
+                              color: _hasChanges
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Theme.of(context).disabledColor)),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

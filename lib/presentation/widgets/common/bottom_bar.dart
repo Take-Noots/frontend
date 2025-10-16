@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../../../core/router/route_names.dart';
+import '../../../core/providers/auth_provider.dart';
+import '../../../data/services/profile_service.dart';
 
-class BottomBar extends StatelessWidget {
+class BottomBar extends StatefulWidget {
   /// The currently selected index for highlighting the active tab
   final int currentIndex;
 
@@ -19,6 +24,75 @@ class BottomBar extends StatelessWidget {
     this.onTap,
     this.isHidden = false,
   });
+
+  @override
+  State<BottomBar> createState() => _BottomBarState();
+}
+
+class _BottomBarState extends State<BottomBar> {
+  String? userId;
+  String? profileImageUrl;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initUserIdAndFetchProfile();
+  }
+
+  Future<void> _initUserIdAndFetchProfile() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      String? id = authProvider.user?.id;
+
+      // If ID is null, try to get it from SharedPreferences directly
+      if (id == null) {
+        final prefs = await SharedPreferences.getInstance();
+        final userDataString = prefs.getString('user_data');
+
+        if (userDataString != null) {
+          final userData = jsonDecode(userDataString);
+          id = userData['id'] as String?;
+        }
+      }
+
+      if (id != null) {
+        final profileService = ProfileService();
+        final profileResult = await profileService.getUserProfile(id);
+
+        if (profileResult['success'] == true && profileResult['data'] != null) {
+          final profileData = profileResult['data'];
+          if (mounted) {
+            setState(() {
+              userId = id;
+              profileImageUrl = profileData['profileImage'] as String?;
+              isLoading = false;
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              userId = id;
+              isLoading = false;
+            });
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching profile in BottomBar: $e");
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,13 +112,13 @@ class BottomBar extends StatelessWidget {
             icon: Icon(
               LucideIcons.home,
               size: 22,
-              color: currentIndex == 0
+              color: widget.currentIndex == 0
                   ? Theme.of(context).colorScheme.secondary
                   : Theme.of(context).iconTheme.color,
             ),
             onPressed: () {
-              if (onTap != null) {
-                onTap!(0);
+              if (widget.onTap != null) {
+                widget.onTap!(0);
               } else {
                 context.go(AppRoutes.home);
               }
@@ -56,13 +130,13 @@ class BottomBar extends StatelessWidget {
             icon: Icon(
               LucideIcons.search,
               size: 22,
-              color: currentIndex == 1
+              color: widget.currentIndex == 1
                   ? Theme.of(context).colorScheme.secondary
                   : Theme.of(context).iconTheme.color,
             ),
             onPressed: () {
-              if (onTap != null) {
-                onTap!(1);
+              if (widget.onTap != null) {
+                widget.onTap!(1);
               } else {
                 context.go(AppRoutes.search);
               }
@@ -74,13 +148,13 @@ class BottomBar extends StatelessWidget {
             icon: Icon(
               LucideIcons.plusCircle,
               size: 22,
-              color: currentIndex == 2
+              color: widget.currentIndex == 2
                   ? Theme.of(context).colorScheme.secondary
                   : Theme.of(context).iconTheme.color,
             ),
             onPressed: () {
-              if (onTap != null) {
-                onTap!(2);
+              if (widget.onTap != null) {
+                widget.onTap!(2);
               } else {
                 // Navigate to create noot page
                 context.go(AppRoutes.createNoot);
@@ -92,13 +166,13 @@ class BottomBar extends StatelessWidget {
             icon: Icon(
               LucideIcons.users,
               size: 22,
-              color: currentIndex == 3
+              color: widget.currentIndex == 3
                   ? Theme.of(context).colorScheme.secondary
                   : Theme.of(context).iconTheme.color,
             ),
             onPressed: () {
-              if (onTap != null) {
-                onTap!(3);
+              if (widget.onTap != null) {
+                widget.onTap!(3);
               } else {
                 context.go(AppRoutes.fanbaseList);
               }
@@ -108,8 +182,8 @@ class BottomBar extends StatelessWidget {
           // Profile
           GestureDetector(
             onTap: () {
-              if (onTap != null) {
-                onTap!(4);
+              if (widget.onTap != null) {
+                widget.onTap!(4);
               } else {
                 context.go(AppRoutes.profile);
               }
@@ -118,8 +192,12 @@ class BottomBar extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 14,
-                  backgroundImage: AssetImage('assets/images/hehe.png'),
-                )
+                  backgroundImage:
+                      profileImageUrl != null && profileImageUrl!.isNotEmpty
+                          ? NetworkImage(profileImageUrl!)
+                          : const AssetImage('assets/images/hehe.png')
+                              as ImageProvider,
+                ),
               ],
             ),
           ),

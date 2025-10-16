@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Uncomment this
 import 'dart:convert'; // Uncomment this
-import '../../../core/router/route_names.dart';
 import 'tabs/album_art_posts_tab.dart';
 import 'tabs/thought_posts_tab.dart';
 import 'tabs/tagged_posts_tab.dart';
@@ -70,7 +68,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
       print("AuthProvider user ID: $id");
 
       // If ID is null, try to get it from SharedPreferences directly
-      if (id == null) {
+      if (authProvider.user == null) {
         final prefs = await SharedPreferences.getInstance();
         final userDataString = prefs.getString('user_data');
         print("SharedPrefs user_data: $userDataString");
@@ -309,19 +307,19 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (userId == null) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: Text(
             'User not found. Please log in again.',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           ),
         ),
       );
@@ -329,54 +327,51 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
 
     if (profile == null && profileNotFound) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Profile'),
-          centerTitle: true,
-          backgroundColor: Colors.black,
-        ),
-        backgroundColor: Colors.black,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 32.0),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32.0),
+              child: Text(
+                'No profile found for this user.',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 18),
+              ),
+            ),
+            SizedBox(
+              width: 160,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const CreateProfilePage()),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(
+                      color: Theme.of(context).colorScheme.onSurface),
+                ),
                 child: Text(
-                  'No profile found for this user.',
-                  style: TextStyle(color: Colors.white, fontSize: 18),
+                  'Create Profile',
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 ),
               ),
-              SizedBox(
-                width: 160,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const CreateProfilePage()),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white),
-                  ),
-                  child: const Text(
-                    'Create Profile',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
 
     if (profile == null) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
             child: Text('Failed to load profile',
-                style: TextStyle(color: Colors.white))),
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface))),
       );
     }
 
@@ -385,7 +380,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
         // Remove leading, add actions for right top
         title: Text(profile?.username ?? 'Profile'),
         centerTitle: true,
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         actions: [
           IconButton(
             icon: const Icon(Icons.menu),
@@ -479,13 +474,16 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                           ),
                         );
                       },
-                      icon: const Icon(Icons.insights, color: Colors.white),
-                      label: const Text(
+                      icon: Icon(Icons.insights,
+                          color: Theme.of(context).colorScheme.onSurface),
+                      label: Text(
                         'Insights',
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface),
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.white),
+                        side: BorderSide(
+                            color: Theme.of(context).colorScheme.onSurface),
                         backgroundColor: Colors.transparent,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -511,13 +509,16 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                         _fetchProfileData();
                       }
                     },
-                    icon: const Icon(Icons.edit, color: Colors.white),
-                    label: const Text(
+                    icon: Icon(Icons.edit,
+                        color: Theme.of(context).colorScheme.onSurface),
+                    label: Text(
                       'Edit Profile',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white),
+                      side: BorderSide(
+                          color: Theme.of(context).colorScheme.onSurface),
                       backgroundColor: Colors.transparent,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -531,17 +532,18 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           ),
           // TabBar under profile details
           Container(
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.surface,
             width: MediaQuery.of(context).size.width,
             padding: EdgeInsets.zero,
             margin: EdgeInsets.zero,
             child: TabBar(
               controller: _tabController,
-              indicatorColor: Colors.white,
+              indicatorColor: Theme.of(context).colorScheme.onSurface,
               isScrollable: false,
               labelPadding: const EdgeInsets.symmetric(horizontal: 0),
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.grey,
+              labelColor: Theme.of(context).colorScheme.onSurface,
+              unselectedLabelColor:
+                  Theme.of(context).colorScheme.onSurfaceVariant,
               tabs: getProfileTabs(),
             ),
           ),
@@ -554,16 +556,17 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                     controller: _tabController,
                     children: getProfileTabViews(),
                   )
-                : const Center(
+                : Center(
                     child: Text(
                       'No profile data available.',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface),
                     ),
                   ),
           ),
         ],
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     );
   }
 }
