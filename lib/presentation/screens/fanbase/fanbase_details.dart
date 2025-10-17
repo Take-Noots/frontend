@@ -417,6 +417,127 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
     );
   }
 
+  // Add this method to _FanbaseDetailScreenState class
+  Future<void> _handleDeleteFanbase() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Fanbase'),
+        content: Text(
+          'Are you sure you want to permanently delete "${_fanbase?.fanbaseName}"? '
+          'This will delete all posts and cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && _fanbase != null) {
+      setState(() => _isLoading = true);
+
+      try {
+        await FanbaseService.deleteFanbase(_fanbase!.id, context);
+
+        if (mounted) {
+          // Navigate back to previous screen after successful deletion
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Fanbase deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete fanbase: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  // Add this method to show options menu
+  void _showFanbaseOptionsMenu() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isCurrentUserOwner) ...[
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text(
+                    'Delete Fanbase',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context); // Close bottom sheet
+                    _handleDeleteFanbase();
+                  },
+                ),
+                // ListTile(
+                //   leading: const Icon(Icons.edit),
+                //   title: const Text('Edit Fanbase'),
+                //   onTap: () {
+                //     Navigator.pop(context);
+                //     // TODO: Navigate to edit fanbase screen
+                //     ScaffoldMessenger.of(context).showSnackBar(
+                //       const SnackBar(
+                //           content: Text('Edit functionality coming soon')),
+                //     );
+                //   },
+                // ),
+              ] else ...[
+                ListTile(
+                  leading: const Icon(Icons.flag, color: Colors.orange),
+                  title: const Text('Report Fanbase'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // TODO: Implement report functionality
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Report functionality coming soon')),
+                    );
+                  },
+                ),
+              ],
+              // ListTile(
+              //   leading: const Icon(Icons.share),
+              //   title: const Text('Share Fanbase'),
+              //   onTap: () {
+              //     Navigator.pop(context);
+              //     Share.share(
+              //       'Check out ${_fanbase?.fanbaseName} on Noot!',
+              //       subject: 'Fanbase Invitation',
+              //     );
+              //   },
+              // ),
+              ListTile(
+                leading: const Icon(Icons.cancel),
+                title: const Text('Cancel'),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -469,6 +590,7 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                   }
                 },
                 onJoinPressed: _handleJoin,
+                onOptionsPressed: _showFanbaseOptionsMenu, // Add this line
                 isLoading: _isLoading,
               ),
               // Tab block separated from the header (white card with subtle shadow)
@@ -579,6 +701,7 @@ class FanbaseDetailsHeader extends StatelessWidget {
   final ValueChanged<int> onTabChanged;
   final VoidCallback onPostCreated;
   final VoidCallback onJoinPressed;
+  final VoidCallback onOptionsPressed; // Add this
   final bool isLoading;
 
   const FanbaseDetailsHeader({
@@ -589,6 +712,7 @@ class FanbaseDetailsHeader extends StatelessWidget {
     required this.onTabChanged,
     required this.onPostCreated,
     required this.onJoinPressed,
+    required this.onOptionsPressed, // Add this
     required this.isLoading,
   });
 
@@ -640,6 +764,16 @@ class FanbaseDetailsHeader extends StatelessWidget {
                             color: Color(0xFFC20BF5),
                           ),
                         ],
+                        const Spacer(),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: Icon(
+                            Icons.more_vert_rounded,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                          onPressed: onOptionsPressed, // Use the callback
+                        ),
                       ],
                     ),
                     const SizedBox(height: 0.5),

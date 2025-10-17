@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/data/models/fanbase_model.dart';
-import 'package:frontend/data/services/fanbase_addon_service.dart';
+import 'package:frontend/data/services/fanbase_service.dart';
 
 class FanbaseDetailsUserAbout extends StatefulWidget {
   final Fanbase fanbase;
@@ -25,7 +25,7 @@ class _FanbaseDetailsUserAboutState extends State<FanbaseDetailsUserAbout> {
   Future<void> fetchRules() async {
     setState(() => loading = true);
     try {
-      final fetched = await FanbaseAddonService.getRules(widget.fanbase.id);
+      final fetched = await FanbaseService.getRules(widget.fanbase.id, context);
       setState(() {
         rules = fetched;
         loading = false;

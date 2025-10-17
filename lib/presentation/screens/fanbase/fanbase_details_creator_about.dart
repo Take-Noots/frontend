@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/data/models/fanbase_model.dart';
-import 'package:frontend/data/services/fanbase_addon_service.dart';
+import 'package:frontend/data/services/fanbase_service.dart';
 
 class FanbaseDetailsCreatorAbout extends StatefulWidget {
   final Fanbase fanbase;
@@ -27,7 +27,7 @@ class _FanbaseDetailsCreatorAboutState
   Future<void> fetchRules() async {
     setState(() => loading = true);
     try {
-      final fetched = await FanbaseAddonService.getRules(widget.fanbase.id);
+      final fetched = await FanbaseService.getRules(widget.fanbase.id, context);
       setState(() {
         rules = fetched;
         loading = false;
@@ -37,6 +37,45 @@ class _FanbaseDetailsCreatorAboutState
         rules = [];
         loading = false;
       });
+    }
+  }
+
+  Future<void> removeRuleAt(int index) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Rule'),
+        content: Text('Are you sure you want to remove rule ${index + 1}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await FanbaseService.removeRule(widget.fanbase.id, index, context);
+        await fetchRules(); // Refresh the rules list
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Rule removed successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to remove rule: $e')),
+          );
+        }
+      }
     }
   }
 
@@ -74,8 +113,9 @@ class _FanbaseDetailsCreatorAboutState
                                   ),
                                   if (controllers.length > 1)
                                     IconButton(
-                                      icon: const Icon(Icons.remove_circle,
-                                          color: Colors.red),
+                                      icon: const Icon(Icons.delete,
+                                          color: Colors.red,
+                                          size: 15),
                                       onPressed: () {
                                         setDialogState(() {
                                           controllers.removeAt(i);
@@ -115,8 +155,8 @@ class _FanbaseDetailsCreatorAboutState
                         if (newRules.isEmpty || newRules.length > 15) return;
                         setDialogState(() => saving = true);
                         try {
-                          await FanbaseAddonService.updateRules(
-                              widget.fanbase.id, newRules);
+                          await FanbaseService.updateRules(
+                              widget.fanbase.id, newRules, context);
                           setState(() {
                             rules = newRules;
                           });
@@ -126,7 +166,11 @@ class _FanbaseDetailsCreatorAboutState
                         }
                       },
                 child: saving
-                    ? const CircularProgressIndicator()
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Text('Save'),
               ),
             ],
@@ -171,10 +215,20 @@ class _FanbaseDetailsCreatorAboutState
                   .bodySmall
                   ?.copyWith(color: Colors.grey)),
           const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: showEditDialog,
-            icon: const Icon(Icons.edit),
-            label: const Text('Add/Edit Fanbase Guide'),
+          Center(
+            child: ElevatedButton.icon(
+              onPressed: showEditDialog,
+              icon: const Icon(Icons.edit),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              label: const Text('Add/Edit Fanbase Guide'),
+            ),
           ),
           const SizedBox(height: 16),
           loading
@@ -189,6 +243,13 @@ class _FanbaseDetailsCreatorAboutState
                         ...rules.asMap().entries.map((e) => ListTile(
                               leading: Text('${e.key + 1}.'),
                               title: Text(e.value),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete_outline,
+                                    color: Colors.red,
+                                    size: 15),
+                                onPressed: () => removeRuleAt(e.key),
+                                tooltip: 'Remove rule',
+                              ),
                             )),
                       ],
                     ),

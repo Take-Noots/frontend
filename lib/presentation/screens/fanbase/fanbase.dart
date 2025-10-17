@@ -666,6 +666,7 @@ class _FanbasePageState extends State<FanbasePage>
               ),
             ),
           ),
+          const SizedBox(height: 2),
 
           // Tab bar with button style
           _buildTabBar(),

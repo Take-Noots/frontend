@@ -274,54 +274,111 @@ class FanbaseService {
   }
 
   /// Fetches the rules for a given fanbase
-  static Future<List<String>> getRules(String fanbaseId) async {
-    final url = Uri.parse('$baseUrl/$fanbaseId/rules');
-    final response = await http.get(url);
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data is List) {
-        return data
-            .map<String>((e) => e is Map && e.containsKey('rule')
-                ? e['rule'] ?? ''
-                : e.toString())
+  static Future<List<String>> getRules(
+    String fanbaseId,
+    BuildContext context,
+  ) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.get('/fanbase/$fanbaseId/rules');
+
+      if (response.statusCode == 200 && response.data is List) {
+        return (response.data as List)
+            .map((e) =>
+                e is Map && e.containsKey('rule') ? e['rule'].toString() : '')
             .where((rule) => rule.isNotEmpty)
             .toList();
       }
       return [];
-    } else {
+    } catch (e) {
       throw Exception(
-          'Failed to load fanbase rules: ${response.statusCode} ${response.reasonPhrase}');
+          'Failed to load fanbase rules: ${e is DioException ? e.response?.data['message'] ?? e.message : e}');
     }
   }
 
   /// Updates the rules for a given fanbase (owner only)
   static Future<void> updateRules(
     String fanbaseId,
-    List<String> rules, {
-    String? token,
-  }) async {
-    final url = Uri.parse('$baseUrl/$fanbaseId/rules');
-    final body = json.encode({
-      'rules': rules.map((r) => {'rule': r}).toList(),
-    });
-    final headers = {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
-    final response = await http.post(
-      url,
-      headers: headers,
-      body: body,
-    );
-    if (response.statusCode != 200) {
-      String msg = 'Failed to update fanbase rules: ${response.statusCode}';
-      try {
-        final error = json.decode(response.body);
-        if (error is Map && error['message'] != null) {
-          msg += ' - ${error['message']}';
-        }
-      } catch (_) {}
-      throw Exception(msg);
+    List<String> rules,
+    BuildContext context,
+  ) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final body = {
+        'rules': rules.map((r) => {'rule': r}).toList()
+      };
+
+      final response = await dio.post('/fanbase/$fanbaseId/rules', data: body);
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception('Failed to update rules: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        final msg =
+            e.response?.data is Map && e.response?.data['message'] != null
+                ? e.response?.data['message']
+                : e.message;
+        throw Exception('Failed to update fanbase rules: $msg');
+      }
+      throw Exception('Failed to update fanbase rules: $e');
+    }
+  }
+
+  /// Removes a specific rule from a fanbase (owner only)
+  static Future<void> removeRule(
+    String fanbaseId,
+    int ruleIndex,
+    BuildContext context,
+  ) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.delete('/fanbase/$fanbaseId/rules/$ruleIndex');
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('Failed to remove rule: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        final msg =
+            e.response?.data is Map && e.response?.data['message'] != null
+                ? e.response?.data['message']
+                : e.message;
+        throw Exception('Failed to remove rule: $msg');
+      }
+      throw Exception('Failed to remove rule: $e');
+    }
+  }
+
+  /// Deletes a fanbase (owner only)
+  static Future<void> deleteFanbase(
+    String fanbaseId,
+    BuildContext context,
+  ) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.delete('/fanbase/$fanbaseId');
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('Failed to delete fanbase: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        final msg =
+            e.response?.data is Map && e.response?.data['message'] != null
+                ? e.response?.data['message']
+                : e.message;
+        throw Exception('Failed to delete fanbase: $msg');
+      }
+      throw Exception('Failed to delete fanbase: $e');
     }
   }
 }
