@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../data/services/thoughts_service.dart';
 import '../../../../data/models/thoughts_model.dart';
 import '../../../widgets/thoughts/thoughts_feed_card.dart';
+import '../../../widgets/loading_screens/common_loading.dart';
 import '../thought_feed.dart';
 
 class ThoughtPostsTab extends StatefulWidget {
@@ -113,7 +114,9 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading)
+      return Center(
+          child: CommonLoading.purple(message: "Loading thoughts..."));
 
     if (_posts.isEmpty) {
       print('ThoughtPostsTab: build - no posts to show');
@@ -149,7 +152,7 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
               onComment: () {
                 // navigate to comment view if desired
               },
-              onUserTap: (userId) {},
+              onUserTap: (String userId, String? username) {},
             ),
           );
         }).toList(),

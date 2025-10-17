@@ -36,7 +36,7 @@ class AppRouter {
   late final GoRouter router = GoRouter(
     debugLogDiagnostics: true,
     refreshListenable: authProvider,
-    initialLocation: AppRoutes.home,
+    initialLocation: AppRoutes.login,
 
     // Redirect logic for authentication
     redirect: (context, state) {

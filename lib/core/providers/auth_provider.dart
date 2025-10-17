@@ -46,8 +46,27 @@ class AuthProvider with ChangeNotifier {
 
   User? get user => _user;
   String? get token => _token;
-  bool get isAuthenticated => _isAuthenticated;
+  bool get isAuthenticated => _isAuthenticated && _isTokenValid();
   bool get isSpotifyLinked => _isSpotifyLinked;
+
+  // Simple token validity check (JWT expiry)
+  bool _isTokenValid() {
+    if (_token == null) return false;
+    try {
+      final parts = _token!.split('.');
+      if (parts.length != 3) return false;
+      final payload =
+          utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final payloadMap = jsonDecode(payload);
+      if (!payloadMap.containsKey('exp')) return false;
+      final exp = payloadMap['exp'];
+      final expInt = exp is int ? exp : int.tryParse(exp.toString()) ?? 0;
+      final expiry = DateTime.fromMillisecondsSinceEpoch(expInt * 1000);
+      return DateTime.now().isBefore(expiry);
+    } catch (e) {
+      return false;
+    }
+  }
 
   void setUser(Map<String, dynamic> userData) {
     _user = User.fromJson(userData);

@@ -4,12 +4,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/utils/color_extractor.dart';
 import 'auth_service.dart';
 
 class SongPostService {
-  final String baseUrl = 'http://localhost:3000';
+  final String baseUrl = AppConstants.baseUrl;
 
   Future<Map<String, dynamic>> createPost({
     required String trackId,
@@ -45,13 +46,14 @@ class SongPostService {
             'message': 'User not logged in. Please log in to create a post.',
           };
         }
-        
+
         // Extract background color from album image
         String? backgroundColor;
         if (albumImage != null && albumImage.isNotEmpty) {
-          backgroundColor = await ColorExtractor.extractBackgroundColor(albumImage);
+          backgroundColor =
+              await ColorExtractor.extractBackgroundColor(albumImage);
         }
-        
+
         // use default color
         if (backgroundColor == null && context != null) {
           backgroundColor = ColorExtractor.getDefaultBackgroundColor(context);
@@ -91,7 +93,7 @@ class SongPostService {
         final prefs = await SharedPreferences.getInstance();
         final userDataString = prefs.getString('user_data');
 
-        // Check if user is logged 
+        // Check if user is logged
         if (userDataString == null) {
           return {
             'success': false,
@@ -109,12 +111,13 @@ class SongPostService {
           };
         }
 
-        // Extract background color from album image 
+        // Extract background color from album image
         String? backgroundColor;
         if (albumImage != null && albumImage.isNotEmpty) {
-          backgroundColor = await ColorExtractor.extractBackgroundColor(albumImage);
+          backgroundColor =
+              await ColorExtractor.extractBackgroundColor(albumImage);
         }
-        
+
         // use default color
         if (backgroundColor == null && context != null) {
           backgroundColor = ColorExtractor.getDefaultBackgroundColor(context);
@@ -194,14 +197,12 @@ class SongPostService {
             'message': 'Posts retrieved successfully',
           };
         } else {
-          print('Unexpected data format: $data');
           return {
             'success': false,
             'message': 'Invalid data format received from server',
           };
         }
       } else {
-        print('Failed to fetch posts. Status: ${response.statusCode}');
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
@@ -211,7 +212,6 @@ class SongPostService {
         };
       }
     } catch (e) {
-      print('Error fetching all posts: $e');
       return {
         'success': false,
         'message': 'Network error: $e',
@@ -260,20 +260,12 @@ class SongPostService {
   Future<Map<String, dynamic>> likePost(String postId, String userId,
       [BuildContext? context]) async {
     try {
-     
       if (context != null) {
         final authService = Provider.of<AuthService>(context, listen: false);
         final dio = authService.dio;
-        
-        //print('[DEBUG] LikePost: Using authenticated Dio for post $postId');
-        //print('[DEBUG] LikePost: Dio baseUrl: ${dio.options.baseUrl}');
-        //print('[DEBUG] LikePost: AuthService token: ${authService.tokenManager.accessToken}');
-        
+
         final response = await dio.post('/song-posts/$postId/like');
-        
-        //print('[DEBUG] LikePost: Response status: ${response.statusCode}');
-        //print('[DEBUG] LikePost: Response data: ${response.data}');
-        
+
         if (response.statusCode == 200 || response.statusCode == 201) {
           return response.data;
         } else {
@@ -284,7 +276,6 @@ class SongPostService {
         }
       } else {
         // Fallback to http for backward compatibility
-        //print('[DEBUG] LikePost: Using fallback http for post $postId');
         final response = await http.post(
           Uri.parse('$baseUrl/song-posts/$postId/like'),
           headers: {'Content-Type': 'application/json'},
@@ -293,12 +284,7 @@ class SongPostService {
         return jsonDecode(response.body);
       }
     } catch (e) {
-      print('[DEBUG] LikePost: Error occurred: $e');
-      if (e is DioException) {
-        print(
-            '[DEBUG] LikePost: DioException status: ${e.response?.statusCode}');
-        print('[DEBUG] LikePost: DioException data: ${e.response?.data}');
-      }
+      if (e is DioException) {}
       return {
         'success': false,
         'message': 'Network error: $e',
@@ -348,16 +334,12 @@ class SongPostService {
       String postId, String commentId, String userId,
       [BuildContext? context]) async {
     try {
-      print(
-          '[DEBUG] LikeComment service: postId=$postId, commentId=$commentId, userId=$userId');
-
       // If context is provided, use AuthService with Dio for authenticated requests
       if (context != null) {
         final authService = Provider.of<AuthService>(context, listen: false);
         final dio = authService.dio;
 
         final url = '/song-posts/$postId/comment/$commentId/like';
-        print('[DEBUG] LikeComment service: Making request to $url');
 
         final response = await dio.post(url);
 
@@ -517,10 +499,6 @@ class SongPostService {
     String caption,
   ) async {
     try {
-      print('[DEBUG] Updating post with ID: $postId');
-      print('[DEBUG] New caption: $caption');
-      print('[DEBUG] Making PUT request to: $baseUrl/song-posts/$postId');
-
       final response = await http.put(
         Uri.parse('$baseUrl/song-posts/$postId'),
         headers: {
@@ -530,9 +508,6 @@ class SongPostService {
           'caption': caption,
         }),
       );
-
-      print('[DEBUG] Response status: ${response.statusCode}');
-      print('[DEBUG] Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -591,17 +566,11 @@ class SongPostService {
   }
 
   Future<Map<String, dynamic>> hidePost(String postId) async {
-    print('[DEBUG] hidePost called with postId: $postId');
-    print('[DEBUG] Making API call to: $baseUrl/song-posts/$postId/hide');
-
     try {
       final response = await http.patch(
         Uri.parse('$baseUrl/song-posts/$postId/hide'),
         headers: {'Content-Type': 'application/json'},
       );
-
-      print('[DEBUG] API response status: ${response.statusCode}');
-      print('[DEBUG] API response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -627,25 +596,25 @@ class SongPostService {
   }
 
   // Save a post
-  Future<Map<String, dynamic>> savePost(String userId, String postId) async {
+  Future<Map<String, dynamic>> savePost(
+      String userId, String postId, BuildContext context) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/profile/$userId/save/$postId'),
-        headers: {'Content-Type': 'application/json'},
-      );
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.post('/profile/$userId/save/$postId');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = response.data;
         return {
           'success': data['success'] ?? true,
           'message': data['message'] ?? 'Post saved successfully',
         };
       } else {
-        final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['error'] ??
-              errorData['message'] ??
+          'message': response.data['error'] ??
+              response.data['message'] ??
               'Failed to save post',
         };
       }
@@ -658,25 +627,25 @@ class SongPostService {
   }
 
   // Unsave a post
-  Future<Map<String, dynamic>> unsavePost(String userId, String postId) async {
+  Future<Map<String, dynamic>> unsavePost(
+      String userId, String postId, BuildContext context) async {
     try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl/profile/$userId/save/$postId'),
-        headers: {'Content-Type': 'application/json'},
-      );
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.delete('/profile/$userId/save/$postId');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = response.data;
         return {
           'success': data['success'] ?? true,
           'message': data['message'] ?? 'Post unsaved successfully',
         };
       } else {
-        final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['error'] ??
-              errorData['message'] ??
+          'message': response.data['error'] ??
+              response.data['message'] ??
               'Failed to unsave post',
         };
       }
@@ -689,15 +658,16 @@ class SongPostService {
   }
 
   // Check if a post is saved
-  Future<Map<String, dynamic>> isPostSaved(String userId, String postId) async {
+  Future<Map<String, dynamic>> isPostSaved(
+      String userId, String postId, BuildContext context) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/profile/$userId/saved/$postId'),
-        headers: {'Content-Type': 'application/json'},
-      );
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.get('/profile/$userId/saved/$postId');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = response.data;
         return {
           'success': true,
           'isSaved': data['isSaved'] ?? false,
@@ -760,7 +730,6 @@ class SongPostService {
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
-        print('[DEBUG] getHiddenPostsByUserId response body: ${response.body}');
 
         // The backend may return either a list directly or a wrapper { success, data }
         dynamic payload = decoded;
@@ -770,12 +739,6 @@ class SongPostService {
 
         // Normalize to plain Dart structures and ensure we have a list
         final normalized = jsonDecode(jsonEncode(payload));
-        print(
-            '[DEBUG] getHiddenPostsByUserId payload normalized type: ${normalized.runtimeType}');
-        if (normalized is List) {
-          print(
-              '[DEBUG] getHiddenPostsByUserId contains ${normalized.length} items');
-        }
         if (normalized is List) {
           return {
             'success': true,
@@ -840,7 +803,7 @@ class SongPostService {
 
       final response = await dio.post('/song-posts/by-ids', data: {'ids': ids});
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data;
         return {
           'success': true,

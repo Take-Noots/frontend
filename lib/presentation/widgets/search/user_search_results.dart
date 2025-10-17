@@ -6,7 +6,7 @@ class UserSearchResults extends StatelessWidget {
   final String? query;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
-  final Function(String) onUserTap;
+  final Function(String, String?) onUserTap;
 
   const UserSearchResults({
     Key? key,
@@ -60,8 +60,8 @@ class UserSearchResults extends StatelessWidget {
             },
             child: const Text('Follow'),
           ),
-          onTap: userId.isNotEmpty 
-              ? () => onUserTap(userId)
+          onTap: userId.isNotEmpty
+              ? () => onUserTap(userId, user['username'] ?? user['name'])
               : null,
         );
       },

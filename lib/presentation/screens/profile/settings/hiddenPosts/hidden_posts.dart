@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../../data/services/song_post_service.dart';
 import '../../../../../data/models/post_model.dart';
-import 'package:provider/provider.dart';
-import '../../../../../core/providers/auth_provider.dart';
+// import 'package:provider/provider.dart';
+// import '../../../../../core/providers/auth_provider.dart';
 
 class HiddenPostsPage extends StatefulWidget {
   const HiddenPostsPage({Key? key}) : super(key: key);

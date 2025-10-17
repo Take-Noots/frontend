@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../../../core/providers/theme_provider.dart';
-import '../../../widgets/home/feed_widget.dart';
+import '../../../../widgets/home/feed_widget.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import '../../../../data/models/post_model.dart' as data_model;
-import '../../../../data/models/feed_item.dart';
-import '../../../../data/services/song_post_service.dart';
+import '../../../../../data/models/post_model.dart' as data_model;
+import '../../../../../data/models/feed_item.dart';
+import '../../../../../data/services/song_post_service.dart';
+import '../../../../../data/services/profile_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
-import '../../../widgets/song_post/comment.dart';
-import '../../../widgets/song_post/post_options_menu.dart';
-import '../../song_posts/update.dart';
+import '../../../../widgets/song_post/comment.dart';
+import '../../../../widgets/song_post/post_options_menu.dart';
+import '../../../song_posts/update.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import '../user_profiles.dart';
-import '../../../../core/styles/app_colors.dart';
+import '../../user_profiles.dart';
 
 class SavedPostsFeedScreen extends StatefulWidget {
   final String userId;
@@ -43,6 +42,8 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
   bool _isPlaying = false;
   String? _currentlyPlayingTrackId;
   String? _currentUserId;
+  Map<String, bool> _followingStatus =
+      {}; // Track following status for each user
 
   @override
   void initState() {
@@ -99,7 +100,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
             try {
               _itemScrollController.jumpTo(index: _initialIndex);
             } catch (e) {
-              print("Error scrolling: $e");
+              // Handle scrolling error silently
             }
           }
         });
@@ -270,10 +271,47 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
     Share.share(shareText, subject: 'Music from Noot');
   }
 
-  void _handlePostOptions(data_model.Post post) {
+  Future<void> _handlePostOptions(data_model.Post post) async {
     bool isUsersOwnPost = false;
     if (post.userId != null && _currentUserId != null) {
       isUsersOwnPost = post.userId == _currentUserId;
+    }
+
+    // Check if post is saved (should be true for saved posts screen, but check anyway)
+    bool isSaved = false;
+    if (_currentUserId != null) {
+      try {
+        final savedResult = await _songPostService.isPostSaved(
+            _currentUserId!, post.id, context);
+        isSaved = savedResult['isSaved'] ?? false;
+      } catch (e) {
+        // If we can't check saved status, assume it's saved since we're in saved posts screen
+        isSaved = true;
+      }
+    }
+
+    // Check if current user is following the post's author
+    bool isFollowing = false;
+    if (_currentUserId != null &&
+        post.userId != null &&
+        _currentUserId != post.userId) {
+      // Use cached following status if available, otherwise check from API
+      if (_followingStatus.containsKey(post.userId)) {
+        isFollowing = _followingStatus[post.userId]!;
+      } else {
+        try {
+          final authService = Provider.of<dynamic>(context, listen: false);
+          final profileService = ProfileService(authService: authService);
+          final followingList =
+              await profileService.getFollowingListWithDetails(_currentUserId!);
+          isFollowing = followingList.any((user) => user['id'] == post.userId);
+          // Cache the result
+          _followingStatus[post.userId!] = isFollowing;
+        } catch (e) {
+          // If we can't check following status, assume not following
+          isFollowing = false;
+        }
+      }
     }
 
     PostOptionsMenu.show(
@@ -282,37 +320,19 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
       currentUserId: _currentUserId,
       postId: post.id,
       isOwnPost: isUsersOwnPost,
+      isSaved: isSaved,
+      isFollowing: isFollowing,
       onSharePost: () {
         final shareText =
             'Check out this song: ${post.songName} by ${post.artists}';
         Share.share(shareText, subject: 'Music from Noot');
       },
       onSavePost: () async {
-        // Unsave the post
-        final result =
-            await _songPostService.unsavePost(widget.userId, post.id);
-        if (result['success'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Post removed from saved'),
-              backgroundColor: AppColors.primaryPurple,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              margin: const EdgeInsets.all(10),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-          // Remove from list and refresh
-          setState(() {
-            _posts.removeWhere((p) => p.id == post.id);
-          });
-        }
-      },
-      onUnfollow: () {
+        // This should not be called in saved posts screen since posts are already saved
+        // But keeping for compatibility - just show a message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Unfollowed ${post.username ?? "user"}'),
+            content: Text('Post is already saved'),
             backgroundColor: const Color(0xFFA855F7),
             behavior: SnackBarBehavior.floating,
             shape:
@@ -321,6 +341,74 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
             duration: const Duration(seconds: 2),
           ),
         );
+      },
+      onUnsavePost: () async {
+        if (_currentUserId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Please log in to unsave posts'),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+
+        try {
+          final result = await _songPostService.unsavePost(
+              _currentUserId!, post.id, context);
+          if (result['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Post removed from saved'),
+                backgroundColor: const Color(0xFFA855F7),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+            // Remove from list and refresh
+            setState(() {
+              _posts.removeWhere((p) => p.id == post.id);
+            });
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message'] ?? 'Failed to unsave post'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error unsaving post: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      },
+      onUnfollow: () async {
+        await _handleUnfollowUser(post.userId!);
+      },
+      onFollow: () async {
+        await _handleFollowUser(post.userId!);
       },
       onReport: () {
         // Report functionality handled inside PostOptionsMenu
@@ -396,7 +484,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text('Post deleted successfully'),
-                  backgroundColor: AppColors.primaryPurple,
+                  backgroundColor: const Color(0xFFA855F7),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
@@ -440,7 +528,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('Post hidden from your feed'),
-                backgroundColor: AppColors.primaryPurple,
+                backgroundColor: const Color(0xFFA855F7),
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
@@ -479,22 +567,145 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const Center(child: CircularProgressIndicator()),
+  Future<void> _handleFollowUser(String targetUserId) async {
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please log in to follow users'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final authService = Provider.of<dynamic>(context, listen: false);
+      final profileService = ProfileService(authService: authService);
+      final result =
+          await profileService.followUser(_currentUserId!, targetUserId);
+      if (result['success'] == true) {
+        // Update local following status
+        setState(() {
+          _followingStatus[targetUserId] = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('User followed successfully'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to follow user'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error following user: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
       );
     }
-    if (_error != null) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: Center(
-            child: Text(_error!,
-                style:
-                    TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+  }
+
+  Future<void> _handleUnfollowUser(String targetUserId) async {
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please log in to unfollow users'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
       );
+      return;
+    }
+
+    try {
+      final authService = Provider.of<dynamic>(context, listen: false);
+      final profileService = ProfileService(authService: authService);
+      final result =
+          await profileService.unfollowUser(_currentUserId!, targetUserId);
+      if (result['success'] == true) {
+        // Update local following status
+        setState(() {
+          _followingStatus[targetUserId] = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('User unfollowed successfully'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to unfollow user'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error unfollowing user: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Widget _buildSongPostsTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+          child: Text(_error!,
+              style:
+                  TextStyle(color: Theme.of(context).colorScheme.onSurface)));
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -506,65 +717,81 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
             curve: Curves.easeInOut,
           );
         } catch (e) {
-          print("Error scrolling: $e");
+          // Handle scrolling error silently
         }
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Saved Posts'),
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back,
-              color: Theme.of(context).colorScheme.onSurface),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.brightness_6,
-                color: Theme.of(context).colorScheme.onSurface),
-            onPressed: () {
-              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
-            },
-          ),
-        ],
-      ),
-      body: _posts.isEmpty
-          ? Center(
-              child: Text(
-                'No saved posts',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-            )
-          : FeedWidget(
-              feedItems: _posts.map((p) => FeedItem.song(p)).toList(),
-              isLoading: false,
-              error: null,
-              onRefresh: _loadSavedPosts,
-              onSongLike: (data_model.Post post) => _handleLike(post),
-              onSongComment: (data_model.Post post) => _handleComment(post),
-              onSongPlay: (data_model.Post post) => _handlePlay(post),
-              onSongShare: (data_model.Post post) => _handleShare(post),
-              currentlyPlayingTrackId: _currentlyPlayingTrackId,
-              isPlaying: _isPlaying,
-              currentUserId: _currentUserId,
-              onPostOptions: _handlePostOptions,
-              onUserTap: (String userId) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => UserProfilePage(userId: userId),
-                  ),
-                );
-              },
-              itemScrollController: _itemScrollController,
-              itemPositionsListener: _itemPositionsListener,
-              initialIndex: _initialIndex,
+    return _posts.isEmpty
+        ? Center(
+            child: Text(
+              'No saved posts',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          )
+        : FeedWidget(
+            feedItems: _posts.map((p) => FeedItem.song(p)).toList(),
+            isLoading: false,
+            error: null,
+            onRefresh: _loadSavedPosts,
+            onSongLike: (data_model.Post post) => _handleLike(post),
+            onSongComment: (data_model.Post post) => _handleComment(post),
+            onSongPlay: (data_model.Post post) => _handlePlay(post),
+            onSongShare: (data_model.Post post) => _handleShare(post),
+            currentlyPlayingTrackId: _currentlyPlayingTrackId,
+            isPlaying: _isPlaying,
+            currentUserId: _currentUserId,
+            onPostOptions: _handlePostOptions,
+            onUserTap: (String userId, String? username) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      UserProfilePage(userId: userId, username: username),
+                ),
+              );
+            },
+            itemScrollController: _itemScrollController,
+            itemPositionsListener: _itemPositionsListener,
+            initialIndex: _initialIndex,
+          );
+  }
+
+  Widget _buildThoughtsTab() {
+    return const Center(child: Text('Saved thought posts — coming soon'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Saved Posts'),
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          centerTitle: true,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back,
+                color: Theme.of(context).colorScheme.onSurface),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          bottom: TabBar(
+            indicatorColor: Theme.of(context).colorScheme.primary,
+            labelColor: Theme.of(context).colorScheme.onSurface,
+            unselectedLabelColor:
+                Theme.of(context).colorScheme.onSurfaceVariant,
+            tabs: const [Tab(text: 'Song Posts'), Tab(text: 'Thought Posts')],
+          ),
+        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: TabBarView(
+          children: [
+            _buildSongPostsTab(),
+            _buildThoughtsTab(),
+          ],
+        ),
+      ),
     );
   }
 }

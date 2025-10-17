@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../data/services/auth_service.dart';
 import '../../widgets/auth/custom_button.dart';
 import '../../widgets/auth/custom_snack_bar.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/router/route_names.dart';
 import '../../../core/utils/temp_storage.dart';
 
 class TermsScreen extends StatefulWidget {
@@ -105,11 +107,9 @@ class _TermsScreenState extends State<TermsScreen> {
         // Check if user is authenticated in auth provider
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         if (authProvider.isAuthenticated) {
-          Navigator.pushNamedAndRemoveUntil(
-              context, '/link-account', (route) => false);
+          context.go(AppRoutes.linkSpotify);
         } else {
-          Navigator.pushNamedAndRemoveUntil(
-              context, '/login', (route) => false);
+          context.go(AppRoutes.login);
         }
       } else {
         CustomSnackBar.show(

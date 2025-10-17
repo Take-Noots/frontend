@@ -5,12 +5,8 @@ import '../widgets/home/feed_widget.dart';
 import '../../data/models/post_model.dart' as data_model;
 import '../../data/models/feed_item.dart';
 import '../../data/models/thoughts_model.dart';
+import '../../data/services/profile_service.dart';
 import '../../data/services/thoughts_service.dart';
-import '../widgets/thoughts/thoughts_feed_card.dart';
-import '../../data/models/feed_item.dart';
-import '../../data/models/thoughts_model.dart';
-import '../../data/services/thoughts_service.dart';
-import '../widgets/thoughts/thoughts_feed_card.dart';
 import '../../data/services/song_post_service.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,7 +14,6 @@ import 'package:provider/provider.dart';
 import '../../data/services/auth_service.dart';
 import 'package:dio/dio.dart';
 import '../widgets/song_post/comment.dart';
-import 'package:share_plus/share_plus.dart';
 import './profile/user_profiles.dart';
 import '../widgets/song_post/post_options_menu.dart';
 import './song_posts/update.dart';
@@ -49,6 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _currentlyPlayingTrackId;
   bool _isPlaying = false;
   String? userId;
+  Map<String, bool> _followingStatus =
+      {}; // Track following status for each user
 
   @override
   void initState() {
@@ -70,7 +67,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Refresh posts after creating a new post
   Future<void> refreshPostsAfterCreation() async {
-    print('Refreshing posts after new post creation...');
     await _loadPosts();
   }
 
@@ -99,11 +95,8 @@ class _HomeScreenState extends State<HomeScreen> {
       List<FeedItem> feedItems = [];
 
       // Check if songResult is valid and has success field
-      if (songResult != null &&
-          songResult['success'] == true &&
-          songResult['data'] != null) {
+      if (songResult['success'] == true && songResult['data'] != null) {
         final List<dynamic> postsData = songResult['data'];
-        print('[DEBUG] Song posts data length: ${postsData.length}');
 
         final posts = postsData.map((json) {
           final post = data_model.Post.fromJson(json);
@@ -112,13 +105,9 @@ class _HomeScreenState extends State<HomeScreen> {
           return FeedItem.song(post);
         }).where((item) =>
             item.songPost == null ||
-            ((item.songPost!.isHidden ?? 0) == 0 &&
-                (item.songPost!.isDeleted ?? 0) == 0));
+            (item.songPost!.isHidden == 0 && item.songPost!.isDeleted == 0));
 
-        print('[DEBUG] Filtered song posts length: ${posts.length}');
         feedItems.addAll(posts);
-      } else {
-        print('[DEBUG] Song result not successful: $songResult');
       }
 
       // Check saved status for all posts if user is logged in
@@ -127,35 +116,22 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       // Check if thoughtsResult is valid and has success field
-      if (thoughtsResult != null &&
-          thoughtsResult['success'] == true &&
-          thoughtsResult['data'] != null) {
+      if (thoughtsResult['success'] == true && thoughtsResult['data'] != null) {
         final List<dynamic> thoughtsData = thoughtsResult['data'];
-        print('[DEBUG] Thoughts data length: ${thoughtsData.length}');
-        print('[DEBUG] Parsed thoughtsData: $thoughtsData');
 
         final thoughtsPosts = thoughtsData.map((json) {
           final post = ThoughtsPost.fromJson(json);
-          print('[DEBUG] Parsed ThoughtsPost: $post');
           return FeedItem.thought(post);
         }).where((item) =>
             item.thoughtsPost == null ||
-            ((item.thoughtsPost!.isHidden ?? 0) == 0 &&
-                (item.thoughtsPost!.isDeleted ?? 0) == 0));
+            (item.thoughtsPost!.isHidden == 0 &&
+                item.thoughtsPost!.isDeleted == 0));
 
-        print(
-            '[DEBUG] Filtered thoughts posts length: ${thoughtsPosts.length}');
         feedItems.addAll(thoughtsPosts);
-      } else {
-        print('[DEBUG] Thoughts result not successful: $thoughtsResult');
       }
 
       // Sort all by createdAt, newest first
       feedItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      print('[DEBUG] Final feed items count: ${feedItems.length}');
-      print(
-          '[DEBUG] Feed items types: ${feedItems.map((item) => item.type).toList()}');
 
       if (mounted) {
         setState(() {
@@ -164,7 +140,6 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      print('Error in _loadPosts: $e');
       String errorMessage = 'Error loading posts: $e';
 
       // Check if it's an authentication error
@@ -188,27 +163,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      print('[DEBUG] Checking saved status for ${feedItems.length} feed items');
-      
-      // Check saved status for song posts
       final savedPostsResult =
           await _songPostService.getSavedPosts(userId!, context);
-      print('[DEBUG] Saved posts result: $savedPostsResult');
 
-      if (savedPostsResult != null &&
-          savedPostsResult['success'] == true &&
+      if (savedPostsResult['success'] == true &&
           savedPostsResult['savedPosts'] != null) {
         final List<String> savedPostsIds =
             List<String>.from(savedPostsResult['savedPosts']);
-        print('[DEBUG] Saved posts IDs: $savedPostsIds');
 
         for (var item in feedItems) {
           if (item.type == FeedItemType.song && item.songPost != null) {
             final post = item.songPost!;
-            final wasSaved = post.isSaved;
             post.isSaved = savedPostsIds.contains(post.id);
-            print(
-                '[DEBUG] Post ${post.id}: wasSaved=$wasSaved, isSaved=${post.isSaved}');
           }
         }
       }
@@ -236,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e) {
-      print('[DEBUG] Error in _checkSavedStatusForPosts: $e');
+      // Handle error silently
     }
   }
 
@@ -245,9 +211,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (currentUserId == null) {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      final userData = userDataString != null
-          ? jsonDecode(userDataString)
-          : {'id': ''}; 
+      final userData =
+          userDataString != null ? jsonDecode(userDataString) : {'id': ''};
       currentUserId = userData['id'];
     }
     if (currentUserId == null) {
@@ -270,12 +235,8 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-    //print('[DEBUG] HomeScreen: Attempting to like post ${post.id}');
-    //print('[DEBUG] HomeScreen: Current user ID: $currentUserId');
-
     final result =
         await _songPostService.likePost(post.id, currentUserId, context);
-   // print('[DEBUG] HomeScreen: Like result: $result');
 
     if (result['success']) {
       if (post.userId != null) {
@@ -335,7 +296,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 post.comments = updatedComments;
               });
               return updatedComments;
-              return updatedComments;
             } else if (result['success'] == false) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -343,7 +303,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   backgroundColor: Theme.of(context).colorScheme.error,
                 ),
               );
-              return post.comments;
               return post.comments;
             }
           },
@@ -399,13 +358,12 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      String errorMsg = 'Failed to play track';
       if (e is DioError && e.response != null && e.response?.data != null) {
         final data = e.response?.data;
         if (data is Map && data['message'] != null) {
-          errorMsg = data['message'];
+          // errorMsg = data['message'];
         } else if (data is String) {
-          errorMsg = data;
+          // errorMsg = data;
         }
       }
     }
@@ -461,17 +419,11 @@ class _HomeScreenState extends State<HomeScreen> {
         _currentlyPlayingTrackId = thoughtsTrackId;
         _isPlaying = true;
       });
-      print(
-          '[DEBUG] _handleThoughtsPlay: Optimistically updated state - isPlaying: true, trackId: $thoughtsTrackId');
 
       try {
         await _playThoughtsTrack(post);
-        print('[DEBUG] _handleThoughtsPlay: Successfully played track');
-      } catch (e, stackTrace) {
+      } catch (e) {
         // Revert state on error
-        print('[DEBUG] _handleThoughtsPlay: Error occurred, reverting state');
-        print('[DEBUG] _handleThoughtsPlay: Full error: $e');
-        print('[DEBUG] _handleThoughtsPlay: Stack trace: $stackTrace');
         setState(() {
           _currentlyPlayingTrackId = null;
           _isPlaying = false;
@@ -508,24 +460,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _playThoughtsTrack(ThoughtsPost post) async {
     try {
-      print(
-          '[DEBUG] _playThoughtsTrack: Starting to play track for post: ${post.songName} by ${post.artistName}');
-
       final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
 
       // Search for the track first - try with both song name and artist name
       final searchQuery = '${post.songName} ${post.artistName}';
-      print('[DEBUG] _playThoughtsTrack: Searching for track: $searchQuery');
       final searchResponse = await dio.get(
         '/spotify/search/track',
         queryParameters: {'track_name': searchQuery},
       );
-
-      print(
-          '[DEBUG] _playThoughtsTrack: Search response status: ${searchResponse.statusCode}');
-      print(
-          '[DEBUG] _playThoughtsTrack: Search response data: ${searchResponse.data}');
 
       // Check if response has the expected structure
       if (searchResponse.data == null) {
@@ -546,7 +489,6 @@ class _HomeScreenState extends State<HomeScreen> {
           searchResponse.data['tracks']['items'].isNotEmpty) {
         // Find the track that matches both song name and artist name
         final tracks = searchResponse.data['tracks']['items'] as List;
-        print('[DEBUG] _playThoughtsTrack: Found ${tracks.length} tracks');
 
         String? trackId;
 
@@ -569,21 +511,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 .where((name) => name.isNotEmpty)
                 .join(' ');
           } catch (e) {
-            print('[DEBUG] _playThoughtsTrack: Error parsing artists: $e');
             trackArtists = '';
           }
 
           final postSongName = post.songName?.toLowerCase() ?? '';
           final postArtistName = post.artistName?.toLowerCase() ?? '';
 
-          print(
-              '[DEBUG] _playThoughtsTrack: Comparing track "$trackName" by "$trackArtists" with post "$postSongName" by "$postArtistName"');
-
           if (trackName.contains(postSongName) &&
               trackArtists.contains(postArtistName)) {
             trackId = track['id'];
-            print(
-                '[DEBUG] _playThoughtsTrack: Found matching track with ID: $trackId');
             break;
           }
         }
@@ -591,29 +527,19 @@ class _HomeScreenState extends State<HomeScreen> {
         // If no exact match found, use the first result
         if (trackId == null) {
           trackId = tracks.first['id'];
-          print(
-              '[DEBUG] _playThoughtsTrack: No exact match found, using first result: $trackId');
         }
 
         // Play the track
-        print(
-            '[DEBUG] _playThoughtsTrack: Attempting to play track with ID: $trackId');
         final playResponse = await dio.post(
           '/spotify/player/post/play',
           data: {'track_id': trackId},
         );
 
-        print(
-            '[DEBUG] _playThoughtsTrack: Play response status: ${playResponse.statusCode}');
-        print(
-            '[DEBUG] _playThoughtsTrack: Play response data: ${playResponse.data}');
-
         // Accept any 2xx status code as success
         if (playResponse.statusCode != null &&
             playResponse.statusCode! >= 200 &&
             playResponse.statusCode! < 300) {
-          print(
-              '[DEBUG] _playThoughtsTrack: Successfully started playing track');
+          // Successfully started playing track
         } else {
           throw Exception(
               'Failed to play track - Status: ${playResponse.statusCode}');
@@ -623,13 +549,6 @@ class _HomeScreenState extends State<HomeScreen> {
             'Track not found - Search returned ${searchResponse.statusCode} with ${searchResponse.data['tracks']['items']?.length ?? 0} results');
       }
     } on DioException catch (e) {
-      print('[DEBUG] _playThoughtsTrack: DioException occurred');
-      print(
-          '[DEBUG] _playThoughtsTrack: Status code: ${e.response?.statusCode}');
-      print('[DEBUG] _playThoughtsTrack: Response data: ${e.response?.data}');
-      print('[DEBUG] _playThoughtsTrack: Error message: ${e.message}');
-      print('[DEBUG] _playThoughtsTrack: Error type: ${e.type}');
-
       if (e.response?.data != null) {
         final errorData = e.response!.data;
         if (errorData is Map && errorData['message'] != null) {
@@ -640,36 +559,59 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       throw Exception('Failed to play track: ${e.message}');
     } catch (e) {
-      print('[DEBUG] _playThoughtsTrack: Generic error occurred: $e');
       throw Exception('Failed to play track: $e');
     }
   }
 
-  void _handleShare(data_model.Post post) {
-    final shareText =
-        'Check out this song: ${post.songName} by ${post.artists}';
-    Share.share(shareText, subject: 'Music from Noot');
-  }
-
-  void _handlePostOptions(data_model.Post post) {
-    print('HomeScreen _handlePostOptions - Post ID: ${post.id}');
-    print('HomeScreen _handlePostOptions - Post User ID: ${post.userId}');
-    print('HomeScreen _handlePostOptions - Current User ID: $userId');
-
+  Future<void> _handlePostOptions(data_model.Post post) async {
     // Check if either ID is null or empty
     if (post.userId == null || post.userId!.isEmpty) {
-      print('WARNING: Post userId is null or empty');
+      // WARNING: Post userId is null or empty
     }
     if (userId == null || userId!.isEmpty) {
-      print('WARNING: Current userId is null or empty');
+      // WARNING: Current userId is null or empty
     }
 
     bool isUsersOwnPost = false;
     if (post.userId != null && userId != null) {
       isUsersOwnPost = post.userId == userId;
-      print('Calculated isUsersOwnPost: $isUsersOwnPost');
     } else {
-      print('Cannot determine if post is user\'s own due to null IDs');
+      // Cannot determine if post is user's own due to null IDs
+    }
+
+    // Check if post is saved
+    bool isSaved = false;
+    if (userId != null) {
+      try {
+        final savedResult =
+            await _songPostService.isPostSaved(userId!, post.id, context);
+        isSaved = savedResult['isSaved'] ?? false;
+      } catch (e) {
+        // If we can't check saved status, assume it's not saved
+        isSaved = false;
+      }
+    }
+
+    // Check if current user is following the post's author
+    bool isFollowing = false;
+    if (userId != null && post.userId != null && userId != post.userId) {
+      // Use cached following status if available, otherwise check from API
+      if (_followingStatus.containsKey(post.userId)) {
+        isFollowing = _followingStatus[post.userId]!;
+      } else {
+        try {
+          final authService = Provider.of<AuthService>(context, listen: false);
+          final profileService = ProfileService(authService: authService);
+          final followingList =
+              await profileService.getFollowingListWithDetails(userId!);
+          isFollowing = followingList.any((user) => user['id'] == post.userId);
+          // Cache the result
+          _followingStatus[post.userId!] = isFollowing;
+        } catch (e) {
+          // If we can't check following status, assume not following
+          isFollowing = false;
+        }
+      }
     }
 
     PostOptionsMenu.show(
@@ -678,13 +620,14 @@ class _HomeScreenState extends State<HomeScreen> {
       currentUserId: userId,
       postId: post.id,
       isOwnPost: isUsersOwnPost,
+      isSaved: isSaved,
+      isFollowing: isFollowing,
       onDelete: () async {
         try {
           final result = await _songPostService.deletePost(post.id);
           if (result['success'] == true) {
             setState(() {
-              _feedItems.removeWhere(
-                  (item) => item is FeedItem && item.songPost?.id == post.id);
+              _feedItems.removeWhere((item) => item.songPost?.id == post.id);
             });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -730,6 +673,12 @@ class _HomeScreenState extends State<HomeScreen> {
       onUnsavePost: () async {
         await _handleUnsavePost(post);
       },
+      onFollow: () async {
+        await _handleFollowUser(post.userId!);
+      },
+      onUnfollow: () async {
+        await _handleUnfollowUser(post.userId!);
+      },
     );
   }
 
@@ -750,7 +699,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      final result = await _songPostService.savePost(userId!, post.id);
+      final result = await _songPostService.savePost(userId!, post.id, context);
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -819,7 +768,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      final result = await _songPostService.unsavePost(userId!, post.id);
+      final result =
+          await _songPostService.unsavePost(userId!, post.id, context);
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -871,18 +821,131 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  String _formatTimestamp(DateTime timestamp) {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
+  Future<void> _handleFollowUser(String targetUserId) async {
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please log in to follow users'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
 
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m';
-    } else {
-      return 'now';
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final profileService = ProfileService(authService: authService);
+      final result = await profileService.followUser(userId!, targetUserId);
+      if (result['success'] == true) {
+        // Update local following status
+        setState(() {
+          _followingStatus[targetUserId] = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('User followed successfully'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to follow user'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error following user: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleUnfollowUser(String targetUserId) async {
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please log in to unfollow users'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final profileService = ProfileService(authService: authService);
+      final result = await profileService.unfollowUser(userId!, targetUserId);
+      if (result['success'] == true) {
+        // Update local following status
+        setState(() {
+          _followingStatus[targetUserId] = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('User unfollowed successfully'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to unfollow user'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error unfollowing user: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -899,35 +962,27 @@ class _HomeScreenState extends State<HomeScreen> {
       onThoughtLike: (ThoughtsPost post) {},
       onThoughtComment: (ThoughtsPost post) {},
       onThoughtPlay: (ThoughtsPost post) {
-        print(
-            '[DEBUG] HomeScreen: onThoughtPlay callback triggered for post: ${post.id}');
-        print(
-            '[DEBUG] HomeScreen: songName: ${post.songName}, artistName: ${post.artistName}');
         _handleThoughtsPlay(post);
       },
       currentlyPlayingTrackId: _currentlyPlayingTrackId,
       isPlaying: _isPlaying,
       currentUserId: userId,
       onPostOptions: _handlePostOptions,
-      onUserTap: (String userId) {
+      onUserTap: (String userId, String? username) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => UserProfilePage(userId: userId),
+            builder: (context) =>
+                UserProfilePage(userId: userId, username: username),
           ),
         );
       },
       onHidePost: (data_model.Post post) async {
-        print('[DEBUG] onHidePost called for post ID: ${post.id}');
         try {
           final result = await _songPostService.hidePost(post.id);
-          print('[DEBUG] hidePost backend result: $result');
           if (result['success'] == true || result['hidden'] == true) {
             setState(() {
-              final before = _feedItems.length;
               _feedItems.removeWhere((item) => item.songPost?.id == post.id);
-              final after = _feedItems.length;
-              print('[DEBUG] _feedItems length before: $before, after: $after');
             });
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -941,7 +996,6 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
         } catch (e) {
-          print('[DEBUG] Exception in onHidePost: $e');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error hiding post: $e')),
           );
