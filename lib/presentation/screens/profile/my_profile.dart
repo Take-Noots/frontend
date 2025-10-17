@@ -241,7 +241,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
         ThoughtPostsTab(postsList: posts, userId: userId),
         ArtistConcertsTab(userId: userId!), // Implement this tab
         ArtistUpcomingTab(userId: userId!), // Implement this tab
-        // ArtistInsightsTab(userId: userId!), // REMOVE
+        // ArtistInsightsTab(userId: userId!),
         const TaggedPostsTab(),
       ];
     } else if (userType == 'business') {

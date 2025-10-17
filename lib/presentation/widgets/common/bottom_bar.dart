@@ -15,10 +15,14 @@ class BottomBar extends StatefulWidget {
   /// Callback when a tab is tapped
   final Function(int)? onTap;
 
+  /// Whether to hide the bottom bar
+  final bool isHidden;
+
   const BottomBar({
     super.key,
     this.currentIndex = 0,
     this.onTap,
+    this.isHidden = false,
   });
 
   @override
@@ -96,6 +100,11 @@ class _BottomBarState extends State<BottomBar> {
 
   @override
   Widget build(BuildContext context) {
+    // Return empty container if hidden
+    if (widget.isHidden) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       color: Theme.of(context).colorScheme.primary,
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -151,7 +160,8 @@ class _BottomBarState extends State<BottomBar> {
               if (widget.onTap != null) {
                 widget.onTap!(2);
               } else {
-                Navigator.pushNamed(context, '/create');
+                // Navigate to create noot page
+                context.go(AppRoutes.createNoot);
               }
             },
           ),

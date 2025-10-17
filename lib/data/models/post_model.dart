@@ -47,6 +47,7 @@ class Post {
   final String artists;
   final String? albumImage;
   final String? caption;
+  final String? backgroundColor;
   final String? userId;
   final String? username;
   final String? userImage;
@@ -68,6 +69,7 @@ class Post {
     required this.artists,
     this.albumImage,
     this.caption,
+    this.backgroundColor,
     this.userId,
     this.username,
     this.userImage,
@@ -91,6 +93,7 @@ class Post {
       artists: json['artists'] ?? '',
       albumImage: json['albumImage'],
       caption: json['caption'],
+      backgroundColor: json['backgroundColor'],
       userId: json['userId'] as String?,
       username: json['username'] as String?,
       userImage: json['userImage'] as String?,
@@ -206,6 +209,7 @@ class Post {
       artists: artists ?? this.artists,
       albumImage: albumImage ?? this.albumImage,
       caption: caption ?? this.caption,
+      backgroundColor: backgroundColor ?? this.backgroundColor,
       userId: userId ?? this.userId,
       username: username ?? this.username,
       likes: likes ?? this.likes,

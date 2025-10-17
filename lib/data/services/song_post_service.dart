@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/utils/color_extractor.dart';
 import 'auth_service.dart';
 
 class SongPostService {
@@ -46,6 +47,18 @@ class SongPostService {
           };
         }
 
+        // Extract background color from album image
+        String? backgroundColor;
+        if (albumImage != null && albumImage.isNotEmpty) {
+          backgroundColor =
+              await ColorExtractor.extractBackgroundColor(albumImage);
+        }
+
+        // use default color
+        if (backgroundColor == null && context != null) {
+          backgroundColor = ColorExtractor.getDefaultBackgroundColor(context);
+        }
+
         final postData = {
           'trackId': trackId,
           'songName': songName,
@@ -53,6 +66,7 @@ class SongPostService {
           'userId': currentUserId,
           if (albumImage != null) 'albumImage': albumImage,
           if (caption != null) 'caption': caption,
+          if (backgroundColor != null) 'backgroundColor': backgroundColor,
         };
 
         final response = await dio.post('/song-posts', data: postData);
@@ -79,7 +93,7 @@ class SongPostService {
         final prefs = await SharedPreferences.getInstance();
         final userDataString = prefs.getString('user_data');
 
-        // Check if user is logged in
+        // Check if user is logged
         if (userDataString == null) {
           return {
             'success': false,
@@ -97,6 +111,18 @@ class SongPostService {
           };
         }
 
+        // Extract background color from album image
+        String? backgroundColor;
+        if (albumImage != null && albumImage.isNotEmpty) {
+          backgroundColor =
+              await ColorExtractor.extractBackgroundColor(albumImage);
+        }
+
+        // use default color
+        if (backgroundColor == null && context != null) {
+          backgroundColor = ColorExtractor.getDefaultBackgroundColor(context);
+        }
+
         final response = await http.post(
           Uri.parse('$baseUrl/song-posts'),
           headers: {
@@ -109,6 +135,7 @@ class SongPostService {
             'albumImage': albumImage,
             'caption': caption,
             'userId': userData['id'],
+            if (backgroundColor != null) 'backgroundColor': backgroundColor,
           }),
         );
 
@@ -233,7 +260,6 @@ class SongPostService {
   Future<Map<String, dynamic>> likePost(String postId, String userId,
       [BuildContext? context]) async {
     try {
-      // If context is provided, use AuthService with Dio for authenticated requests
       if (context != null) {
         final authService = Provider.of<AuthService>(context, listen: false);
         final dio = authService.dio;

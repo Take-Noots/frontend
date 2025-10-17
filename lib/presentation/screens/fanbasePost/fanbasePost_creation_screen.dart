@@ -4,6 +4,7 @@ import 'dart:async';
 
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/fanbase_post_service.dart';
+import '../../../core/styles/app_colors.dart';
 
 /// Screen for creating new posts within a specific fanbase
 /// Allows users to create posts with optional Spotify track attachments
@@ -180,7 +181,7 @@ class _FanbasePostCreationScreenState extends State<FanbasePostCreationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
           content: const Text('Post created successfully!'),
-          backgroundColor: const Color(0xFFA855F7),
+          backgroundColor: AppColors.primaryPurple,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),

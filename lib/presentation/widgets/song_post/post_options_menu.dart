@@ -3,6 +3,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'dart:ui';
 import 'package:share_plus/share_plus.dart';
 import '../../../data/services/post_report_service.dart';
+import '../../../core/styles/app_colors.dart';
 
 class PostOptionsMenu extends StatefulWidget {
   final String? postUserId;
@@ -529,7 +530,7 @@ class _PostOptionsMenuState extends State<PostOptionsMenu> {
             SnackBar(
               content:
                   Text(result['message'] ?? 'Report submitted successfully'),
-              backgroundColor: const Color(0xFFA855F7),
+              backgroundColor: AppColors.primaryPurple,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
