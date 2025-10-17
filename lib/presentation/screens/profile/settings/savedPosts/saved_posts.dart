@@ -19,12 +19,6 @@ class _SavedPostsPageState extends State<SavedPostsPage> {
   void initState() {
     super.initState();
     _savedPostsFuture = _fetchSavedPosts();
-    // Debug: Show userId
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('UserId: ${widget.userId}')),
-      );
-    });
   }
 
   Future<List<String>> _fetchSavedPosts() async {
@@ -32,12 +26,6 @@ class _SavedPostsPageState extends State<SavedPostsPage> {
     final result = await service.getSavedPosts(widget.userId, context);
     if (result['success'] == true && result['savedPosts'] != null) {
       List<String> ids = (result['savedPosts'] as List).cast<String>();
-      // Debug: Show saved post IDs
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Saved IDs: ${ids.length} items')),
-        );
-      });
       return ids;
     }
     return [];

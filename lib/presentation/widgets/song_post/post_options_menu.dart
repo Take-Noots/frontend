@@ -29,15 +29,6 @@ class PostOptionsMenu {
     VoidCallback? onDelete,
     VoidCallback? onHide,
   }) {
-    // Debug output to understand the values
-    print(
-        'PostOptionsMenu - postUserId: $postUserId, currentUserId: $currentUserId');
-    print('PostOptionsMenu - isOwnPost: $isOwnPost');
-    print('PostOptionsMenu - isSaved: $isSaved');
-    print('PostOptionsMenu - postId: $postId');
-    print(
-        'PostOptionsMenu - onHide callback is ${onHide != null ? "NOT NULL" : "NULL"}');
-
     // Enhanced logic to determine if post belongs to current user
     bool isCurrentUserPost;
 
@@ -53,8 +44,6 @@ class PostOptionsMenu {
     else {
       isCurrentUserPost = false;
     }
-
-    print('PostOptionsMenu - isCurrentUserPost: $isCurrentUserPost');
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor =
@@ -152,16 +141,9 @@ class PostOptionsMenu {
                   leading: Icon(LucideIcons.eyeOff, color: textColor),
                   title: Text('Hide post', style: TextStyle(color: textColor)),
                   onTap: () {
-                    print('[DEBUG] PostOptionsMenu: Hide post tapped');
-                    print(
-                        '[DEBUG] PostOptionsMenu: onHide callback is ${onHide != null ? "NOT NULL" : "NULL"}');
                     Navigator.pop(context);
                     if (onHide != null) {
-                      print('[DEBUG] PostOptionsMenu: Calling onHide callback');
                       onHide();
-                    } else {
-                      print(
-                          '[DEBUG] PostOptionsMenu: onHide callback is null, not calling');
                     }
                   },
                 ),
@@ -373,11 +355,6 @@ class PostOptionsMenu {
 
   static void _submitReport(BuildContext context, String reason,
       String? reportedUserId, String? postId) async {
-    print('[DEBUG] _submitReport called with:');
-    print('[DEBUG] - reason: $reason');
-    print('[DEBUG] - reportedUserId: $reportedUserId');
-    print('[DEBUG] - postId: $postId');
-
     if (reportedUserId == null || postId == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

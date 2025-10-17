@@ -282,27 +282,33 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
     Share.share(shareText, subject: 'Music from Noot');
   }
 
-  void _handlePostOptions(data_model.Post post) {
-    print('ProfileFeedScreen _handlePostOptions - Post ID: ${post.id}');
-    print(
-        'ProfileFeedScreen _handlePostOptions - Post User ID: ${post.userId}');
-    print(
-        'ProfileFeedScreen _handlePostOptions - Current User ID: $_currentUserId');
-
+  Future<void> _handlePostOptions(data_model.Post post) async {
     // Check if either ID is null or empty
     if (post.userId == null || post.userId!.isEmpty) {
-      print('WARNING: Post userId is null or empty');
+      // WARNING: Post userId is null or empty
     }
     if (_currentUserId == null || _currentUserId!.isEmpty) {
-      print('WARNING: Current userId is null or empty');
+      // WARNING: Current userId is null or empty
     }
 
     bool isUsersOwnPost = false;
     if (post.userId != null && _currentUserId != null) {
       isUsersOwnPost = post.userId == _currentUserId;
-      print('Calculated isUsersOwnPost: $isUsersOwnPost');
     } else {
-      print('Cannot determine if post is user\'s own due to null IDs');
+      // Cannot determine if post is user's own due to null IDs
+    }
+
+    // Check if post is saved
+    bool isSaved = false;
+    if (_currentUserId != null) {
+      try {
+        final savedResult = await _songPostService.isPostSaved(
+            _currentUserId!, post.id, context);
+        isSaved = savedResult['isSaved'] ?? false;
+      } catch (e) {
+        // If we can't check saved status, assume it's not saved
+        isSaved = false;
+      }
     }
 
     PostOptionsMenu.show(
@@ -311,23 +317,127 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
       currentUserId: _currentUserId,
       postId: post.id,
       isOwnPost: isUsersOwnPost,
+      isSaved: isSaved,
       onSharePost: () {
         final shareText =
             'Check out this song: ${post.songName} by ${post.artists}';
         Share.share(shareText, subject: 'Music from Noot');
       },
-      onSavePost: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Post saved'),
-            backgroundColor: const Color(0xFFA855F7),
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(10),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+      onSavePost: () async {
+        if (_currentUserId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Please log in to save posts'),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+
+        try {
+          final result = await _songPostService.savePost(
+              _currentUserId!, post.id, context);
+          if (result['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Post saved successfully'),
+                backgroundColor: const Color(0xFFA855F7),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message'] ?? 'Failed to save post'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error saving post: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      },
+      onUnsavePost: () async {
+        if (_currentUserId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Please log in to unsave posts'),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+
+        try {
+          final result = await _songPostService.unsavePost(
+              _currentUserId!, post.id, context);
+          if (result['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Post unsaved successfully'),
+                backgroundColor: const Color(0xFFA855F7),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message'] ?? 'Failed to unsave post'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error unsaving post: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       },
       onUnfollow: () {
         // Implement unfollow user functionality

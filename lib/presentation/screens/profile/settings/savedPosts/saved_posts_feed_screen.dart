@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../../core/providers/theme_provider.dart';
 import '../../../../widgets/home/feed_widget.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../../../data/models/post_model.dart' as data_model;
@@ -65,8 +64,6 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
       _isLoading = true;
       _error = null;
     });
-    print(
-        'Loading saved posts for user: ${widget.userId}, savedPostIds: ${widget.savedPostIds}');
     try {
       if (widget.savedPostIds.isEmpty) {
         setState(() {
@@ -78,16 +75,10 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
 
       final postsResult =
           await _songPostService.getPostsByIds(widget.savedPostIds, context);
-      print('postsResult: $postsResult');
       if (postsResult['success'] == true) {
         final posts = (postsResult['posts'] as List)
             .map<data_model.Post>((json) => data_model.Post.fromJson(json))
             .toList();
-        print('Loaded ${posts.length} posts');
-        for (var post in posts) {
-          print(
-              'Post: ${post.id}, username: ${post.username}, userId: ${post.userId}');
-        }
 
         int initialIndex = 0;
         if (widget.initialPostId != null && widget.initialPostId!.isNotEmpty) {
@@ -106,7 +97,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
             try {
               _itemScrollController.jumpTo(index: _initialIndex);
             } catch (e) {
-              print("Error scrolling: $e");
+              // Handle scrolling error silently
             }
           }
         });
@@ -277,10 +268,23 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
     Share.share(shareText, subject: 'Music from Noot');
   }
 
-  void _handlePostOptions(data_model.Post post) {
+  Future<void> _handlePostOptions(data_model.Post post) async {
     bool isUsersOwnPost = false;
     if (post.userId != null && _currentUserId != null) {
       isUsersOwnPost = post.userId == _currentUserId;
+    }
+
+    // Check if post is saved (should be true for saved posts screen, but check anyway)
+    bool isSaved = false;
+    if (_currentUserId != null) {
+      try {
+        final savedResult = await _songPostService.isPostSaved(
+            _currentUserId!, post.id, context);
+        isSaved = savedResult['isSaved'] ?? false;
+      } catch (e) {
+        // If we can't check saved status, assume it's saved since we're in saved posts screen
+        isSaved = true;
+      }
     }
 
     PostOptionsMenu.show(
@@ -289,20 +293,33 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
       currentUserId: _currentUserId,
       postId: post.id,
       isOwnPost: isUsersOwnPost,
+      isSaved: isSaved,
       onSharePost: () {
         final shareText =
             'Check out this song: ${post.songName} by ${post.artists}';
         Share.share(shareText, subject: 'Music from Noot');
       },
       onSavePost: () async {
-        // Unsave the post
-        final result =
-            await _songPostService.unsavePost(widget.userId, post.id);
-        if (result['success'] == true) {
+        // This should not be called in saved posts screen since posts are already saved
+        // But keeping for compatibility - just show a message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Post is already saved'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      onUnsavePost: () async {
+        if (_currentUserId == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Post removed from saved'),
-              backgroundColor: const Color(0xFFA855F7),
+              content: const Text('Please log in to unsave posts'),
+              backgroundColor: Colors.orange,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
@@ -310,10 +327,53 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
               duration: const Duration(seconds: 2),
             ),
           );
-          // Remove from list and refresh
-          setState(() {
-            _posts.removeWhere((p) => p.id == post.id);
-          });
+          return;
+        }
+
+        try {
+          final result = await _songPostService.unsavePost(
+              _currentUserId!, post.id, context);
+          if (result['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Post removed from saved'),
+                backgroundColor: const Color(0xFFA855F7),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+            // Remove from list and refresh
+            setState(() {
+              _posts.removeWhere((p) => p.id == post.id);
+            });
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message'] ?? 'Failed to unsave post'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error unsaving post: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
+          );
         }
       },
       onUnfollow: () {
@@ -506,7 +566,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
             curve: Curves.easeInOut,
           );
         } catch (e) {
-          print("Error scrolling: $e");
+          // Handle scrolling error silently
         }
       }
     });
@@ -565,16 +625,6 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
                 color: Theme.of(context).colorScheme.onSurface),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          actions: [
-            IconButton(
-              icon: Icon(Icons.brightness_6,
-                  color: Theme.of(context).colorScheme.onSurface),
-              onPressed: () {
-                Provider.of<ThemeProvider>(context, listen: false)
-                    .toggleTheme();
-              },
-            ),
-          ],
           bottom: TabBar(
             indicatorColor: Theme.of(context).colorScheme.primary,
             labelColor: Theme.of(context).colorScheme.onSurface,

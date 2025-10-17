@@ -20,7 +20,7 @@ class FeedWidget extends StatefulWidget {
   final Function(data_model.Post)? onComment;
   final Function(data_model.Post)? onPlay;
   final Function(data_model.Post)? onShare;
-  final Function(data_model.Post)? onPostOptions;
+  final Future<void> Function(data_model.Post)? onPostOptions;
   final String? currentlyPlayingTrackId;
   final bool isPlaying;
   final void Function(String userId, String? username)? onUserTap;
@@ -386,7 +386,7 @@ class _FeedWidgetState extends State<FeedWidget> {
                     }
                   },
                   onMoreOptions: widget.onPostOptions != null
-                      ? () => widget.onPostOptions!(post)
+                      ? () async => await widget.onPostOptions!(post)
                       : null,
                   isLiked: post.likedByMe,
                   isPlaying: widget.isPlaying,
