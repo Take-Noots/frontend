@@ -1,15 +1,17 @@
-// import 'dart:convert';
-// import 'dart:ffi';
+import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../../core/providers/auth_provider.dart';
 import '../models/fanbase_model.dart';
 import '../models/fanbase_post_model.dart';
 import 'auth_service.dart';
 
 class FanbaseService {
+  static const String baseUrl = 'http://localhost:3000/fanbase';
+
   static Future<List<Fanbase>> getAllFanbases(BuildContext context) async {
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
@@ -120,11 +122,9 @@ class FanbaseService {
         throw Exception(
             'Failed to update join status: ${response.statusMessage}');
       }
-
     } on DioException catch (e) {
       final errorMessage = e.response?.data?['message'] ?? e.message;
       throw Exception('Failed to update join status: $errorMessage');
-
     } catch (e) {
       throw Exception('Failed to update join status: $e');
     }
@@ -144,11 +144,9 @@ class FanbaseService {
         throw Exception(
             'Failed to update like status: ${response.statusMessage}');
       }
-
     } on DioException catch (e) {
       final errorMessage = e.response?.data?['message'] ?? e.message;
       throw Exception('Failed to update like status: $errorMessage');
-
     } catch (e) {
       throw Exception('Failed to update like status: $e');
     }
@@ -237,7 +235,7 @@ class FanbaseService {
       final dio = authService.dio;
 
       String actualFanbaseId = fanbaseId ?? '';
-      
+
       // If fanbaseId is not provided, try to get it from the post
       if (actualFanbaseId.isEmpty) {
         try {
@@ -256,9 +254,11 @@ class FanbaseService {
       print('[DEBUG] Liking fanbase post (from fanbase_service)');
       print('[DEBUG] PostId: $postId');
       print('[DEBUG] FanbaseId: $actualFanbaseId');
-      print('[DEBUG] Making POST request to: /fanbase/$actualFanbaseId/posts/$postId/like');
-      
-      final response = await dio.post('/fanbase/$actualFanbaseId/posts/$postId/like');
+      print(
+          '[DEBUG] Making POST request to: /fanbase/$actualFanbaseId/posts/$postId/like');
+
+      final response =
+          await dio.post('/fanbase/$actualFanbaseId/posts/$postId/like');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return FanbasePost.fromJson(response.data);
@@ -270,6 +270,115 @@ class FanbaseService {
       throw Exception('Failed to like post: $errorMessage');
     } catch (e) {
       throw Exception('Failed to like post: $e');
+    }
+  }
+
+  /// Fetches the rules for a given fanbase
+  static Future<List<String>> getRules(
+    String fanbaseId,
+    BuildContext context,
+  ) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.get('/fanbase/$fanbaseId/rules');
+
+      if (response.statusCode == 200 && response.data is List) {
+        return (response.data as List)
+            .map((e) =>
+                e is Map && e.containsKey('rule') ? e['rule'].toString() : '')
+            .where((rule) => rule.isNotEmpty)
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception(
+          'Failed to load fanbase rules: ${e is DioException ? e.response?.data['message'] ?? e.message : e}');
+    }
+  }
+
+  /// Updates the rules for a given fanbase (owner only)
+  static Future<void> updateRules(
+    String fanbaseId,
+    List<String> rules,
+    BuildContext context,
+  ) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final body = {
+        'rules': rules.map((r) => {'rule': r}).toList()
+      };
+
+      final response = await dio.post('/fanbase/$fanbaseId/rules', data: body);
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception('Failed to update rules: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        final msg =
+            e.response?.data is Map && e.response?.data['message'] != null
+                ? e.response?.data['message']
+                : e.message;
+        throw Exception('Failed to update fanbase rules: $msg');
+      }
+      throw Exception('Failed to update fanbase rules: $e');
+    }
+  }
+
+  /// Removes a specific rule from a fanbase (owner only)
+  static Future<void> removeRule(
+    String fanbaseId,
+    int ruleIndex,
+    BuildContext context,
+  ) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.delete('/fanbase/$fanbaseId/rules/$ruleIndex');
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('Failed to remove rule: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        final msg =
+            e.response?.data is Map && e.response?.data['message'] != null
+                ? e.response?.data['message']
+                : e.message;
+        throw Exception('Failed to remove rule: $msg');
+      }
+      throw Exception('Failed to remove rule: $e');
+    }
+  }
+
+  /// Deletes a fanbase (owner only)
+  static Future<void> deleteFanbase(
+    String fanbaseId,
+    BuildContext context,
+  ) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.delete('/fanbase/$fanbaseId');
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('Failed to delete fanbase: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        final msg =
+            e.response?.data is Map && e.response?.data['message'] != null
+                ? e.response?.data['message']
+                : e.message;
+        throw Exception('Failed to delete fanbase: $msg');
+      }
+      throw Exception('Failed to delete fanbase: $e');
     }
   }
 }

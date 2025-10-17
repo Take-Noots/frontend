@@ -9,6 +9,7 @@ import '../../presentation/screens/auth/link_spotify_screen.dart';
 import '../../presentation/screens/home_screen.dart';
 import '../../presentation/screens/search/search_feed_screen.dart';
 import '../../presentation/screens/fanbase/fanbase.dart';
+import '../../presentation/screens/fanbase/fanbase_details.dart';
 import '../../presentation/screens/profile/my_profile.dart';
 import '../../presentation/screens/profile/user_profiles.dart';
 import '../../presentation/screens/profile/settings/edit_profile.dart';
@@ -93,7 +94,8 @@ class AppRouter {
       ShellRoute(
         builder: (context, state, child) {
           // Hide bottom bar for create noot routes
-          final isCreateRoute = state.matchedLocation.startsWith('/create-noot');
+          final isCreateRoute =
+              state.matchedLocation.startsWith('/create-noot');
           return ShellScreenV2(
             hideBottomBar: isCreateRoute,
             child: child,
@@ -116,6 +118,20 @@ class AppRouter {
           GoRoute(
             path: AppRoutes.fanbaseList,
             builder: (context, state) => const FanbasePage(),
+          ),
+
+          // Individual Fanbase Details
+          GoRoute(
+            path: '${AppRoutes.fanbaseList}/:fanbaseId',
+            builder: (context, state) {
+              final fanbaseId = state.pathParameters['fanbaseId']!;
+              final userId = state.uri.queryParameters['userId'] ?? '';
+
+              return FanbaseDetailScreen(
+                fanbaseId: fanbaseId,
+                userId: userId,
+              );
+            },
           ),
 
           // Profile routes
