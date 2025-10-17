@@ -101,6 +101,30 @@ class _BottomBarState extends State<BottomBar> {
       return const SizedBox.shrink();
     }
 
+    // Calculate current index based on route
+    int actualCurrentIndex = widget.currentIndex;
+
+    // Only auto-detect route if no custom index is provided
+    if (widget.onTap == null) {
+      try {
+        final location = GoRouterState.of(context).matchedLocation;
+        if (location.startsWith('/home')) {
+          actualCurrentIndex = 0;
+        } else if (location.startsWith('/search')) {
+          actualCurrentIndex = 1;
+        } else if (location.startsWith('/create-noot')) {
+          actualCurrentIndex = 2;
+        } else if (location.startsWith('/fanbases')) {
+          actualCurrentIndex = 3;
+        } else if (location.startsWith('/profile')) {
+          actualCurrentIndex = 4;
+        }
+      } catch (e) {
+        // If we can't get the route, just use the widget's currentIndex
+        actualCurrentIndex = widget.currentIndex;
+      }
+    }
+
     return Container(
       color: Theme.of(context).colorScheme.primary,
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -112,14 +136,14 @@ class _BottomBarState extends State<BottomBar> {
             icon: Icon(
               LucideIcons.home,
               size: 22,
-              color: widget.currentIndex == 0
+              color: actualCurrentIndex == 0
                   ? Theme.of(context).colorScheme.secondary
                   : Theme.of(context).iconTheme.color,
             ),
             onPressed: () {
               if (widget.onTap != null) {
                 widget.onTap!(0);
-              } else {
+              } else if (actualCurrentIndex != 0) {
                 context.go(AppRoutes.home);
               }
             },
@@ -130,14 +154,14 @@ class _BottomBarState extends State<BottomBar> {
             icon: Icon(
               LucideIcons.search,
               size: 22,
-              color: widget.currentIndex == 1
+              color: actualCurrentIndex == 1
                   ? Theme.of(context).colorScheme.secondary
                   : Theme.of(context).iconTheme.color,
             ),
             onPressed: () {
               if (widget.onTap != null) {
                 widget.onTap!(1);
-              } else {
+              } else if (actualCurrentIndex != 1) {
                 context.go(AppRoutes.search);
               }
             },
@@ -148,15 +172,14 @@ class _BottomBarState extends State<BottomBar> {
             icon: Icon(
               LucideIcons.plusCircle,
               size: 22,
-              color: widget.currentIndex == 2
+              color: actualCurrentIndex == 2
                   ? Theme.of(context).colorScheme.secondary
                   : Theme.of(context).iconTheme.color,
             ),
             onPressed: () {
               if (widget.onTap != null) {
                 widget.onTap!(2);
-              } else {
-                // Navigate to create noot page
+              } else if (actualCurrentIndex != 2) {
                 context.go(AppRoutes.createNoot);
               }
             },
@@ -166,14 +189,14 @@ class _BottomBarState extends State<BottomBar> {
             icon: Icon(
               LucideIcons.users,
               size: 22,
-              color: widget.currentIndex == 3
+              color: actualCurrentIndex == 3
                   ? Theme.of(context).colorScheme.secondary
                   : Theme.of(context).iconTheme.color,
             ),
             onPressed: () {
               if (widget.onTap != null) {
                 widget.onTap!(3);
-              } else {
+              } else if (actualCurrentIndex != 3) {
                 context.go(AppRoutes.fanbaseList);
               }
             },
@@ -184,7 +207,7 @@ class _BottomBarState extends State<BottomBar> {
             onTap: () {
               if (widget.onTap != null) {
                 widget.onTap!(4);
-              } else {
+              } else if (actualCurrentIndex != 4) {
                 context.go(AppRoutes.profile);
               }
             },

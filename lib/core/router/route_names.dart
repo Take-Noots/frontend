@@ -42,6 +42,12 @@ class AppRoutes {
   // Fanbase routes
   static const String fanbasePost = '/fanbase';
   static const String fanbaseList = '/fanbases';
+  static const String fanbaseDetails = '/fanbases/:fanbaseId';
+
+  // Helper method to generate fanbase detail route
+  static String fanbaseDetailRoute(String fanbaseId, String userId) {
+    return '/fanbases/$fanbaseId?userId=$userId';
+  }
 
   // Request routes
   static const String requests = '/requests';
