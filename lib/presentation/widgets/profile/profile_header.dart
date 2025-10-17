@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'profile_stat_column.dart';
+import '../common/full_screen_image_viewer.dart';
 
 class ProfileHeader extends StatelessWidget {
   final String username;
@@ -33,13 +34,37 @@ class ProfileHeader extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 44,
-                backgroundImage:
-                    profileImage != null && profileImage!.isNotEmpty
-                        ? NetworkImage(profileImage!)
-                        : const AssetImage('assets/images/hehe.png')
-                            as ImageProvider,
+              GestureDetector(
+                onTap: () {
+                  // Open full screen image viewer
+                  final imageToShow =
+                      profileImage != null && profileImage!.isNotEmpty
+                          ? profileImage!
+                          : 'assets/images/hehe.png';
+                  final isAsset = profileImage == null || profileImage!.isEmpty;
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FullScreenImageViewer(
+                        imageUrl: imageToShow,
+                        isAssetImage: isAsset,
+                      ),
+                    ),
+                  );
+                },
+                child: Hero(
+                  tag:
+                      'profile_image_${profileImage ?? 'assets/images/hehe.png'}',
+                  child: CircleAvatar(
+                    radius: 44,
+                    backgroundImage:
+                        profileImage != null && profileImage!.isNotEmpty
+                            ? NetworkImage(profileImage!)
+                            : const AssetImage('assets/images/hehe.png')
+                                as ImageProvider,
+                  ),
+                ),
               ),
               Expanded(
                 child: Row(

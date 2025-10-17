@@ -250,9 +250,11 @@ class UserDetailWidget extends StatelessWidget {
   final Map<String, dynamic>? details;
   final String? username;
   final String? userImage;
-  final String? userId; 
-  final String? currentUserId; 
+  final String? userId;
+  final String? currentUserId;
   final String? postId;
+  final String? songName;
+  final String? artists;
   final VoidCallback? onUsernameTap;
   final VoidCallback? onOptionsTap;
   final VoidCallback? onDelete;
@@ -268,9 +270,11 @@ class UserDetailWidget extends StatelessWidget {
     this.details,
     this.username,
     this.userImage,
-    this.userId, 
-    this.currentUserId, 
+    this.userId,
+    this.currentUserId,
     this.postId,
+    this.songName,
+    this.artists,
     this.onUsernameTap,
     this.onOptionsTap,
     this.onDelete,
@@ -354,15 +358,20 @@ class UserDetailWidget extends StatelessWidget {
                       isOwnPost: isOwnPost,
                       isSaved: isSaved,
                       postId: postId,
-                      onCopyLink: () {
-                        print('Copy link pressed for user: $username');
+                      username: username,
+                      songName: songName,
+                      artistName: artists,
+                      onSharePost: () {
+                        print('Share post pressed for user: $username');
                       },
-                      onSavePost: onSavePost ?? () {
-                        print('Save post pressed for user: $username');
-                      },
-                      onUnsavePost: onUnsavePost ?? () {
-                        print('Unsave post pressed for user: $username');
-                      },
+                      onSavePost: onSavePost ??
+                          () {
+                            print('Save post pressed for user: $username');
+                          },
+                      onUnsavePost: onUnsavePost ??
+                          () {
+                            print('Unsave post pressed for user: $username');
+                          },
                       onUnfollow: () {
                         print('Unfollow pressed for user: $username');
                       },
@@ -370,9 +379,7 @@ class UserDetailWidget extends StatelessWidget {
                         print('Report pressed for user: $username');
                       },
                       onEdit: isOwnPost ? onEdit : null,
-                      onDelete: isOwnPost
-                          ? onDelete
-                          : null,
+                      onDelete: isOwnPost ? onDelete : null,
                       onHide: isOwnPost ? onHide : null,
                     );
                   }
@@ -416,7 +423,6 @@ class InteractionWidget extends StatelessWidget {
     final iconColor = isDark ? Colors.white : Colors.black;
     // final likedColor = isDark ? Colors.purple : Colors.deepPurple;
     final likedColor = Color(0xFFFd535f9);
-    final textColor = isDark ? Colors.white : Colors.black;
     final parentWidth = MediaQuery.of(context).size.width;
 
     return Expanded(
@@ -593,10 +599,12 @@ class FooterWidget extends StatelessWidget {
 class HeaderWidget extends StatelessWidget {
   final String? username;
   final String? userImage;
-  final String? userId; 
-  final String? currentUserId; 
+  final String? userId;
+  final String? currentUserId;
   final String? trackId;
   final String? postId;
+  final String? songName;
+  final String? artists;
   final bool isPlaying;
   final bool isCurrentTrack;
   final VoidCallback? onPlayPause;
@@ -614,16 +622,18 @@ class HeaderWidget extends StatelessWidget {
     super.key,
     this.username,
     this.userImage,
-    this.userId, 
+    this.userId,
     this.currentUserId,
     this.trackId,
     this.postId,
+    this.songName,
+    this.artists,
     this.isPlaying = false,
     this.isCurrentTrack = false,
     this.onPlayPause,
     this.onUsernameTap,
     this.onOptionsTap,
-    this.onDelete, 
+    this.onDelete,
     this.isOwnPost = false,
     this.onHide,
     this.onEdit,
@@ -641,14 +651,21 @@ class HeaderWidget extends StatelessWidget {
           UserDetailWidget(
             username: username,
             userImage: userImage,
-            userId: userId, 
-            currentUserId: currentUserId, 
+            userId: userId,
+            currentUserId: currentUserId,
             postId: postId,
+            songName: songName,
+            artists: artists,
             onUsernameTap: onUsernameTap,
             onOptionsTap: onOptionsTap,
             onDelete: onDelete,
             isOwnPost: isOwnPost,
-            onHide: onHide != null ? () { print('[DEBUG] HeaderWidget: onHide called'); onHide!(); } : null,
+            onHide: onHide != null
+                ? () {
+                    print('[DEBUG] HeaderWidget: onHide called');
+                    onHide!();
+                  }
+                : null,
             onEdit: onEdit,
             onSavePost: onSavePost,
             onUnsavePost: onUnsavePost,
@@ -696,7 +713,7 @@ class Post extends StatelessWidget {
   final String? caption;
   final String username;
   final String? userId;
-  final String? currentUserId; 
+  final String? currentUserId;
   final String userImage;
   final String? postId;
 
@@ -728,7 +745,7 @@ class Post extends StatelessWidget {
     this.caption,
     required this.username,
     this.userId,
-    this.currentUserId, 
+    this.currentUserId,
     required this.userImage,
     this.postId,
     this.onLike,
@@ -756,25 +773,28 @@ class Post extends StatelessWidget {
     // Directly calculate isOwnPost if not provided
     final bool calculatedIsOwnPost = isOwnPost ||
         (userId != null && currentUserId != null && userId == currentUserId);
-    print('[DEBUG] Post.build: userId=$userId, currentUserId=$currentUserId, calculatedIsOwnPost=$calculatedIsOwnPost');
+    print(
+        '[DEBUG] Post.build: userId=$userId, currentUserId=$currentUserId, calculatedIsOwnPost=$calculatedIsOwnPost');
 
     return Column(
       children: [
         HeaderWidget(
           username: username,
           userImage: userImage,
-          userId: userId, 
-          currentUserId: currentUserId, 
+          userId: userId,
+          currentUserId: currentUserId,
           trackId: trackId,
           postId: postId,
+          songName: songName,
+          artists: artists,
           isPlaying: isPlaying,
           isCurrentTrack: isCurrentTrack,
           onPlayPause: onPlayPause,
           onUsernameTap: onUsernameTap,
           onOptionsTap: onMoreOptions,
           onDelete: onDelete,
-          isOwnPost: calculatedIsOwnPost, 
-          onHide: onHide, 
+          isOwnPost: calculatedIsOwnPost,
+          onHide: onHide,
           onEdit: onEdit,
           onSavePost: onSavePost,
           onUnsavePost: onUnsavePost,

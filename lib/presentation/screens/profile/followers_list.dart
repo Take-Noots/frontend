@@ -13,14 +13,15 @@ class FollowersListPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Followers'),
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: followers.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
                 'No followers yet.',
-                style: TextStyle(color: Colors.white54),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             )
           : ListView.builder(
@@ -35,18 +36,23 @@ class FollowersListPage extends StatelessWidget {
                               follower['profileImage'].toString().isNotEmpty)
                           ? NetworkImage(follower['profileImage'])
                           : null,
-                      backgroundColor: Colors.grey,
+                      backgroundColor:
+                          Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                     title: Text(
                       follower['username'] ?? follower['userId'] ?? 'Unknown',
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface),
                     ),
                     subtitle: (follower['fullName'] != null &&
                             follower['fullName'].toString().isNotEmpty)
                         ? Text(
                             follower['fullName'],
-                            style: const TextStyle(
-                                color: Colors.white54, fontSize: 12),
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                fontSize: 12),
                           )
                         : null,
                     onTap: () {
@@ -64,17 +70,22 @@ class FollowersListPage extends StatelessWidget {
                 } else if (follower is String) {
                   // fallback for string-only entries
                   return ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Colors.grey,
-                      child: Icon(Icons.person, color: Colors.white),
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          Theme.of(context).colorScheme.onSurfaceVariant,
+                      child: Icon(Icons.person,
+                          color: Theme.of(context).colorScheme.onSurface),
                     ),
                     title: Text(
                       follower,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface),
                     ),
-                    subtitle: const Text(
+                    subtitle: Text(
                       'No details available',
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 12),
                     ),
                     onTap: () {
                       // For string entries, we'll assume the string is the userId

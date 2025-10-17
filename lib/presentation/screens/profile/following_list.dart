@@ -13,14 +13,15 @@ class FollowingListPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Following'),
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: following.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
                 'Not following anyone yet.',
-                style: TextStyle(color: Colors.white54),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             )
           : ListView.builder(
@@ -33,18 +34,22 @@ class FollowingListPage extends StatelessWidget {
                             user['profileImage'].toString().isNotEmpty)
                         ? NetworkImage(user['profileImage'])
                         : null,
-                    backgroundColor: Colors.grey,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
                   ),
                   title: Text(
                     user['username'] ?? 'Unknown',
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                   ),
                   subtitle: (user['fullName'] != null &&
                           user['fullName'].toString().isNotEmpty)
                       ? Text(
                           user['fullName'],
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 12),
+                          style: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              fontSize: 12),
                         )
                       : null,
                   onTap: () {
