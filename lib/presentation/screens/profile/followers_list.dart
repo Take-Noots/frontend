@@ -1,19 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import './user_profiles.dart'; // Import the ProfileScreen
-import './my_profile.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/router/route_names.dart';
+import '../../widgets/loading_screens/user_list_skeleton.dart';
 
 // followers: List<Map<String, dynamic>> with userId, username, profileImage
 class FollowersListPage extends StatelessWidget {
   final List<dynamic> followers;
   final void Function(String userId, String? username)? onUserTap;
+  final bool isLoading;
+  final Set<String> currentUserFollowing;
+  final Future<void> Function(String targetUserId, bool isFollow)
+      onFollowToggle;
 
-  const FollowersListPage({Key? key, required this.followers, this.onUserTap})
-      : super(key: key);
+  const FollowersListPage({
+    Key? key,
+    required this.followers,
+    this.onUserTap,
+    this.isLoading = false,
+    required this.currentUserFollowing,
+    required this.onFollowToggle,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Show skeleton loading screen while loading
+    if (isLoading) {
+      return const UserListSkeleton(title: 'Followers');
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Followers'),
@@ -65,12 +82,7 @@ class FollowersListPage extends StatelessWidget {
                             Provider.of<AuthProvider>(context, listen: false);
                         final currentUserId = authProvider.user?.id;
                         if (follower['userId'] == currentUserId) {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const NormalUserProfilePage(),
-                            ),
-                          );
+                          context.go(AppRoutes.profile);
                         } else {
                           if (onUserTap != null) {
                             onUserTap!(
@@ -88,6 +100,40 @@ class FollowersListPage extends StatelessWidget {
                         }
                       }
                     },
+                    trailing: (follower['userId'] != null &&
+                            follower['userId'] !=
+                                Provider.of<AuthProvider>(context,
+                                        listen: false)
+                                    .user
+                                    ?.id)
+                        ? ElevatedButton(
+                            onPressed: () {
+                              final isFollowing = currentUserFollowing
+                                  .contains(follower['userId']);
+                              onFollowToggle(follower['userId'], !isFollowing);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: currentUserFollowing
+                                      .contains(follower['userId'])
+                                  ? Theme.of(context).colorScheme.surface
+                                  : const Color(0xFF8E08EF),
+                              foregroundColor: currentUserFollowing
+                                      .contains(follower['userId'])
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Colors.white,
+                              side: currentUserFollowing
+                                      .contains(follower['userId'])
+                                  ? BorderSide(
+                                      color:
+                                          Theme.of(context).colorScheme.outline)
+                                  : null,
+                            ),
+                            child: Text(currentUserFollowing
+                                    .contains(follower['userId'])
+                                ? 'Unfollow'
+                                : 'Follow'),
+                          )
+                        : null,
                   );
                 } else if (follower is String) {
                   // fallback for string-only entries
@@ -115,11 +161,7 @@ class FollowersListPage extends StatelessWidget {
                           Provider.of<AuthProvider>(context, listen: false);
                       final currentUserId = authProvider.user?.id;
                       if (follower == currentUserId) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const NormalUserProfilePage(),
-                          ),
-                        );
+                        context.go(AppRoutes.profile);
                       } else {
                         if (onUserTap != null) {
                           onUserTap!(follower, null);

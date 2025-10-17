@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/data/services/search_service.dart';
+import 'package:frontend/presentation/widgets/loading_screens/common_loading.dart';
 
 import 'package:frontend/presentation/widgets/song_post/post.dart';
 import 'package:frontend/presentation/widgets/search/explore_feed.dart';
@@ -181,7 +182,8 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
           Expanded(
             child: showResults
                 ? (_isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? Center(
+                        child: CommonLoading.purple(message: "Searching..."))
                     : _selectedSegment == 0 // All
                         ? SingleChildScrollView(
                             child: Column(

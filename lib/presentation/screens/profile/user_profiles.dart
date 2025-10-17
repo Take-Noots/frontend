@@ -15,8 +15,8 @@ import 'tabs/album_art_posts_tab.dart';
 import 'tabs/thought_posts_tab.dart';
 import 'tabs/tagged_posts_tab.dart';
 import 'my_profile.dart';
-import 'followers_list.dart';
-import 'following_list.dart';
+import 'followers_list_wrapper.dart';
+import 'following_list_wrapper.dart';
 import 'profile_feed_screen.dart'; // Add this import for navigation
 
 class UserProfilePage extends StatefulWidget {
@@ -305,28 +305,22 @@ class _UserProfilePageState extends State<UserProfilePage>
             showGrid: false,
             profileImage: profile!.profileImage,
             postsList: posts,
-            onFollowersTap: () async {
-              final profileService = ProfileService();
-              final followersList = await profileService
-                  .getFollowersListWithDetails(profile!.userId);
+            onFollowersTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => FollowersListPage(
-                    followers: followersList,
+                  builder: (context) => FollowersListPageWrapper(
+                    userId: profile!.userId,
                   ),
                 ),
               );
             },
-            onFollowingTap: () async {
-              final profileService = ProfileService();
-              final followingList = await profileService
-                  .getFollowingListWithDetails(profile!.userId);
+            onFollowingTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => FollowingListPage(
-                    following: followingList,
+                  builder: (context) => FollowingListPageWrapper(
+                    userId: profile!.userId,
                   ),
                 ),
               );

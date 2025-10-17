@@ -16,6 +16,7 @@ import '../song_posts/update.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import './user_profiles.dart';
+import '../../../../presentation/widgets/loading_screens/common_loading.dart';
 
 class ProfileFeedScreen extends StatefulWidget {
   final String userId;
@@ -507,7 +508,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(child: CommonLoading.purple()),
       );
     }
     if (_error != null) {

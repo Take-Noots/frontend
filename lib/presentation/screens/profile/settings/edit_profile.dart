@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../data/models/profile_model.dart';
 import '../../../../data/services/profile_service.dart';
 import '../../../../data/services/cloudinary_service.dart';
+import '../../../../presentation/widgets/loading_screens/common_loading.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({Key? key}) : super(key: key);
@@ -20,7 +21,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _fullNameController = TextEditingController();
-  String profileImage = 'https://via.placeholder.com/150';
+  String profileImage = 'assets/hehe.png';
   String userType = 'public'; // Default user type
 
   final ProfileService _service = ProfileService();
@@ -311,7 +312,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       print('[DEBUG] EditProfilePage: Showing loading spinner');
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(child: CommonLoading.purple()),
       );
     }
     print(
@@ -357,10 +358,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               shape: BoxShape.circle,
                             ),
                             child: Center(
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    Theme.of(context).colorScheme.onSurface),
-                              ),
+                              child: CommonLoading.purple(size: 24),
                             ),
                           ),
                         ),

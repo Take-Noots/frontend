@@ -469,7 +469,7 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(0),
-                ),  
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -704,10 +704,8 @@ class FanbaseDetailsHeader extends StatelessWidget {
                           children: [
                             Text(
                               'Owner',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.purple
-                              ),
+                              style:
+                                  TextStyle(fontSize: 14, color: Colors.purple),
                             ),
                           ],
                         ),
