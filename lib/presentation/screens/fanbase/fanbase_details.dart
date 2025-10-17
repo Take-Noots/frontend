@@ -489,18 +489,6 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                     _handleDeleteFanbase();
                   },
                 ),
-                // ListTile(
-                //   leading: const Icon(Icons.edit),
-                //   title: const Text('Edit Fanbase'),
-                //   onTap: () {
-                //     Navigator.pop(context);
-                //     // TODO: Navigate to edit fanbase screen
-                //     ScaffoldMessenger.of(context).showSnackBar(
-                //       const SnackBar(
-                //           content: Text('Edit functionality coming soon')),
-                //     );
-                //   },
-                // ),
               ] else ...[
                 ListTile(
                   leading: const Icon(Icons.flag, color: Colors.orange),
@@ -515,17 +503,6 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                   },
                 ),
               ],
-              // ListTile(
-              //   leading: const Icon(Icons.share),
-              //   title: const Text('Share Fanbase'),
-              //   onTap: () {
-              //     Navigator.pop(context);
-              //     Share.share(
-              //       'Check out ${_fanbase?.fanbaseName} on Noot!',
-              //       subject: 'Fanbase Invitation',
-              //     );
-              //   },
-              // ),
               ListTile(
                 leading: const Icon(Icons.cancel),
                 title: const Text('Cancel'),
@@ -688,7 +665,6 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
           );
         },
       ),
-      bottomNavigationBar: const BottomBar(),
     );
   }
 }

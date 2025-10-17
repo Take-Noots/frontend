@@ -24,7 +24,7 @@ class FanbasePage extends StatefulWidget {
 
 class _FanbasePageState extends State<FanbasePage>
     with SingleTickerProviderStateMixin {
-  late Future<List<Fanbase>> futureFanbases;
+  Future<List<Fanbase>>? futureFanbases; // Changed from 'late' to nullable
   late TabController _tabController;
   String? _currentUserId; // Current user's ID for filtering
   List<Fanbase> _allFanbases = []; // Cache all fanbases
@@ -48,13 +48,13 @@ class _FanbasePageState extends State<FanbasePage>
     super.dispose();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_currentUserId != null) {
-      _loadFanbases();
-    }
-  }
+  // @override
+  // void didChangeDependencies() {
+  //   super.didChangeDependencies();
+  //   if (_currentUserId != null && futureFanbases == null) {
+  //     _loadFanbases();
+  //   }
+  // }
 
   /// Loads current user ID and then fetches all fanbases
   Future<void> _loadCurrentUserAndFanbases() async {
@@ -651,61 +651,81 @@ class _FanbasePageState extends State<FanbasePage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: NootAppBar(),
-      body: Column(
+    final body = Column(
+      children: [
+        // Page title
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16.0, 3.0, 0, 4.0),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Fanbases',
+              style: TextStyle(fontSize: 16),
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+
+        // Tab bar with button style
+        _buildTabBar(),
+        const SizedBox(height: 0),
+
+        // Tab view content
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // Feed tab - shows non-owned fanbases
+              _buildFanbaseList(0),
+
+              // Joined tab - shows joined fanbases
+              _buildFanbaseList(1),
+
+              // Owned tab - shows owned fanbases
+              _buildFanbaseList(2),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    final fab = FloatingActionButton.extended(
+      onPressed: _showCreateFanbaseSheet,
+      label: const Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Page title
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16.0, 3.0, 0, 4.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Fanbases',
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-          ),
-          const SizedBox(height: 2),
-
-          // Tab bar with button style
-          _buildTabBar(),
-          const SizedBox(height: 0),
-
-          // Tab view content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // Feed tab - shows non-owned fanbases
-                _buildFanbaseList(0),
-
-                // Joined tab - shows joined fanbases
-                _buildFanbaseList(1),
-
-                // Owned tab - shows owned fanbases
-                _buildFanbaseList(2),
-              ],
-            ),
-          ),
+          Icon(Icons.add, size: 18),
+          SizedBox(width: 4),
         ],
       ),
+      backgroundColor: const Color.fromARGB(82, 221, 0, 255),
+      heroTag: 'add_fanbase_fab',
+    );
 
-      // Floating action button for creating new fanbases
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreateFanbaseSheet,
-        label: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.add, size: 18),
-            SizedBox(width: 4),
-          ],
-        ),
-        backgroundColor: const Color.fromARGB(82, 221, 0, 255),
-        heroTag: 'add_fanbase_fab',
-      ),
+    // If inside shell, don't use Scaffold (ShellScreenV2 provides it)
+    if (widget.inShell) {
+      return Stack(
+        children: [
+          Column(
+            children: [
+              NootAppBar(),
+              Expanded(child: body),
+            ],
+          ),
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: fab,
+          ),
+        ],
+      );
+    }
 
-      bottomNavigationBar: const BottomBar(),
+    // If not in shell, use full Scaffold
+    return Scaffold(
+      appBar: NootAppBar(),
+      body: body,
+      floatingActionButton: fab,
     );
   }
 }
