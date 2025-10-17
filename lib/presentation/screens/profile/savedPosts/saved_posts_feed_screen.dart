@@ -13,6 +13,7 @@ import '../../song_posts/update.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../user_profiles.dart';
+import '../../../../core/styles/app_colors.dart';
 
 class SavedPostsFeedScreen extends StatefulWidget {
   final String userId;
@@ -294,7 +295,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Post removed from saved'),
-              backgroundColor: const Color(0xFFA855F7),
+              backgroundColor: AppColors.primaryPurple,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
@@ -395,7 +396,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text('Post deleted successfully'),
-                  backgroundColor: const Color(0xFFA855F7),
+                  backgroundColor: AppColors.primaryPurple,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
@@ -439,7 +440,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('Post hidden from your feed'),
-                backgroundColor: const Color(0xFFA855F7),
+                backgroundColor: AppColors.primaryPurple,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),

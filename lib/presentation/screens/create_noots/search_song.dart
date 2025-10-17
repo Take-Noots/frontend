@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -12,6 +13,7 @@ import '../../widgets/create_post/button.dart';
 import '../../widgets/common/musicplayer_bar.dart';
 import 'create_new_noot.dart';
 import 'create_description_noot.dart';
+import '../../../core/router/route_names.dart';
 
 
 class CreatePostPage extends StatefulWidget {
@@ -211,6 +213,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
         title: const Text('Search Songs'),
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // Navigate back to home
+            context.go(AppRoutes.home);
+          },
+        ),
       ),
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Padding(
@@ -219,9 +228,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
       ),
       bottomNavigationBar: CustomBottomBar(
         onSharePost: () {
-          
+          // Already on search song page - do nothing
         },
         onShareThoughts: () {
+          // Navigate to thoughts creation page
           Navigator.push(
             context,
             MaterialPageRoute(
