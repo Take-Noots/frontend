@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import '../../../data/models/group_chat_model.dart';
 import '../../../data/services/group_chat_service.dart';
 import 'user_profile_screen.dart';
@@ -19,6 +22,7 @@ class GroupDetailsScreen extends StatefulWidget {
 
 class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   final GroupChatService _groupChatService = GroupChatService();
+  final ImagePicker _imagePicker = ImagePicker();
   late GroupChat groupChat;
   bool _isLoading = false;
 
@@ -33,93 +37,305 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   void _showEditGroupDialog() {
     final nameController = TextEditingController(text: groupChat.name);
     final descriptionController = TextEditingController(text: groupChat.description ?? '');
-    final iconController = TextEditingController(text: groupChat.groupIcon ?? '');
+    File? selectedImage;
+    String? currentImageUrl = groupChat.groupIcon;
 
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          title: Text(
+            'Edit Group',
+            style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Group Icon Section
+                GestureDetector(
+                  onTap: () => _showImagePickerDialog(setDialogState, (image, imageUrl) {
+                    selectedImage = image;
+                    currentImageUrl = imageUrl;
+                  }),
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[600],
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.secondary,
+                        width: 2,
+                      ),
+                    ),
+                    child: ClipOval(
+                      child: selectedImage != null
+                          ? Image.file(
+                              selectedImage!,
+                              fit: BoxFit.cover,
+                            )
+                          : (currentImageUrl != null && currentImageUrl!.isNotEmpty
+                              ? (currentImageUrl!.startsWith('http')
+                                  ? Image.network(
+                                      currentImageUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Icon(
+                                        Icons.group,
+                                        color: Theme.of(context).colorScheme.onPrimary,
+                                        size: 40,
+                                      ),
+                                    )
+                                  : Image.asset(
+                                      currentImageUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Icon(
+                                        Icons.group,
+                                        color: Theme.of(context).colorScheme.onPrimary,
+                                        size: 40,
+                                      ),
+                                    ))
+                              : Icon(
+                                  Icons.group,
+                                  color: Theme.of(context).colorScheme.onPrimary,
+                                  size: 40,
+                                )),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tap to change group icon',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.secondary,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Group Name Field
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Group Name',
+                    labelStyle: TextStyle(color: Theme.of(context).colorScheme.secondary),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Theme.of(context).colorScheme.secondary),
+                    ),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.green),
+                    ),
+                  ),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+                ),
+                const SizedBox(height: 16),
+
+                // Description Field
+                TextField(
+                  controller: descriptionController,
+                  decoration: InputDecoration(
+                    labelText: 'Description (optional)',
+                    labelStyle: TextStyle(color: Theme.of(context).colorScheme.secondary),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Theme.of(context).colorScheme.secondary),
+                    ),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.green),
+                    ),
+                  ),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (nameController.text.trim().isNotEmpty) {
+                  Navigator.pop(context);
+                  await _updateGroupWithImage(
+                    name: nameController.text.trim(),
+                    description: descriptionController.text.trim(),
+                    selectedImage: selectedImage,
+                  );
+                }
+              },
+              child: const Text(
+                'Save',
+                style: TextStyle(color: Colors.green),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showImagePickerDialog(StateSetter setDialogState, Function(File?, String?) callback) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.primary,
         title: Text(
-          'Edit Group',
+          'Select Group Icon',
           style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                labelText: 'Group Name',
-                labelStyle: TextStyle(color: Theme.of(context).colorScheme.secondary),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.secondary),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.green),
-                ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Colors.green),
+              title: Text(
+                'Take Photo',
+                style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
               ),
-              style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+              onTap: () async {
+                Navigator.pop(context);
+                final image = await _imagePicker.pickImage(
+                  source: ImageSource.camera,
+                  maxWidth: 500,
+                  maxHeight: 500,
+                  imageQuality: 80,
+                );
+                if (image != null) {
+                  setDialogState(() {
+                    callback(File(image.path), null);
+                  });
+                }
+              },
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: descriptionController,
-              decoration: InputDecoration(
-                labelText: 'Description (optional)',
-                labelStyle: TextStyle(color: Theme.of(context).colorScheme.secondary),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.secondary),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.green),
-                ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.blue),
+              title: Text(
+                'Choose from Gallery',
+                style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
               ),
-              style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
-              maxLines: 2,
+              onTap: () async {
+                Navigator.pop(context);
+                final image = await _imagePicker.pickImage(
+                  source: ImageSource.gallery,
+                  maxWidth: 500,
+                  maxHeight: 500,
+                  imageQuality: 80,
+                );
+                if (image != null) {
+                  setDialogState(() {
+                    callback(File(image.path), null);
+                  });
+                }
+              },
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: iconController,
-              decoration: InputDecoration(
-                labelText: 'Icon URL (optional)',
-                labelStyle: TextStyle(color: Theme.of(context).colorScheme.secondary),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.secondary),
+            if (groupChat.groupIcon != null && groupChat.groupIcon!.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: Text(
+                  'Remove Current Icon',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
                 ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.green),
-                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  setDialogState(() {
+                    callback(null, '');
+                  });
+                },
               ),
-              style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
-            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Theme.of(context).colorScheme.secondary),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (nameController.text.trim().isNotEmpty) {
-                Navigator.pop(context);
-                await _updateGroup(
-                  name: nameController.text.trim(),
-                  description: descriptionController.text.trim(),
-                  icon: iconController.text.trim(),
-                );
-              }
-            },
-            child: const Text(
-              'Save',
-              style: TextStyle(color: Colors.green),
-            ),
-          ),
-        ],
       ),
     );
+  }
+
+  Future<void> _updateGroupWithImage({
+    required String name,
+    required String description,
+    File? selectedImage,
+  }) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      String? imageUrl;
+
+      // If user selected a new image, upload it first
+      if (selectedImage != null) {
+        final imageBytes = await selectedImage.readAsBytes();
+        final base64Image = 'data:image/jpeg;base64,${base64Encode(imageBytes)}';
+
+        final uploadResult = await _groupChatService.uploadGroupIconBase64(
+          groupChatId: groupChat.id,
+          imageBase64: base64Image,
+        );
+
+        if (!uploadResult['success']) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(uploadResult['message'] ?? 'Failed to upload image'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+
+        imageUrl = uploadResult['imageUrl'];
+      }
+
+      // Update group with new data
+      final result = await _groupChatService.updateGroupChat(
+        groupChatId: groupChat.id,
+        name: name,
+        description: description.isEmpty ? null : description,
+        groupIcon: imageUrl ?? groupChat.groupIcon,
+      );
+
+      if (result['success']) {
+        setState(() {
+          groupChat = GroupChat.fromJson(result['data'], widget.currentUserId);
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Group updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message']),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating group: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _updateGroup({
@@ -315,30 +531,62 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
               child: Column(
                 children: [
                   // Group Header
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundColor: Colors.grey[600],
-                          backgroundImage: groupChat.groupIcon != null && groupChat.groupIcon!.isNotEmpty
-                              ? (groupChat.groupIcon!.startsWith('http')
-                                  ? NetworkImage(groupChat.groupIcon!) as ImageProvider
-                                  : AssetImage(groupChat.groupIcon!))
-                              : null,
-                          child: groupChat.groupIcon == null || groupChat.groupIcon!.isEmpty
-                              ? Icon(
-                                  Icons.group,
-                                  color: Theme.of(context).colorScheme.onPrimary,
-                                  size: 40,
-                                )
-                              : null,
-                        ),
+                  GestureDetector(
+                    onTap: isCreator ? _showEditGroupDialog : null,
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: isCreator ? Border.all(
+                          color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+                          width: 1,
+                        ) : null,
+                      ),
+                      child: Column(
+                        children: [
+                          Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 50,
+                                backgroundColor: Colors.grey[600],
+                                backgroundImage: groupChat.groupIcon != null && groupChat.groupIcon!.isNotEmpty
+                                    ? (groupChat.groupIcon!.startsWith('http')
+                                        ? NetworkImage(groupChat.groupIcon!) as ImageProvider
+                                        : AssetImage(groupChat.groupIcon!))
+                                    : null,
+                                child: groupChat.groupIcon == null || groupChat.groupIcon!.isEmpty
+                                    ? Icon(
+                                        Icons.group,
+                                        color: Theme.of(context).colorScheme.onPrimary,
+                                        size: 40,
+                                      )
+                                    : null,
+                              ),
+                              if (isCreator)
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Container(
+                                    width: 30,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      color: Colors.green,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Theme.of(context).colorScheme.primary,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.edit,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         const SizedBox(height: 16),
                         Text(
                           groupChat.name,
@@ -393,6 +641,17 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                             ),
                           ],
                         ),
+                        if (isCreator) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap to edit group details',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.secondary,
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
