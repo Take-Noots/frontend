@@ -22,6 +22,7 @@ import 'package:share_plus/share_plus.dart';
 import './profile/user_profiles.dart';
 import '../widgets/song_post/post_options_menu.dart';
 import './song_posts/update.dart';
+import '../../core/styles/app_colors.dart';
 
 class HomeScreen extends StatefulWidget {
   final String? accessToken;
@@ -188,6 +189,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       print('[DEBUG] Checking saved status for ${feedItems.length} feed items');
+      
+      // Check saved status for song posts
       final savedPostsResult =
           await _songPostService.getSavedPosts(userId!, context);
       print('[DEBUG] Saved posts result: $savedPostsResult');
@@ -209,6 +212,29 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
       }
+
+      // Check saved status for thoughts posts
+      final savedThoughtsResult =
+          await _thoughtsService.getSavedThoughtsPosts(userId!, context);
+      print('[DEBUG] Saved thoughts result: $savedThoughtsResult');
+
+      if (savedThoughtsResult != null &&
+          savedThoughtsResult['success'] == true &&
+          savedThoughtsResult['savedPosts'] != null) {
+        final List<String> savedThoughtsIds =
+            List<String>.from(savedThoughtsResult['savedPosts']);
+        print('[DEBUG] Saved thoughts IDs: $savedThoughtsIds');
+
+        for (var item in feedItems) {
+          if (item.type == FeedItemType.thought && item.thoughtsPost != null) {
+            final post = item.thoughtsPost!;
+            final wasSaved = post.isSaved;
+            post.isSaved = savedThoughtsIds.contains(post.id);
+            print(
+                '[DEBUG] Thoughts ${post.id}: wasSaved=$wasSaved, isSaved=${post.isSaved}');
+          }
+        }
+      }
     } catch (e) {
       print('[DEBUG] Error in _checkSavedStatusForPosts: $e');
     }
@@ -221,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final userDataString = prefs.getString('user_data');
       final userData = userDataString != null
           ? jsonDecode(userDataString)
-          : {'id': '685fb750cc084ba7e0ef8533'}; // Fallback for testing
+          : {'id': ''}; 
       currentUserId = userData['id'];
     }
     if (currentUserId == null) {
@@ -244,12 +270,12 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-    print('[DEBUG] HomeScreen: Attempting to like post ${post.id}');
-    print('[DEBUG] HomeScreen: Current user ID: $currentUserId');
+    //print('[DEBUG] HomeScreen: Attempting to like post ${post.id}');
+    //print('[DEBUG] HomeScreen: Current user ID: $currentUserId');
 
     final result =
         await _songPostService.likePost(post.id, currentUserId, context);
-    print('[DEBUG] HomeScreen: Like result: $result');
+   // print('[DEBUG] HomeScreen: Like result: $result');
 
     if (result['success']) {
       if (post.userId != null) {
@@ -663,7 +689,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('Post deleted successfully'),
-                backgroundColor: const Color(0xFFA855F7),
+                backgroundColor: AppColors.primaryPurple,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
@@ -729,7 +755,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Post saved successfully'),
-            backgroundColor: const Color(0xFFA855F7),
+            backgroundColor: AppColors.primaryPurple,
             behavior: SnackBarBehavior.floating,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -752,7 +778,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Failed to save post'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.primaryPurple,
             behavior: SnackBarBehavior.floating,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -765,7 +791,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error saving post: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.primaryPurple,
           behavior: SnackBarBehavior.floating,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -798,7 +824,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Post unsaved successfully'),
-            backgroundColor: const Color(0xFFA855F7),
+            backgroundColor: AppColors.primaryPurple,
             behavior: SnackBarBehavior.floating,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:async';
 
 import '/data/services/spotify_service.dart';
@@ -9,6 +10,8 @@ import '../../../data/services/auth_service.dart';
 import '../../../data/services/thoughts_service.dart';
 import '../../widgets/create_post/button.dart';
 import '../../widgets/common/musicplayer_bar.dart';
+import '../../../core/router/route_names.dart';
+import 'search_song.dart';
 
 // Screen for sharing thoughts/descriptions with optional cover image
 class CreateDescriptionNootPage extends StatefulWidget {
@@ -179,7 +182,7 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
           });
           
           
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          context.go(AppRoutes.home);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -783,10 +786,16 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
       ),
       bottomNavigationBar: CustomBottomBar(
         onSharePost: () {
-          Navigator.pop(context);
+          // Navigate to song post creation page
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CreatePostPage(),
+            ),
+          );
         },
         onShareThoughts: () {
-          
+          // Already on thoughts page 
         },
       ),
     );

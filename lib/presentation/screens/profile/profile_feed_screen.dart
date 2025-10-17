@@ -16,6 +16,7 @@ import '../song_posts/update.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import './user_profiles.dart';
+import '../../../core/styles/app_colors.dart';
 
 class ProfileFeedScreen extends StatefulWidget {
   final String userId;
@@ -129,39 +130,62 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
   }
 
   void _handleLike(data_model.Post post) async {
+    
     String? currentUserId = _currentUserId;
     if (currentUserId == null) {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      final userData =
-          userDataString != null ? jsonDecode(userDataString) : {'id': null};
+      final userData = userDataString != null
+          ? jsonDecode(userDataString)
+          : {'id': ''}; 
       currentUserId = userData['id'];
     }
-    if (currentUserId == null) return;
 
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('User ID not found. Please log in again.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
+    
     setState(() {
       if (post.likedByMe) {
-        post.likedByMe = false;
+        post.likedByMe = false;  
         post.likes--;
       } else {
-        post.likedByMe = true;
+        post.likedByMe = true;   
         post.likes++;
       }
     });
 
-    final result = await _songPostService.likePost(post.id, currentUserId);
-    if (!(result['success'] == true)) {
-      setState(() {
-        if (post.likedByMe) {
-          post.likedByMe = false;
-          post.likes--;
-        } else {
-          post.likedByMe = true;
-          post.likes++;
-        }
-      });
+    //print('[DEBUG] ProfileScreen: Attempting to like post ${post.id}');
+    //print('[DEBUG] ProfileScreen: Current user ID: $currentUserId');
+
+    final result = await _songPostService.likePost(post.id, currentUserId, context);
+    //print('[DEBUG] ProfileScreen: Like result: $result');
+
+   
+    if (result['success'] != true) {
+      if (mounted) {
+        setState(() {
+          if (post.likedByMe) {
+            post.likedByMe = false;
+            post.likes--;
+          } else {
+            post.likedByMe = true;
+            post.likes++;
+          }
+        });
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? 'Failed to like post')),
+        SnackBar(
+          content: Text(result['message'] ?? 'Failed to like post'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   }
@@ -183,10 +207,21 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             final userDataString = prefs.getString('user_data');
             final userData = userDataString != null
                 ? jsonDecode(userDataString)
-                : {'id': null, 'name': 'Anonymous'};
+                : {'id': '685fb750cc084ba7e0ef8533', 'name': 'owl'};
             final result = await _songPostService.addComment(
-                post.id, userData['id'], userData['name'], text);
-            if (result['success']) {
+                post.id, userData['id'], userData['name'], text, context);
+            
+            // Handle different success response formats
+            bool isSuccess = false;
+            if (result['success'] is bool) {
+              isSuccess = result['success'];
+            } else if (result['success'] is int) {
+              isSuccess = result['success'] == 1;
+            } else if (result['success'] is String) {
+              isSuccess = result['success'].toString().toLowerCase() == 'true';
+            }
+            
+            if (isSuccess && result['data'] != null) {
               final updatedComments =
                   (result['data']['comments'] as List<dynamic>)
                       .map((c) => data_model.Comment.fromJson(c))
@@ -198,8 +233,9 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                    content:
-                        Text(result['message'] ?? 'Failed to add comment')),
+                  content: Text(result['message'] ?? 'Failed to add comment'),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
               );
               return post.comments;
             }
@@ -319,7 +355,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Post saved'),
-            backgroundColor: const Color(0xFFA855F7),
+            backgroundColor: AppColors.primaryPurple,
             behavior: SnackBarBehavior.floating,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -333,7 +369,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Unfollowed ${post.username ?? "user"}'),
-            backgroundColor: const Color(0xFFA855F7),
+            backgroundColor: AppColors.primaryPurple,
             behavior: SnackBarBehavior.floating,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -418,7 +454,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text('Post deleted successfully'),
-                  backgroundColor: const Color(0xFFA855F7),
+                  backgroundColor: AppColors.primaryPurple,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
@@ -463,7 +499,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('Post hidden from your feed'),
-                backgroundColor: const Color(0xFFA855F7),
+                backgroundColor: AppColors.primaryPurple,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),

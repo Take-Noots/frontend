@@ -8,10 +8,12 @@ import '../widgets/common/musicplayer_bar.dart';
 /// This version wraps any child content with persistent bottom bar and music player
 class ShellScreenV2 extends StatefulWidget {
   final Widget child;
+  final bool hideBottomBar;
 
   const ShellScreenV2({
     Key? key,
     required this.child,
+    this.hideBottomBar = false,
   }) : super(key: key);
 
   @override
@@ -58,7 +60,7 @@ class _ShellScreenV2State extends State<ShellScreenV2> {
         ],
       ),
       // Persistent bottom navigation bar
-      bottomNavigationBar: const BottomBar(),
+      bottomNavigationBar: BottomBar(isHidden: widget.hideBottomBar),
     );
   }
 }
