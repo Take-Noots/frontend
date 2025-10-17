@@ -4,18 +4,55 @@ import 'dart:ui';
 import 'package:share_plus/share_plus.dart';
 import '../../../data/services/post_report_service.dart';
 
-class PostOptionsMenu {
-  // Use custom app scheme for deep linking (mobile) or localhost for web
-  static const String baseUrl =
-      'noot://app'; // Custom deep link scheme for mobile
-  static const String webUrl =
-      'http://localhost:56825'; // Fallback for web sharing
+class PostOptionsMenu extends StatefulWidget {
+  final String? postUserId;
+  final String? currentUserId;
+  final bool? isOwnPost;
+  final bool? isSaved;
+  final bool? isFollowing;
+  final String? postId;
+  final String? username;
+  final String? songName;
+  final String? artistName;
+  final VoidCallback? onSharePost;
+  final VoidCallback? onSavePost;
+  final VoidCallback? onUnsavePost;
+  final VoidCallback? onFollow;
+  final VoidCallback? onUnfollow;
+  final VoidCallback? onReport;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+  final VoidCallback? onHide;
+
+  const PostOptionsMenu({
+    super.key,
+    this.postUserId,
+    this.currentUserId,
+    this.isOwnPost,
+    this.isSaved,
+    this.isFollowing,
+    this.postId,
+    this.username,
+    this.songName,
+    this.artistName,
+    this.onSharePost,
+    this.onSavePost,
+    this.onUnsavePost,
+    this.onFollow,
+    this.onUnfollow,
+    this.onReport,
+    this.onEdit,
+    this.onDelete,
+    this.onHide,
+  });
+
   static void show(
     BuildContext context, {
     String? postUserId,
     String? currentUserId,
     bool? isOwnPost,
     bool? isSaved,
+    bool? isFollowing,
     String? postId,
     String? username,
     String? songName,
@@ -23,6 +60,7 @@ class PostOptionsMenu {
     VoidCallback? onSharePost,
     VoidCallback? onSavePost,
     VoidCallback? onUnsavePost,
+    VoidCallback? onFollow,
     VoidCallback? onUnfollow,
     VoidCallback? onReport,
     VoidCallback? onEdit,
@@ -45,160 +83,265 @@ class PostOptionsMenu {
       isCurrentUserPost = false;
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor =
-        isDark ? const Color.fromARGB(255, 0, 0, 0) : Colors.white;
-    final textColor = isDark ? Colors.white : Colors.black;
-
     showModalBottomSheet(
       context: context,
-      backgroundColor: backgroundColor,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color.fromARGB(255, 0, 0, 0)
+          : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header with rounded drag handle
-              Container(
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-
-              // Options list
-              ListTile(
-                leading: Icon(LucideIcons.share, color: textColor),
-                title: Text('Share post', style: TextStyle(color: textColor)),
-                onTap: () {
-                  Navigator.pop(context);
-                  if (postId != null && postUserId != null) {
-                    // Create a user-friendly share message
-                    String shareText = 'Check out this post';
-                    if (username != null) {
-                      shareText += ' by @$username';
-                    }
-                    if (songName != null) {
-                      shareText += '\n🎵 $songName';
-                      if (artistName != null) {
-                        shareText += ' - $artistName';
-                      }
-                    }
-                    // Use deep link scheme for mobile apps
-                    shareText += '$baseUrl/profile/$postUserId/post/$postId';
-
-                    Share.share(shareText,
-                        subject: 'Check out this post on Noot');
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text(
-                            'Unable to share post: Post information not available'),
-                        backgroundColor: Colors.red,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        margin: const EdgeInsets.all(10),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                  if (onSharePost != null) onSharePost();
-                },
-              ),
-
-              if (isCurrentUserPost) ...[
-                // Show edit option for own posts
-                ListTile(
-                  leading: Icon(LucideIcons.pencil, color: textColor),
-                  title: Text('Edit post', style: TextStyle(color: textColor)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (onEdit != null) onEdit();
-                  },
-                ),
-                // Show delete option for own posts
-                ListTile(
-                  leading: Icon(LucideIcons.trash2, color: Colors.red),
-                  title: const Text('Delete post',
-                      style: TextStyle(color: Colors.red)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (onDelete != null) onDelete();
-                  },
-                ),
-                // Show hide option for own posts
-                ListTile(
-                  leading: Icon(LucideIcons.eyeOff, color: textColor),
-                  title: Text('Hide post', style: TextStyle(color: textColor)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (onHide != null) {
-                      onHide();
-                    }
-                  },
-                ),
-              ] else ...[
-                // Show save/unsave options for other users' posts
-                ListTile(
-                  leading: Icon(
-                    isSaved == true
-                        ? LucideIcons.bookmarkMinus
-                        : LucideIcons.bookmark,
-                    color: isSaved == true ? Colors.blue : textColor,
-                  ),
-                  title: Text(
-                    isSaved == true ? 'Unsave post' : 'Save post',
-                    style: TextStyle(
-                      color: isSaved == true ? Colors.blue : textColor,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (isSaved == true) {
-                      if (onUnsavePost != null) onUnsavePost();
-                    } else {
-                      if (onSavePost != null) onSavePost();
-                    }
-                  },
-                ),
-                ListTile(
-                  leading: Icon(LucideIcons.userMinus, color: textColor),
-                  title: Text('Unfollow', style: TextStyle(color: textColor)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (onUnfollow != null) onUnfollow();
-                  },
-                ),
-                // Show report option only for other users' posts
-                ListTile(
-                  leading: Icon(LucideIcons.flag, color: Colors.red),
-                  title:
-                      const Text('Report', style: TextStyle(color: Colors.red)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Show report options menu
-                    _showReportOptions(context, postUserId, postId);
-                  },
-                ),
-              ],
-
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
+      builder: (context) => PostOptionsMenu(
+        postUserId: postUserId,
+        currentUserId: currentUserId,
+        isOwnPost: isCurrentUserPost,
+        isSaved: isSaved,
+        isFollowing: isFollowing,
+        postId: postId,
+        username: username,
+        songName: songName,
+        artistName: artistName,
+        onSharePost: onSharePost,
+        onSavePost: onSavePost,
+        onUnsavePost: onUnsavePost,
+        onFollow: onFollow,
+        onUnfollow: onUnfollow,
+        onReport: onReport,
+        onEdit: onEdit,
+        onDelete: onDelete,
+        onHide: onHide,
+      ),
     );
   }
+
+  @override
+  State<PostOptionsMenu> createState() => _PostOptionsMenuState();
+}
+
+class _PostOptionsMenuState extends State<PostOptionsMenu> {
+  late bool _isSaved;
+  late bool _isFollowing;
+
+  @override
+  void initState() {
+    super.initState();
+    _isSaved = widget.isSaved ?? false;
+    _isFollowing = widget.isFollowing ?? false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black;
+
+    // Enhanced logic to determine if post belongs to current user
+    bool isCurrentUserPost;
+
+    // First, use explicit isOwnPost if provided
+    if (widget.isOwnPost != null) {
+      isCurrentUserPost = widget.isOwnPost!;
+    }
+    // Otherwise, compare IDs if both are available
+    else if (widget.postUserId != null && widget.currentUserId != null) {
+      isCurrentUserPost = widget.postUserId == widget.currentUserId;
+    }
+    // If either ID is null, assume it's not the user's post
+    else {
+      isCurrentUserPost = false;
+    }
+
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header with rounded drag handle
+          Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // Options list
+          ListTile(
+            leading: Icon(LucideIcons.share, color: textColor),
+            title: Text('Share post', style: TextStyle(color: textColor)),
+            onTap: () {
+              Navigator.pop(context);
+              if (widget.postId != null && widget.postUserId != null) {
+                // Create a user-friendly share message
+                String shareText = 'Check out this post';
+                if (widget.username != null) {
+                  shareText += ' by @${widget.username}';
+                }
+                if (widget.songName != null) {
+                  shareText += '\n🎵 ${widget.songName}';
+                  if (widget.artistName != null) {
+                    shareText += ' - ${widget.artistName}';
+                  }
+                }
+                // Use deep link scheme for mobile apps
+                shareText +=
+                    '$baseUrl/profile/${widget.postUserId}/post/${widget.postId}';
+
+                Share.share(shareText, subject: 'Check out this post on Noot');
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text(
+                        'Unable to share post: Post information not available'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    margin: const EdgeInsets.all(10),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+              if (widget.onSharePost != null) widget.onSharePost!();
+            },
+          ),
+
+          if (isCurrentUserPost) ...[
+            // Show edit option for own posts
+            ListTile(
+              leading: Icon(LucideIcons.pencil, color: textColor),
+              title: Text('Edit post', style: TextStyle(color: textColor)),
+              onTap: () {
+                Navigator.pop(context);
+                if (widget.onEdit != null) widget.onEdit!();
+              },
+            ),
+            // Show delete option for own posts
+            ListTile(
+              leading: Icon(LucideIcons.trash2, color: Colors.red),
+              title: const Text('Delete post',
+                  style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                if (widget.onDelete != null) widget.onDelete!();
+              },
+            ),
+            // Show hide option for own posts
+            ListTile(
+              leading: Icon(LucideIcons.eyeOff, color: textColor),
+              title: Text('Hide post', style: TextStyle(color: textColor)),
+              onTap: () {
+                Navigator.pop(context);
+                if (widget.onHide != null) {
+                  widget.onHide!();
+                }
+              },
+            ),
+          ] else ...[
+            // Show save/unsave options for other users' posts
+            ListTile(
+              leading: Icon(
+                _isSaved ? LucideIcons.bookmarkMinus : LucideIcons.bookmark,
+                color: _isSaved ? Colors.blue : textColor,
+              ),
+              title: Text(
+                _isSaved ? 'Unsave post' : 'Save post',
+                style: TextStyle(
+                  color: _isSaved ? Colors.blue : textColor,
+                ),
+              ),
+              onTap: () async {
+                if (widget.currentUserId == null || widget.postId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text(
+                          'Error: User or post information not available'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      margin: const EdgeInsets.all(10),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
+                final wasSaved = _isSaved;
+                Navigator.pop(context);
+                // Call the appropriate callback
+                if (wasSaved) {
+                  if (widget.onUnsavePost != null) {
+                    widget.onUnsavePost!();
+                  }
+                } else {
+                  if (widget.onSavePost != null) {
+                    widget.onSavePost!();
+                  }
+                }
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                _isFollowing ? LucideIcons.userMinus : LucideIcons.userPlus,
+                color: textColor,
+              ),
+              title: Text(
+                _isFollowing ? 'Unfollow' : 'Follow',
+                style: TextStyle(color: textColor),
+              ),
+              onTap: () async {
+                if (widget.currentUserId == null || widget.postUserId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text(
+                          'Error: User or post information not available'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      margin: const EdgeInsets.all(10),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
+                final wasFollowing = _isFollowing;
+                Navigator.pop(context);
+                // Call the provided callbacks
+                if (wasFollowing) {
+                  if (widget.onUnfollow != null) {
+                    widget.onUnfollow!();
+                  }
+                } else {
+                  if (widget.onFollow != null) {
+                    widget.onFollow!();
+                  }
+                }
+              },
+            ),
+            // Show report option only for other users' posts
+            ListTile(
+              leading: Icon(LucideIcons.flag, color: Colors.red),
+              title: const Text('Report', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                // Show report options menu
+                _showReportOptions(context, widget.postUserId, widget.postId);
+              },
+            ),
+          ],
+
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  static const String baseUrl =
+      'noot://app'; // Custom deep link scheme for mobile
 
   static void _showReportOptions(
       BuildContext context, String? reportedUserId, String? postId) {

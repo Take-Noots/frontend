@@ -4,6 +4,7 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../../../data/models/post_model.dart' as data_model;
 import '../../../../../data/models/feed_item.dart';
 import '../../../../../data/services/song_post_service.dart';
+import '../../../../../data/services/profile_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 import '../../../../widgets/song_post/comment.dart';
@@ -41,6 +42,8 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
   bool _isPlaying = false;
   String? _currentlyPlayingTrackId;
   String? _currentUserId;
+  Map<String, bool> _followingStatus =
+      {}; // Track following status for each user
 
   @override
   void initState() {
@@ -287,6 +290,30 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
       }
     }
 
+    // Check if current user is following the post's author
+    bool isFollowing = false;
+    if (_currentUserId != null &&
+        post.userId != null &&
+        _currentUserId != post.userId) {
+      // Use cached following status if available, otherwise check from API
+      if (_followingStatus.containsKey(post.userId)) {
+        isFollowing = _followingStatus[post.userId]!;
+      } else {
+        try {
+          final authService = Provider.of<dynamic>(context, listen: false);
+          final profileService = ProfileService(authService: authService);
+          final followingList =
+              await profileService.getFollowingListWithDetails(_currentUserId!);
+          isFollowing = followingList.any((user) => user['id'] == post.userId);
+          // Cache the result
+          _followingStatus[post.userId!] = isFollowing;
+        } catch (e) {
+          // If we can't check following status, assume not following
+          isFollowing = false;
+        }
+      }
+    }
+
     PostOptionsMenu.show(
       context,
       postUserId: post.userId,
@@ -294,6 +321,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
       postId: post.id,
       isOwnPost: isUsersOwnPost,
       isSaved: isSaved,
+      isFollowing: isFollowing,
       onSharePost: () {
         final shareText =
             'Check out this song: ${post.songName} by ${post.artists}';
@@ -376,18 +404,11 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
           );
         }
       },
-      onUnfollow: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Unfollowed ${post.username ?? "user"}'),
-            backgroundColor: const Color(0xFFA855F7),
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(10),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+      onUnfollow: () async {
+        await _handleUnfollowUser(post.userId!);
+      },
+      onFollow: () async {
+        await _handleFollowUser(post.userId!);
       },
       onReport: () {
         // Report functionality handled inside PostOptionsMenu
@@ -544,6 +565,136 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
         }
       },
     );
+  }
+
+  Future<void> _handleFollowUser(String targetUserId) async {
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please log in to follow users'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final authService = Provider.of<dynamic>(context, listen: false);
+      final profileService = ProfileService(authService: authService);
+      final result =
+          await profileService.followUser(_currentUserId!, targetUserId);
+      if (result['success'] == true) {
+        // Update local following status
+        setState(() {
+          _followingStatus[targetUserId] = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('User followed successfully'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to follow user'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error following user: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleUnfollowUser(String targetUserId) async {
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please log in to unfollow users'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final authService = Provider.of<dynamic>(context, listen: false);
+      final profileService = ProfileService(authService: authService);
+      final result =
+          await profileService.unfollowUser(_currentUserId!, targetUserId);
+      if (result['success'] == true) {
+        // Update local following status
+        setState(() {
+          _followingStatus[targetUserId] = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('User unfollowed successfully'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to unfollow user'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error unfollowing user: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Widget _buildSongPostsTab() {
