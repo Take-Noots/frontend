@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/group_chat_model.dart';
 import '../../../data/services/group_chat_service.dart';
+import '../../../data/services/profile_service.dart';
 import 'group_details_screen.dart';
 
 class GroupChatScreen extends StatefulWidget {
@@ -410,9 +411,9 @@ class GroupMessageBubble extends StatelessWidget {
         mainAxisAlignment: message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           if (!message.isMe) ...[
-            const CircleAvatar(
+            ProfilePictureWidget(
+              userId: message.senderId,
               radius: 12,
-              backgroundImage: AssetImage('assets/images/hehe.png'),
             ),
             const SizedBox(width: 8),
           ],
@@ -481,5 +482,115 @@ class GroupMessageBubble extends StatelessWidget {
     final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
     
     return '$displayHour:$minute $period';
+  }
+}
+// ProfilePictureWidget to fetch and display real profile pictures
+class ProfilePictureWidget extends StatefulWidget {
+  final String? userId;
+  final double radius;
+  final bool showOnlineIndicator;
+  final bool isOnline;
+
+  const ProfilePictureWidget({
+    super.key,
+    required this.userId,
+    required this.radius,
+    this.showOnlineIndicator = false,
+    this.isOnline = false,
+  });
+
+  @override
+  State<ProfilePictureWidget> createState() => _ProfilePictureWidgetState();
+}
+
+class _ProfilePictureWidgetState extends State<ProfilePictureWidget> {
+  String? profileImageUrl;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfileImage();
+  }
+
+  @override
+  void didUpdateWidget(ProfilePictureWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId) {
+      _fetchProfileImage();
+    }
+  }
+
+  Future<void> _fetchProfileImage() async {
+    if (widget.userId == null || widget.userId!.isEmpty) {
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final profileService = ProfileService();
+      final profileResult = await profileService.getUserProfile(widget.userId!);
+
+      if (profileResult['success'] == true && profileResult['data'] != null) {
+        final profileData = profileResult['data'];
+        if (mounted) {
+          setState(() {
+            profileImageUrl = profileData['profileImage'] as String?;
+            isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        isLoading
+            ? CircleAvatar(
+                radius: widget.radius,
+                backgroundColor: Colors.grey[300],
+                child: const CircularProgressIndicator(strokeWidth: 2),
+              )
+            : CircleAvatar(
+                radius: widget.radius,
+                backgroundImage: profileImageUrl != null && profileImageUrl!.isNotEmpty
+                    ? NetworkImage(profileImageUrl!)
+                    : const AssetImage('assets/images/hehe.png') as ImageProvider,
+              ),
+        if (widget.showOnlineIndicator && widget.isOnline)
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: widget.radius * 0.6,
+              height: widget.radius * 0.6,
+              decoration: BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
