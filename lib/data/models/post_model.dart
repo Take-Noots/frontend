@@ -29,7 +29,6 @@ class Comment {
 
   Map<String, dynamic> toJson() => {
         '_id': id,
-        '_id': id,
         'userId': userId,
         'username': username,
         'text': text,
@@ -48,14 +47,14 @@ class Post {
   final String artists;
   final String? albumImage;
   final String? caption;
-  final String? userId; 
+  final String? userId;
   final String? username;
   final String? userImage;
   int likes;
   int commentsCount;
   List<String> likedBy;
   bool likedByMe;
-  bool isSaved; 
+  bool isSaved;
   final DateTime createdAt;
   final DateTime updatedAt;
   List<Comment> comments;
@@ -176,7 +175,6 @@ class Post {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
-
   }
 
   Post copyWith({

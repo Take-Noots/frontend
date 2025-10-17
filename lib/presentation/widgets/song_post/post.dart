@@ -711,10 +711,10 @@ class Post extends StatelessWidget {
   final String artists;
   final String albumImage;
   final String? caption;
-  final String username;
+  final String? username;
   final String? userId;
   final String? currentUserId;
-  final String userImage;
+  final String? userImage;
   final String? postId;
 
   final VoidCallback? onLike;
@@ -743,10 +743,10 @@ class Post extends StatelessWidget {
     required this.artists,
     required this.albumImage,
     this.caption,
-    required this.username,
+    this.username,
     this.userId,
     this.currentUserId,
-    required this.userImage,
+    this.userImage,
     this.postId,
     this.onLike,
     this.onComment,

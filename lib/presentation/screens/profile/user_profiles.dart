@@ -367,33 +367,65 @@ class _UserProfilePageState extends State<UserProfilePage>
           ),
           // Add Follow and Message buttons for other users
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            padding:
+                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                OutlinedButton(
-                  onPressed: _handleFollow,
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(
-                        color: Theme.of(context).colorScheme.onSurface),
-                  ),
-                  child: Text(
-                    isFollowingUser ? 'Following' : 'Follow',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface),
+                SizedBox(
+                  width: 140,
+                  height: 44,
+                  child: ElevatedButton(
+                    onPressed: _handleFollow,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isFollowingUser
+                          ? Theme.of(context).colorScheme.surface
+                          : const Color(0xFFA855F7), // Purple for follow
+                      foregroundColor: isFollowingUser
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: isFollowingUser
+                            ? BorderSide(
+                                color: Theme.of(context).colorScheme.outline)
+                            : BorderSide.none,
+                      ),
+                    ),
+                    child: Text(
+                      isFollowingUser ? 'Following' : 'Follow',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
-                OutlinedButton(
-                  onPressed: _handleMessage,
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(
-                        color: Theme.of(context).colorScheme.onSurface),
-                  ),
-                  child: Text(
-                    'Message',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface),
+                SizedBox(
+                  width: 140,
+                  height: 44,
+                  child: OutlinedButton(
+                    onPressed: _handleMessage,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.outline,
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    child: const Text(
+                      'Message',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ],

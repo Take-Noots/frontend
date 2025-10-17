@@ -811,13 +811,16 @@ class SongPostService {
 
   Future<Map<String, dynamic>> getPostsByIds(
       List<String> ids, BuildContext context) async {
+    print('getPostsByIds called with ids: $ids');
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
+      print('dio baseUrl: ${dio.options.baseUrl}');
 
       final response = await dio.post('/song-posts/by-ids', data: {'ids': ids});
+      print('Response status: ${response.statusCode}, data: ${response.data}');
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data;
         return {
           'success': true,

@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../../../core/providers/theme_provider.dart';
-import '../../../widgets/home/feed_widget.dart';
+import '../../../../../core/providers/theme_provider.dart';
+import '../../../../widgets/home/feed_widget.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import '../../../../data/models/post_model.dart' as data_model;
-import '../../../../data/models/feed_item.dart';
-import '../../../../data/services/song_post_service.dart';
+import '../../../../../data/models/post_model.dart' as data_model;
+import '../../../../../data/models/feed_item.dart';
+import '../../../../../data/services/song_post_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
-import '../../../widgets/song_post/comment.dart';
-import '../../../widgets/song_post/post_options_menu.dart';
-import '../../song_posts/update.dart';
+import '../../../../widgets/song_post/comment.dart';
+import '../../../../widgets/song_post/post_options_menu.dart';
+import '../../../song_posts/update.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import '../user_profiles.dart';
+import '../../user_profiles.dart';
 
 class SavedPostsFeedScreen extends StatefulWidget {
   final String userId;
@@ -65,6 +65,8 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
       _isLoading = true;
       _error = null;
     });
+    print(
+        'Loading saved posts for user: ${widget.userId}, savedPostIds: ${widget.savedPostIds}');
     try {
       if (widget.savedPostIds.isEmpty) {
         setState(() {
@@ -76,10 +78,16 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
 
       final postsResult =
           await _songPostService.getPostsByIds(widget.savedPostIds, context);
+      print('postsResult: $postsResult');
       if (postsResult['success'] == true) {
         final posts = (postsResult['posts'] as List)
             .map<data_model.Post>((json) => data_model.Post.fromJson(json))
             .toList();
+        print('Loaded ${posts.length} posts');
+        for (var post in posts) {
+          print(
+              'Post: ${post.id}, username: ${post.username}, userId: ${post.userId}');
+        }
 
         int initialIndex = 0;
         if (widget.initialPostId != null && widget.initialPostId!.isNotEmpty) {
@@ -478,22 +486,15 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildSongPostsTab() {
     if (_isLoading) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const Center(child: CircularProgressIndicator()),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
     if (_error != null) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: Center(
-            child: Text(_error!,
-                style:
-                    TextStyle(color: Theme.of(context).colorScheme.onSurface))),
-      );
+      return Center(
+          child: Text(_error!,
+              style:
+                  TextStyle(color: Theme.of(context).colorScheme.onSurface)));
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -510,61 +511,86 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Saved Posts'),
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back,
-              color: Theme.of(context).colorScheme.onSurface),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.brightness_6,
-                color: Theme.of(context).colorScheme.onSurface),
-            onPressed: () {
-              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
-            },
-          ),
-        ],
-      ),
-      body: _posts.isEmpty
-          ? Center(
-              child: Text(
-                'No saved posts',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-            )
-          : FeedWidget(
-              feedItems: _posts.map((p) => FeedItem.song(p)).toList(),
-              isLoading: false,
-              error: null,
-              onRefresh: _loadSavedPosts,
-              onSongLike: (data_model.Post post) => _handleLike(post),
-              onSongComment: (data_model.Post post) => _handleComment(post),
-              onSongPlay: (data_model.Post post) => _handlePlay(post),
-              onSongShare: (data_model.Post post) => _handleShare(post),
-              currentlyPlayingTrackId: _currentlyPlayingTrackId,
-              isPlaying: _isPlaying,
-              currentUserId: _currentUserId,
-              onPostOptions: _handlePostOptions,
-              onUserTap: (String userId, String? username) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        UserProfilePage(userId: userId, username: username),
-                  ),
-                );
-              },
-              itemScrollController: _itemScrollController,
-              itemPositionsListener: _itemPositionsListener,
-              initialIndex: _initialIndex,
+    return _posts.isEmpty
+        ? Center(
+            child: Text(
+              'No saved posts',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          )
+        : FeedWidget(
+            feedItems: _posts.map((p) => FeedItem.song(p)).toList(),
+            isLoading: false,
+            error: null,
+            onRefresh: _loadSavedPosts,
+            onSongLike: (data_model.Post post) => _handleLike(post),
+            onSongComment: (data_model.Post post) => _handleComment(post),
+            onSongPlay: (data_model.Post post) => _handlePlay(post),
+            onSongShare: (data_model.Post post) => _handleShare(post),
+            currentlyPlayingTrackId: _currentlyPlayingTrackId,
+            isPlaying: _isPlaying,
+            currentUserId: _currentUserId,
+            onPostOptions: _handlePostOptions,
+            onUserTap: (String userId, String? username) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      UserProfilePage(userId: userId, username: username),
+                ),
+              );
+            },
+            itemScrollController: _itemScrollController,
+            itemPositionsListener: _itemPositionsListener,
+            initialIndex: _initialIndex,
+          );
+  }
+
+  Widget _buildThoughtsTab() {
+    return const Center(child: Text('Saved thought posts — coming soon'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Saved Posts'),
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          centerTitle: true,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back,
+                color: Theme.of(context).colorScheme.onSurface),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.brightness_6,
+                  color: Theme.of(context).colorScheme.onSurface),
+              onPressed: () {
+                Provider.of<ThemeProvider>(context, listen: false)
+                    .toggleTheme();
+              },
+            ),
+          ],
+          bottom: TabBar(
+            indicatorColor: Theme.of(context).colorScheme.primary,
+            labelColor: Theme.of(context).colorScheme.onSurface,
+            unselectedLabelColor:
+                Theme.of(context).colorScheme.onSurfaceVariant,
+            tabs: const [Tab(text: 'Song Posts'), Tab(text: 'Thought Posts')],
+          ),
+        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: TabBarView(
+          children: [
+            _buildSongPostsTab(),
+            _buildThoughtsTab(),
+          ],
+        ),
+      ),
     );
   }
 }
