@@ -28,6 +28,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   bool _isLoading = true;
   bool _isSending = false;
   String? _error;
+  bool _isMember = true;
 
   @override
   void initState() {
@@ -55,14 +56,41 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   Future<void> _loadGroupDetails() async {
     try {
       final result = await _groupChatService.getGroupChatDetails(widget.groupChatId);
-      
+
       if (result['success'] && mounted) {
+        final newGroupChat = GroupChat.fromJson(result['data'], widget.currentUserId);
+        final isStillMember = newGroupChat.members.any((member) => member.id == widget.currentUserId);
+
         setState(() {
-          groupChat = GroupChat.fromJson(result['data'], widget.currentUserId);
+          groupChat = newGroupChat;
+          _isMember = isStillMember;
         });
+
+        // If user is no longer a member, show message and prevent further actions
+        if (!isStillMember && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You are no longer a member of this group'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else {
+        // If we can't load group details, assume user is not a member
+        if (mounted) {
+          setState(() {
+            _isMember = false;
+          });
+        }
       }
     } catch (e) {
       print('Error loading group details: $e');
+      // On error, assume user might not be a member
+      if (mounted) {
+        setState(() {
+          _isMember = false;
+        });
+      }
     }
   }
 
@@ -108,7 +136,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   }
 
   Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty || _isSending) return;
+    if (_messageController.text.trim().isEmpty || _isSending || !_isMember) return;
 
     final messageText = _messageController.text.trim();
     _messageController.clear();
@@ -185,7 +213,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         ),
         title: GestureDetector(
           onTap: () {
-            if (groupChat != null) {
+            if (groupChat != null && _isMember) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -195,6 +223,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   ),
                 ),
               ).then((_) => _loadGroupChatData());
+            } else if (!_isMember) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('You cannot access group details as you are not a member'),
+                  backgroundColor: Colors.red,
+                ),
+              );
             }
           },
           child: Row(
@@ -249,7 +284,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               color: Theme.of(context).colorScheme.onPrimary,
             ),
             onPressed: () {
-              if (groupChat != null) {
+              if (groupChat != null && _isMember) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -259,6 +294,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     ),
                   ),
                 ).then((_) => _loadGroupChatData());
+              } else if (!_isMember) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('You cannot access group details as you are not a member'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             },
           ),
@@ -284,55 +326,81 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   ),
                 ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(25),
+              child: _isMember
+                ? Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          child: TextField(
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText: 'Message...',
+                              hintStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                            ),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                            maxLines: null,
+                            onSubmitted: (_) => _sendMessage(),
+                            enabled: !_isSending,
+                          ),
+                        ),
                       ),
-                      child: TextField(
-                        controller: _messageController,
-                        decoration: InputDecoration(
-                          hintText: 'Message...',
-                          hintStyle: TextStyle(
+
+                      IconButton(
+                        icon: _isSending
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.green,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.send,
+                                color: Colors.green,
+                              ),
+                        onPressed: _isSending ? null : _sendMessage,
+                      ),
+                    ],
+                  )
+                : Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.block,
+                          color: Theme.of(context).colorScheme.secondary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'You are not a member of this group',
+                          style: TextStyle(
                             color: Theme.of(context).colorScheme.secondary,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
+                            fontSize: 14,
                           ),
                         ),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                        maxLines: null,
-                        onSubmitted: (_) => _sendMessage(),
-                        enabled: !_isSending,
-                      ),
+                      ],
                     ),
                   ),
-                  
-                  IconButton(
-                    icon: _isSending
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.green,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.send,
-                            color: Colors.green,
-                          ),
-                    onPressed: _isSending ? null : _sendMessage,
-                  ),
-                ],
-              ),
             ),
           ],
         ),

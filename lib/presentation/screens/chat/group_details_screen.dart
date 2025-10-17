@@ -992,15 +992,9 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
             ),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              // TODO: Implement leave group
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Leave group feature coming soon!'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+              await _leaveGroup();
             },
             child: const Text(
               'Leave',
@@ -1010,6 +1004,57 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _leaveGroup() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final result = await _groupChatService.removeMemberFromGroup(
+        groupChat.id,
+        widget.currentUserId,
+      );
+
+      if (result['success']) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You have left the group successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          // Navigate back to the chat list (pop all group screens)
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Failed to leave group'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error leaving group: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   String _formatDate(DateTime date) {
