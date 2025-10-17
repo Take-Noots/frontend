@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'dart:ui';
+import 'package:share_plus/share_plus.dart';
 import '../../../data/services/post_report_service.dart';
+import '../../../core/styles/app_colors.dart';
 
 class PostOptionsMenu {
+  // Use custom app scheme for deep linking (mobile) or localhost for web
+  static const String baseUrl =
+      'noot://app'; // Custom deep link scheme for mobile
+  static const String webUrl =
+      'http://localhost:56825'; // Fallback for web sharing
   static void show(
     BuildContext context, {
     String? postUserId,
@@ -11,7 +18,10 @@ class PostOptionsMenu {
     bool? isOwnPost,
     bool? isSaved,
     String? postId,
-    VoidCallback? onCopyLink,
+    String? username,
+    String? songName,
+    String? artistName,
+    VoidCallback? onSharePost,
     VoidCallback? onSavePost,
     VoidCallback? onUnsavePost,
     VoidCallback? onUnfollow,
@@ -26,7 +36,8 @@ class PostOptionsMenu {
     print('PostOptionsMenu - isOwnPost: $isOwnPost');
     print('PostOptionsMenu - isSaved: $isSaved');
     print('PostOptionsMenu - postId: $postId');
-    print('PostOptionsMenu - onHide callback is ${onHide != null ? "NOT NULL" : "NULL"}');
+    print(
+        'PostOptionsMenu - onHide callback is ${onHide != null ? "NOT NULL" : "NULL"}');
 
     // Enhanced logic to determine if post belongs to current user
     bool isCurrentUserPost;
@@ -78,11 +89,42 @@ class PostOptionsMenu {
 
               // Options list
               ListTile(
-                leading: Icon(LucideIcons.link, color: textColor),
-                title: Text('Copy link', style: TextStyle(color: textColor)),
+                leading: Icon(LucideIcons.share, color: textColor),
+                title: Text('Share post', style: TextStyle(color: textColor)),
                 onTap: () {
                   Navigator.pop(context);
-                  if (onCopyLink != null) onCopyLink();
+                  if (postId != null && postUserId != null) {
+                    // Create a user-friendly share message
+                    String shareText = 'Check out this post';
+                    if (username != null) {
+                      shareText += ' by @$username';
+                    }
+                    if (songName != null) {
+                      shareText += '\n🎵 $songName';
+                      if (artistName != null) {
+                        shareText += ' - $artistName';
+                      }
+                    }
+                    // Use deep link scheme for mobile apps
+                    shareText += '$baseUrl/profile/$postUserId/post/$postId';
+
+                    Share.share(shareText,
+                        subject: 'Check out this post on Noot');
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text(
+                            'Unable to share post: Post information not available'),
+                        backgroundColor: Colors.red,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        margin: const EdgeInsets.all(10),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                  if (onSharePost != null) onSharePost();
                 },
               ),
 
@@ -91,7 +133,6 @@ class PostOptionsMenu {
                 ListTile(
                   leading: Icon(LucideIcons.pencil, color: textColor),
                   title: Text('Edit post', style: TextStyle(color: textColor)),
-
                   onTap: () {
                     Navigator.pop(context);
                     if (onEdit != null) onEdit();
@@ -113,13 +154,15 @@ class PostOptionsMenu {
                   title: Text('Hide post', style: TextStyle(color: textColor)),
                   onTap: () {
                     print('[DEBUG] PostOptionsMenu: Hide post tapped');
-                    print('[DEBUG] PostOptionsMenu: onHide callback is ${onHide != null ? "NOT NULL" : "NULL"}');
+                    print(
+                        '[DEBUG] PostOptionsMenu: onHide callback is ${onHide != null ? "NOT NULL" : "NULL"}');
                     Navigator.pop(context);
                     if (onHide != null) {
                       print('[DEBUG] PostOptionsMenu: Calling onHide callback');
                       onHide();
                     } else {
-                      print('[DEBUG] PostOptionsMenu: onHide callback is null, not calling');
+                      print(
+                          '[DEBUG] PostOptionsMenu: onHide callback is null, not calling');
                     }
                   },
                 ),
@@ -127,7 +170,9 @@ class PostOptionsMenu {
                 // Show save/unsave options for other users' posts
                 ListTile(
                   leading: Icon(
-                    isSaved == true ? LucideIcons.bookmarkMinus : LucideIcons.bookmark,
+                    isSaved == true
+                        ? LucideIcons.bookmarkMinus
+                        : LucideIcons.bookmark,
                     color: isSaved == true ? Colors.blue : textColor,
                   ),
                   title: Text(
@@ -174,7 +219,8 @@ class PostOptionsMenu {
     );
   }
 
-  static void _showReportOptions(BuildContext context, String? reportedUserId, String? postId) {
+  static void _showReportOptions(
+      BuildContext context, String? reportedUserId, String? postId) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black;
@@ -209,7 +255,8 @@ class PostOptionsMenu {
 
                 // Title with icon
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 8.0),
                   child: Row(
                     children: [
                       Icon(
@@ -231,7 +278,8 @@ class PostOptionsMenu {
                 ),
 
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 8.0),
                   child: Text(
                     'Why are you reporting this post?',
                     style: TextStyle(
@@ -244,11 +292,34 @@ class PostOptionsMenu {
                 const SizedBox(height: 8),
 
                 // Report options with enhanced styling
-                _buildReportOption(context, 'Spam', LucideIcons.ban, reportedUserId, postId, textColor, purpleColor),
-                _buildReportOption(context, 'Inappropriate content', LucideIcons.alertTriangle, reportedUserId, postId, textColor, purpleColor),
-                _buildReportOption(context, 'Harmful or abusive', LucideIcons.shield, reportedUserId, postId, textColor, purpleColor),
-                _buildReportOption(context, 'Intellectual property violation', LucideIcons.copyright, reportedUserId, postId, textColor, purpleColor),
-                _buildReportOption(context, 'Other', LucideIcons.helpCircle, reportedUserId, postId, textColor, purpleColor),
+                _buildReportOption(context, 'Spam', LucideIcons.ban,
+                    reportedUserId, postId, textColor, purpleColor),
+                _buildReportOption(
+                    context,
+                    'Inappropriate content',
+                    LucideIcons.alertTriangle,
+                    reportedUserId,
+                    postId,
+                    textColor,
+                    purpleColor),
+                _buildReportOption(
+                    context,
+                    'Harmful or abusive',
+                    LucideIcons.shield,
+                    reportedUserId,
+                    postId,
+                    textColor,
+                    purpleColor),
+                _buildReportOption(
+                    context,
+                    'Intellectual property violation',
+                    LucideIcons.copyright,
+                    reportedUserId,
+                    postId,
+                    textColor,
+                    purpleColor),
+                _buildReportOption(context, 'Other', LucideIcons.helpCircle,
+                    reportedUserId, postId, textColor, purpleColor),
 
                 const SizedBox(height: 16),
               ],
@@ -259,7 +330,14 @@ class PostOptionsMenu {
     );
   }
 
-  static Widget _buildReportOption(BuildContext context, String title, IconData icon, String? reportedUserId, String? postId, Color textColor, Color purpleColor) {
+  static Widget _buildReportOption(
+      BuildContext context,
+      String title,
+      IconData icon,
+      String? reportedUserId,
+      String? postId,
+      Color textColor,
+      Color purpleColor) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
       decoration: BoxDecoration(
@@ -284,22 +362,23 @@ class PostOptionsMenu {
             fontSize: 16,
           ),
         ),
-
         onTap: () {
           Navigator.pop(context);
           _submitReport(context, title, reportedUserId, postId);
         },
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       ),
     );
   }
 
-  static void _submitReport(BuildContext context, String reason, String? reportedUserId, String? postId) async {
+  static void _submitReport(BuildContext context, String reason,
+      String? reportedUserId, String? postId) async {
     print('[DEBUG] _submitReport called with:');
     print('[DEBUG] - reason: $reason');
     print('[DEBUG] - reportedUserId: $reportedUserId');
     print('[DEBUG] - postId: $postId');
-    
+
     if (reportedUserId == null || postId == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -307,7 +386,8 @@ class PostOptionsMenu {
             content: const Text('Error: Missing user or post information'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
@@ -328,10 +408,12 @@ class PostOptionsMenu {
         if (result['success']) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'Report submitted successfully'),
-              backgroundColor: const Color(0xFFA855F7),
+              content:
+                  Text(result['message'] ?? 'Report submitted successfully'),
+              backgroundColor: AppColors.primaryPurple,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(10),
               duration: const Duration(seconds: 2),
             ),
@@ -342,7 +424,8 @@ class PostOptionsMenu {
               content: Text(result['message'] ?? 'Failed to submit report'),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(10),
               duration: const Duration(seconds: 2),
             ),
@@ -356,7 +439,8 @@ class PostOptionsMenu {
             content: Text('Error submitting report: $e'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),

@@ -12,8 +12,10 @@ class ThoughtsPost {
   String? songName;
   String? artistName;
   String? coverImage;
+  String? backgroundColor;
   final int isHidden; // 0 = visible, 1 = hidden
   final int isDeleted; // 0 = not deleted, 1 = deleted
+  bool isSaved; 
 
   ThoughtsPost({
     required this.id,
@@ -29,31 +31,37 @@ class ThoughtsPost {
     this.songName,
     this.artistName,
     this.coverImage,
+    this.backgroundColor,
     required this.isHidden,
     required this.isDeleted,
+    this.isSaved = false,
   });
 
   factory ThoughtsPost.fromJson(Map<String, dynamic> json) {
-  return ThoughtsPost(
-    id: json['_id'] ?? '',
-    userId: json['userId'] ?? '',
-    username: json['username'],
-    userImage: json['userImage'],
-    text: json['text'] ?? json['thoughtsText'] ?? '',
-    createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-    updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
-    likes: json['likes'] ?? 0,
-    likedBy: List<String>.from(json['likedBy'] ?? []),
-    comments: (json['comments'] as List<dynamic>?)
-        ?.map((c) => ThoughtsComment.fromJson(c))
-        .toList() ?? [],
-    songName: json['songName'],
-    artistName: json['artistName'],
-    coverImage: json['coverImage'],
-    isHidden: _parseIsHidden(json['isHidden']),
-    isDeleted: _parseIsDeleted(json['isDeleted']),
-  );
-}
+    return ThoughtsPost(
+      id: json['_id'] ?? '',
+      userId: json['userId'] ?? '',
+      username: json['username'],
+      text: json['text'] ?? json['thoughtsText'] ?? '',
+      createdAt:
+          DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      updatedAt:
+          DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      likes: json['likes'] ?? 0,
+      likedBy: List<String>.from(json['likedBy'] ?? []),
+      comments: (json['comments'] as List<dynamic>?)
+              ?.map((c) => ThoughtsComment.fromJson(c))
+              .toList() ??
+          [],
+      songName: json['songName'],
+      artistName: json['artistName'],
+      coverImage: json['coverImage'],
+      backgroundColor: json['backgroundColor'],
+      isHidden: _parseIsHidden(json['isHidden']),
+      isDeleted: _parseIsDeleted(json['isDeleted']),
+      isSaved: json['isSaved'] ?? false,
+    );
+  }
 
   // Helper method to parse isHidden field from various types
   static int _parseIsHidden(dynamic value) {
@@ -96,8 +104,10 @@ class ThoughtsPost {
       'songName': songName,
       'artistName': artistName,
       'coverImage': coverImage,
+      'backgroundColor': backgroundColor,
       'isHidden': isHidden,
       'isDeleted': isDeleted,
+      'isSaved': isSaved,
     };
   }
 }
@@ -129,8 +139,10 @@ class ThoughtsComment {
       userId: json['userId'] ?? '',
       username: json['username'],
       text: json['thoughtsText'] ?? json['text'] ?? '',
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      createdAt:
+          DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      updatedAt:
+          DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
       likes: json['likes'] ?? 0,
       likedBy: List<String>.from(json['likedBy'] ?? []),
     );

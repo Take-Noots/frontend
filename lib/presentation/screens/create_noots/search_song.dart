@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -12,8 +13,9 @@ import '../../widgets/create_post/button.dart';
 import '../../widgets/common/musicplayer_bar.dart';
 import 'create_new_noot.dart';
 import 'create_description_noot.dart';
+import '../../../core/router/route_names.dart';
 
-// Page for searching and selecting songs for posts
+
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({Key? key}) : super(key: key);
 
@@ -29,12 +31,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
   //Loading state for API calls
   bool _isLoading = false;
   
-  //Search results from Spotify API
+  //store the search results from Spotify API
   Map<String, dynamic>? _searchResults;
   
-  //Debounce timer for search input
+  //a timer to avoid searching too frequently
   Timer? _debounce;
-
 
   @override
   void initState() {
@@ -109,7 +110,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     }
   }
 
-  //Builds the Share Post interface with song search functionality
+  
   Widget _buildSharePostInterface(ColorScheme colorScheme, ThemeData theme) {
     return Column(
       children: [
@@ -212,6 +213,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
         title: const Text('Search Songs'),
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // Navigate back to home
+            context.go(AppRoutes.home);
+          },
+        ),
       ),
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Padding(
@@ -220,10 +228,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
       ),
       bottomNavigationBar: CustomBottomBar(
         onSharePost: () {
-          
+          // Already on search song page - do nothing
         },
         onShareThoughts: () {
-         
+          // Navigate to thoughts creation page
           Navigator.push(
             context,
             MaterialPageRoute(

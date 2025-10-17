@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 // ...existing code...
-import '../../../../core/providers/auth_provider.dart';
 import '../../../../data/models/profile_model.dart';
 import '../../../../data/services/profile_service.dart';
+import '../../../../data/services/cloudinary_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({Key? key}) : super(key: key);
@@ -17,14 +20,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _fullNameController = TextEditingController();
-  String profileImage =
-      'https://i.scdn.co/image/ab6761610000e5eb02e3c8b0e6e6e6e6e6e6e6e6';
+  String profileImage = 'https://via.placeholder.com/150';
   String userType = 'public'; // Default user type
 
   final ProfileService _service = ProfileService();
+  final CloudinaryService _cloudinaryService = CloudinaryService();
+  final ImagePicker _imagePicker = ImagePicker();
 
   bool _loading = true;
   bool _saving = false;
+  bool _uploading = false;
+
+  // Store original values to detect changes
+  String _originalUsername = '';
+  String _originalBio = '';
+  String _originalEmail = '';
+  String _originalFullName = '';
+  String _originalProfileImage = '';
+  String _originalUserType = 'public';
 
   // Define profile type options
   final List<Map<String, String>> _profileTypes = [
@@ -37,63 +50,227 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.loadUserDataFromSharedPreferences();
-      _fetchProfile();
-    });
+    print('[DEBUG] EditProfilePage initState called');
+    _fetchProfile();
+    // Add listeners to detect changes
+    _usernameController.addListener(_onFieldChanged);
+    _bioController.addListener(_onFieldChanged);
+    _emailController.addListener(_onFieldChanged);
+    _fullNameController.addListener(_onFieldChanged);
+  }
+
+  void _onFieldChanged() {
+    setState(() {}); // Rebuild to update button state
+  }
+
+  bool get _hasChanges {
+    return _usernameController.text != _originalUsername ||
+        _bioController.text != _originalBio ||
+        _emailController.text != _originalEmail ||
+        _fullNameController.text != _originalFullName ||
+        profileImage != _originalProfileImage ||
+        userType != _originalUserType;
+  }
+
+  @override
+  void dispose() {
+    print('[DEBUG] EditProfilePage dispose called');
+    _usernameController.dispose();
+    _bioController.dispose();
+    _emailController.dispose();
+    _fullNameController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchProfile() async {
-    setState(() => _loading = true); // Ensure loading state is set
-    final userId = Provider.of<AuthProvider>(context, listen: false).user?.id;
+    print('[DEBUG] _fetchProfile started');
+    if (mounted) {
+      setState(() => _loading = true);
+    }
+
+    // Get userId from SharedPreferences directly
+    String? userId;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        userId = userData['id'];
+      }
+    } catch (e) {
+      print('[DEBUG] _fetchProfile: Error reading SharedPreferences: $e');
+    }
+
+    print('[DEBUG] _fetchProfile userId: $userId');
     if (userId == null) {
-      setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User not logged in')),
-      );
+      print('[DEBUG] _fetchProfile: userId is null');
+      if (mounted) {
+        setState(() => _loading = false);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User not logged in')),
+          );
+          Navigator.of(context).pop();
+        });
+      }
       return;
     }
+    print('[DEBUG] _fetchProfile: calling getUserProfile');
     final result = await _service.getUserProfile(userId);
-
-    // Debug: print the result for troubleshooting
-    // ignore: avoid_print
-    print('Profile fetch result: $result');
+    print('[DEBUG] _fetchProfile result: $result');
 
     if (result['success'] == false || result['data'] == null) {
-      setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? 'Failed to load profile')),
-      );
+      print('[DEBUG] _fetchProfile: failed or no data');
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(result['message'] ?? 'Failed to load profile')),
+        );
+      }
       return;
     }
     final data = result['data'];
-    // Defensive: check for required fields
-    _usernameController.text = data['username'] ?? '';
-    _bioController.text = data['bio'] ?? '';
-    _emailController.text = data['email'] ?? '';
-    _fullNameController.text = data['fullName'] ?? '';
-    profileImage = data['profileImage'] ?? profileImage;
-    userType = data['userType'] ?? 'public'; // Set the user type
-    setState(() => _loading = false);
+    print('[DEBUG] _fetchProfile: data received, setting controllers');
+
+    try {
+      // Defensive: check for required fields
+      _usernameController.text = data['username'] ?? '';
+      _originalUsername = _usernameController.text;
+      print('[DEBUG] _fetchProfile: username set');
+      _bioController.text = data['bio'] ?? '';
+      _originalBio = _bioController.text;
+      print('[DEBUG] _fetchProfile: bio set');
+      _emailController.text = data['email'] ?? '';
+      _originalEmail = _emailController.text;
+      print('[DEBUG] _fetchProfile: email set');
+      _fullNameController.text = data['fullName'] ?? '';
+      _originalFullName = _fullNameController.text;
+      print('[DEBUG] _fetchProfile: fullName set');
+
+      final fetchedProfileImage = data['profileImage'] as String?;
+      final fetchedUserType = data['userType'] as String?;
+
+      if (mounted) {
+        setState(() {
+          profileImage = fetchedProfileImage ?? profileImage;
+          _originalProfileImage = profileImage;
+          userType = fetchedUserType ?? 'public';
+          _originalUserType = userType;
+        });
+      }
+
+      print('[DEBUG] _fetchProfile: profileImage set to $profileImage');
+      print('[DEBUG] _fetchProfile: userType set to $userType');
+    } catch (e) {
+      print('[DEBUG] _fetchProfile ERROR setting fields: $e');
+    }
+
+    print('[DEBUG] _fetchProfile: setting _loading = false');
+    if (mounted) {
+      setState(() => _loading = false);
+      print(
+          '[DEBUG] _fetchProfile: setState called, _loading is now $_loading');
+    } else {
+      print('[DEBUG] _fetchProfile: widget not mounted, cannot call setState');
+    }
+    print('[DEBUG] _fetchProfile: completed successfully');
   }
 
   void _pickImage() async {
-    setState(() {
-      profileImage = profileImage.endsWith('e6e6e6e6e6e6e6e6')
-          ? 'https://i.scdn.co/image/ab6761610000e5ebc4e8e8e8e8e8e8e8e8e8e8e8'
-          : 'https://i.scdn.co/image/ab6761610000e5eb02e3c8b0e6e6e6e6e6e6e6e6';
-    });
+    try {
+      // Show options dialog
+      final source = await showDialog<ImageSource>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Select Image Source'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Gallery'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (source == null) return;
+
+      // Pick image
+      final pickedFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) return;
+
+      setState(() => _uploading = true);
+
+      // Upload to Cloudinary
+      final file = File(pickedFile.path);
+      final imageUrl = await _cloudinaryService.uploadImage(
+        file,
+        folder: 'profile_pictures',
+      );
+
+      if (mounted) {
+        setState(() {
+          profileImage = imageUrl;
+          _uploading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image uploaded successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _uploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload image: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _saveProfile() async {
-    setState(() => _saving = true);
-    final userId = Provider.of<AuthProvider>(context, listen: false).user?.id;
+    if (mounted) {
+      setState(() => _saving = true);
+    }
+
+    // Get userId from SharedPreferences directly
+    String? userId;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        userId = userData['id'];
+      }
+    } catch (e) {
+      print('[DEBUG] _saveProfile: Error reading SharedPreferences: $e');
+    }
+
     if (userId == null) {
-      setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User not logged in')),
-      );
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not logged in')),
+        );
+      }
       return;
     }
     final editProfile = EditProfileModel(
@@ -105,34 +282,44 @@ class _EditProfilePageState extends State<EditProfilePage> {
       userType: userType, // Include user type in the update
     );
     final result = await _service.updateProfile(userId, editProfile.toJson());
-    setState(() => _saving = false);
+    if (mounted) {
+      setState(() => _saving = false);
+    }
     if (result['success'] == true) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
         );
-        // Navigate back with a result
+        // Navigate back with result to trigger profile refresh
         Navigator.pop(context, true);
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(result['message'] ?? 'Failed to update profile')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(result['message'] ?? 'Failed to update profile')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    print(
+        '[DEBUG] EditProfilePage build called, _loading=$_loading, _saving=$_saving');
     if (_loading || _saving) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      print('[DEBUG] EditProfilePage: Showing loading spinner');
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
+    print(
+        '[DEBUG] EditProfilePage: Rendering form with username=${_usernameController.text}');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Profile'),
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -143,156 +330,214 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ],
       ),
-      backgroundColor: Colors.black,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: _pickImage,
-              child: CircleAvatar(
-                radius: 48,
-                backgroundImage: NetworkImage(profileImage),
-                child: Align(
-                  alignment: Alignment.bottomRight,
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.white,
-                    child:
-                        Icon(Icons.camera_alt, color: Colors.black, size: 18),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _fullNameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Full Name',
-                labelStyle: const TextStyle(color: Colors.grey),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade700),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _usernameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Username',
-                labelStyle: const TextStyle(color: Colors.grey),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade700),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _bioController,
-              style: const TextStyle(color: Colors.white),
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: 'Bio',
-                labelStyle: const TextStyle(color: Colors.grey),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade700),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _emailController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Email',
-                labelStyle: const TextStyle(color: Colors.grey),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade700),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Add profile type dropdown
-            Container(
-              padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: Colors.grey.shade700),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Profile Type',
-                    style: TextStyle(color: Colors.grey, fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButton<String>(
-                    value: userType,
-                    isExpanded: true,
-                    dropdownColor: Colors.black87,
-                    style: const TextStyle(color: Colors.white),
-                    underline: Container(), // Remove the default underline
-                    onChanged: (newValue) {
-                      setState(() {
-                        userType = newValue!;
-                      });
-                    },
-                    items: _profileTypes.map<DropdownMenuItem<String>>((type) {
-                      return DropdownMenuItem<String>(
-                        value: type['value'],
-                        child: Text(
-                          type['label']!,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
               children: [
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: _uploading ? null : _pickImage,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 48,
+                        backgroundImage: NetworkImage(profileImage),
+                      ),
+                      if (_uploading)
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Theme.of(context).colorScheme.onSurface),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (!_uploading)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: CircleAvatar(
+                            radius: 16,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.surface,
+                            child: Icon(Icons.camera_alt,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                size: 18),
+                          ),
+                        ),
+                    ],
                   ),
-                  child: const Text('Cancel',
-                      style: TextStyle(color: Colors.white)),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
                 ),
-                ElevatedButton(
-                  onPressed: _saveProfile,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
+                const SizedBox(height: 24),
+                TextField(
+                  controller: _fullNameController,
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    labelText: 'Full Name',
+                    labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.transparent),
+                    ),
                   ),
-                  child:
-                      const Text('Save', style: TextStyle(color: Colors.black)),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _usernameController,
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    labelText: 'Username',
+                    labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.transparent),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _bioController,
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Bio',
+                    labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.transparent),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _emailController,
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.transparent),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Add profile type dropdown
+                Container(
+                  padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Profile Type',
+                        style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 16),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButton<String>(
+                        value: userType,
+                        isExpanded: true,
+                        dropdownColor: Theme.of(context).colorScheme.surface,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface),
+                        underline: Container(), // Remove the default underline
+                        onChanged: (newValue) {
+                          setState(() {
+                            userType = newValue!;
+                          });
+                        },
+                        items:
+                            _profileTypes.map<DropdownMenuItem<String>>((type) {
+                          return DropdownMenuItem<String>(
+                            value: type['value'],
+                            child: Text(
+                              type['label']!,
+                              style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                            color: Theme.of(context).colorScheme.onSurface),
+                      ),
+                      child: Text('Cancel',
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface)),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    ElevatedButton(
+                      onPressed: _hasChanges ? _saveProfile : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _hasChanges
+                            ? Theme.of(context).colorScheme.surface
+                            : Theme.of(context).disabledColor,
+                        disabledBackgroundColor:
+                            Theme.of(context).disabledColor,
+                      ),
+                      child: Text('Save',
+                          style: TextStyle(
+                              color: _hasChanges
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Theme.of(context).disabledColor)),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
