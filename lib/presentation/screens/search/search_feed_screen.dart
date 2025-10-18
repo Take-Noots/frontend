@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/data/services/search_service.dart';
-import 'package:frontend/presentation/widgets/loading_screens/common_loading.dart';
+import 'package:Noot/data/services/search_service.dart';
+import 'package:Noot/presentation/widgets/loading_screens/common_loading.dart';
 
-import 'package:frontend/presentation/widgets/song_post/post.dart';
-import 'package:frontend/presentation/widgets/search/explore_feed.dart';
-import 'package:frontend/presentation/widgets/search/segmant_divider.dart';
-import 'package:frontend/presentation/widgets/song_post/post_shape.dart';
-import 'package:frontend/presentation/widgets/despost/widgets/des_post_content_widget.dart'
+import 'package:Noot/presentation/widgets/song_post/post.dart';
+import 'package:Noot/presentation/widgets/search/explore_feed.dart';
+import 'package:Noot/presentation/widgets/search/segmant_divider.dart';
+import 'package:Noot/presentation/widgets/song_post/post_shape.dart';
+import 'package:Noot/presentation/widgets/despost/widgets/des_post_content_widget.dart'
     as DesPost;
-import 'package:frontend/presentation/widgets/home/feed_widget.dart';
-import 'package:frontend/data/models/post_model.dart' as data_model;
-import 'package:frontend/data/models/feed_item.dart';
+import 'package:Noot/presentation/widgets/home/feed_widget.dart';
+import 'package:Noot/data/models/post_model.dart' as data_model;
+import 'package:Noot/data/models/feed_item.dart';
 
-import 'package:frontend/presentation/widgets/search/searchbar.dart';
+import 'package:Noot/presentation/widgets/search/searchbar.dart';
 
-import 'package:frontend/presentation/widgets/search/category_selector.dart';
-import 'package:frontend/presentation/widgets/search/user_search_results.dart';
-import 'package:frontend/presentation/widgets/search/fanbase_search_results.dart';
+import 'package:Noot/presentation/widgets/search/category_selector.dart';
+import 'package:Noot/presentation/widgets/search/user_search_results.dart';
+import 'package:Noot/presentation/widgets/search/fanbase_search_results.dart';
 
 class SearchFeedScreen extends StatefulWidget {
   const SearchFeedScreen({Key? key}) : super(key: key);

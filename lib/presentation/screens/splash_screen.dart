@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:frontend/core/providers/auth_provider.dart';
-import 'package:frontend/data/services/auth_service.dart';
+import 'package:Noot/core/providers/auth_provider.dart';
+import 'package:Noot/data/services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   final Widget nextScreen;

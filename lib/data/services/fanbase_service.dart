@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../core/providers/auth_provider.dart';
-import '../models/fanbase_model.dart';
+import 'package:Noot/data/models/fanbase_model.dart';
 import '../models/fanbase_post_model.dart';
 import 'auth_service.dart';
 

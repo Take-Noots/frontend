@@ -239,10 +239,10 @@ class _HomeScreenState extends State<HomeScreen> {
         await _songPostService.likePost(post.id, currentUserId, context);
 
     if (result['success']) {
-      if (post.userId != null) {
-        await _songPostService.addRecentlyLikedUser(
+      if (post.id != null) {
+        await _songPostService.addRecentlyLikedPosts(
           currentUserId,
-          post.userId!,
+          post.id,
         );
       }
     }
