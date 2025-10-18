@@ -1,27 +1,15 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/core/providers/auth_provider.dart';
+import 'package:frontend/core/constants/app_constants.dart';
 
 class TokenManagerService {
   // API endpoints
-  // Use localhost for mobile, but use the browser host for web
-  static String get _baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:3000'; // In production, this would be your API domain
-    } else {
-      // For mobile, use platform-specific localhost
-      if (Platform.isAndroid) {
-        // Use 10.0.2.2 for Android emulator to access local backend
-        return 'http://10.0.2.2:3000';
-      }
-      // iOS simulator or real device
-      return 'http://localhost:3000';
-    }
-  }
+  // Use AppConstants for base URL
+  static String get _baseUrl => AppConstants.baseUrl;
 
   static const String _refreshEndpoint = '/auth/refresh';
 
@@ -30,6 +18,9 @@ class TokenManagerService {
 
   // In-memory storage
   String? _accessToken;
+
+  // Refresh lock to prevent concurrent refresh attempts
+  bool _isRefreshing = false;
 
   // Storage services
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -131,9 +122,6 @@ class TokenManagerService {
         if (accessToken != null) {
           _accessToken = accessToken;
           _authProvider.setToken(accessToken);
-
-          // Try to refresh token to validate it
-          await refreshToken();
         }
       } catch (e) {
         print('Error loading token from storage: $e');
@@ -152,9 +140,6 @@ class TokenManagerService {
       if (accessToken != null) {
         _accessToken = accessToken;
         _authProvider.setToken(accessToken);
-
-        // Try to refresh token to validate it
-        await refreshToken();
       }
     } catch (e) {
       print('Error loading token from SharedPreferences: $e');
@@ -222,13 +207,22 @@ class TokenManagerService {
 
   // Refresh token
   Future<bool> refreshToken() async {
+    // Prevent concurrent refresh attempts
+    if (_isRefreshing) {
+      print(
+          '[At Token.Manager.Service] Refresh already in progress, skipping...');
+      return false;
+    }
+
+    _isRefreshing = true;
     try {
       print('[At Token.Manager.Service] Attempting to refresh token...');
 
-      // Call the refresh endpoint
-      final response = await _dio.post(_refreshEndpoint, options: Options(
-          // Ensure cookies are sent with the request
-          extra: {'withCredentials': true}));
+      // Use unauthenticated Dio to avoid interceptor loops
+      final response =
+          await _unauthenticatedDio.post(_refreshEndpoint, options: Options(
+              // Ensure cookies are sent with the request
+              extra: {'withCredentials': true}));
 
       print(
           '[At Token.Manager.Service] Refresh response status: ${response.statusCode}');
@@ -276,6 +270,8 @@ class TokenManagerService {
       }
 
       return false;
+    } finally {
+      _isRefreshing = false;
     }
   }
 

@@ -113,7 +113,7 @@ class OptionsPage extends StatelessWidget {
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface)),
                   onTap: () {
-                    Navigator.pushNamed(context, '/link-account');
+                    context.go(AppRoutes.linkSpotify);
                   },
                 )
               : const SizedBox.shrink(),

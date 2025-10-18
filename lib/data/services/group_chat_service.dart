@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/constants/app_constants.dart';
 
 class GroupChatService {
-  static const String baseUrl = 'http://localhost:3000/chat';
+  static String get baseUrl => '${AppConstants.baseUrl}/chat';
 
   // Create a new group chat
   Future<Map<String, dynamic>> createGroupChat({
@@ -16,16 +17,16 @@ class GroupChatService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in. Please log in to create group chat.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
-      
+
       final response = await http.post(
         Uri.parse('$baseUrl/group/create'),
         headers: {
@@ -67,17 +68,17 @@ class GroupChatService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in. Please log in to view group chats.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
       final userId = userData['id'];
-      
+
       final response = await http.get(
         Uri.parse('$baseUrl/group/$userId'),
         headers: {
@@ -140,20 +141,21 @@ class GroupChatService {
   }
 
   // Send a message to group chat
-  Future<Map<String, dynamic>> sendGroupMessage(String groupChatId, String text) async {
+  Future<Map<String, dynamic>> sendGroupMessage(
+      String groupChatId, String text) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in. Please log in to send messages.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
-      
+
       final response = await http.post(
         Uri.parse('$baseUrl/group/send'),
         headers: {
@@ -162,7 +164,8 @@ class GroupChatService {
         body: jsonEncode({
           'groupChatId': groupChatId,
           'senderId': userData['id'],
-          'senderUsername': userData['username'] ?? userData['name'] ?? 'Unknown',
+          'senderUsername':
+              userData['username'] ?? userData['name'] ?? 'Unknown',
           'text': text,
         }),
       );
@@ -231,19 +234,19 @@ class GroupChatService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in.',
         };
       }
-      
+
       final Map<String, dynamic> updateData = {};
       if (name != null) updateData['name'] = name;
       if (description != null) updateData['description'] = description;
       if (groupIcon != null) updateData['groupIcon'] = groupIcon;
-      
+
       final response = await http.put(
         Uri.parse('$baseUrl/group/update/$groupChatId'),
         headers: {
@@ -275,7 +278,8 @@ class GroupChatService {
   }
 
   // Add member to group
-  Future<Map<String, dynamic>> addMemberToGroup(String groupChatId, String userId) async {
+  Future<Map<String, dynamic>> addMemberToGroup(
+      String groupChatId, String userId) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/group/addMember'),
@@ -311,7 +315,8 @@ class GroupChatService {
   }
 
   // Remove member from group
-  Future<Map<String, dynamic>> removeMemberFromGroup(String groupChatId, String userId) async {
+  Future<Map<String, dynamic>> removeMemberFromGroup(
+      String groupChatId, String userId) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/group/removeMember'),

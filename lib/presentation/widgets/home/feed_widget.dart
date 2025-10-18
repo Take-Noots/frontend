@@ -19,10 +19,10 @@ class FeedWidget extends StatefulWidget {
   final Function(data_model.Post)? onComment;
   final Function(data_model.Post)? onPlay;
   final Function(data_model.Post)? onShare;
-  final Function(data_model.Post)? onPostOptions;
+  final Future<void> Function(data_model.Post)? onPostOptions;
   final String? currentlyPlayingTrackId;
   final bool isPlaying;
-  final void Function(String userId)? onUserTap;
+  final void Function(String userId, String? username)? onUserTap;
 
   final String? currentUserId;
   final Future<void> Function(data_model.Post post)? onHidePost;
@@ -197,10 +197,11 @@ class _FeedWidgetState extends State<FeedWidget> {
     } else if (item.type == FeedItemType.thought && item.thoughtsPost != null) {
       // Create a unique identifier for thoughts posts using song name and artist name
       final thoughtsPost = item.thoughtsPost!;
-      final thoughtsTrackId = thoughtsPost.songName != null && thoughtsPost.artistName != null
-          ? '${thoughtsPost.songName}_${thoughtsPost.artistName}'
-          : null;
-      
+      final thoughtsTrackId =
+          thoughtsPost.songName != null && thoughtsPost.artistName != null
+              ? '${thoughtsPost.songName}_${thoughtsPost.artistName}'
+              : null;
+
       return ThoughtsFeedCard(
         post: thoughtsPost,
         onLike: widget.onThoughtLike != null
@@ -212,7 +213,8 @@ class _FeedWidgetState extends State<FeedWidget> {
         onPlayPause: widget.onThoughtPlay != null
             ? () => widget.onThoughtPlay!(thoughtsPost)
             : null,
-        isPlaying: widget.isPlaying && widget.currentlyPlayingTrackId == thoughtsTrackId,
+        isPlaying: widget.isPlaying &&
+            widget.currentlyPlayingTrackId == thoughtsTrackId,
         isCurrentTrack: widget.currentlyPlayingTrackId == thoughtsTrackId,
         onUserTap: widget.onUserTap,
       );
@@ -292,7 +294,7 @@ class _FeedWidgetState extends State<FeedWidget> {
                     }
                   },
                   onMoreOptions: widget.onPostOptions != null
-                      ? () => widget.onPostOptions!(post)
+                      ? () async => await widget.onPostOptions!(post)
                       : null,
                   isLiked: post.likedByMe,
                   isPlaying: widget.isPlaying,
@@ -301,7 +303,7 @@ class _FeedWidgetState extends State<FeedWidget> {
                   isSaved: post.isSaved,
                   onUsernameTap: () {
                     if (widget.onUserTap != null && post.userId != null) {
-                      widget.onUserTap!(post.userId!);
+                      widget.onUserTap!(post.userId!, post.username);
                     }
                   },
                   onDelete: isOwnPost && widget.onPostOptions != null
