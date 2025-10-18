@@ -43,13 +43,18 @@ class _FanbaseDetailsCreatorAboutState
   Future<void> removeRuleAt(int index) async {
     final confirm = await showDialog<bool>(
       context: context,
+      barrierColor: Colors.black
+          .withOpacity(0.7),
       builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.primary ,
         title: const Text('Remove Rule'),
         content: Text('Are you sure you want to remove rule ${index + 1}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text('Cancel',
+              style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -86,10 +91,13 @@ class _FanbaseDetailsCreatorAboutState
     );
     await showDialog(
       context: context,
+      barrierColor: Colors.black
+          .withOpacity(0.7), // ADD THIS LINE - makes background darker
       builder: (context) {
         return StatefulBuilder(builder: (context, setDialogState) {
           return AlertDialog(
             title: const Text('Edit Fanbase Rules'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
             content: SizedBox(
               width: 400,
               child: SingleChildScrollView(
@@ -114,8 +122,7 @@ class _FanbaseDetailsCreatorAboutState
                                   if (controllers.length > 1)
                                     IconButton(
                                       icon: const Icon(Icons.delete,
-                                          color: Colors.red,
-                                          size: 15),
+                                          color: Colors.red, size: 15),
                                       onPressed: () {
                                         setDialogState(() {
                                           controllers.removeAt(i);
@@ -142,9 +149,16 @@ class _FanbaseDetailsCreatorAboutState
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(
+                  'Cancel',
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+                ),
               ),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple,
+                ),
                 onPressed: saving
                     ? null
                     : () async {
@@ -245,8 +259,7 @@ class _FanbaseDetailsCreatorAboutState
                               title: Text(e.value),
                               trailing: IconButton(
                                 icon: const Icon(Icons.delete_outline,
-                                    color: Colors.red,
-                                    size: 15),
+                                    color: Colors.red, size: 15),
                                 onPressed: () => removeRuleAt(e.key),
                                 tooltip: 'Remove rule',
                               ),
