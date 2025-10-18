@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'dart:convert'; // Add for JSON decoding
+import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Add for user data access
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import 'package:Noot/data/models/fanbase_model.dart';
 import 'package:Noot/data/services/fanbase_service.dart';
+import 'package:Noot/data/services/cloudinary_service.dart'; // ADD THIS
 import 'package:Noot/presentation/widgets/fanbases/fanbase_card.dart';
-import 'package:Noot/presentation/widgets/common/bottom_bar.dart';
 import 'package:Noot/presentation/widgets/home/header_bar.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:Noot/presentation/widgets/loading_screens/common_loading.dart'; // ADD THIS
+
+
 
 /// Main fanbase page with Feed and Owned tabs
 /// Feed tab shows non-owned fanbases, Owned tab shows user's created fanbases
@@ -24,11 +27,14 @@ class FanbasePage extends StatefulWidget {
 
 class _FanbasePageState extends State<FanbasePage>
     with SingleTickerProviderStateMixin {
-  Future<List<Fanbase>>? futureFanbases; // Changed from 'late' to nullable
+  Future<List<Fanbase>>? futureFanbases;
   late TabController _tabController;
-  String? _currentUserId; // Current user's ID for filtering
-  List<Fanbase> _allFanbases = []; // Cache all fanbases
-  int _selectedTabIndex = 0; // Track selected tab index
+  String? _currentUserId;
+  List<Fanbase> _allFanbases = [];
+  int _selectedTabIndex = 0;
+
+  final CloudinaryService _cloudinaryService = CloudinaryService(); // ADD THIS
+  final ImagePicker _imagePicker = ImagePicker(); // ADD THIS
 
   @override
   void initState() {
@@ -47,14 +53,6 @@ class _FanbasePageState extends State<FanbasePage>
     _tabController.dispose();
     super.dispose();
   }
-
-  // @override
-  // void didChangeDependencies() {
-  //   super.didChangeDependencies();
-  //   if (_currentUserId != null && futureFanbases == null) {
-  //     _loadFanbases();
-  //   }
-  // }
 
   /// Loads current user ID and then fetches all fanbases
   Future<void> _loadCurrentUserAndFanbases() async {
@@ -92,16 +90,13 @@ class _FanbasePageState extends State<FanbasePage>
 
     return fanbases.where((fanbase) {
       if (tabIndex == 0) {
-        // Explore(No Joined) tab
         return fanbase.createdBy.id != _currentUserId && !fanbase.isJoined;
       } else if (tabIndex == 1) {
-        // Joined tab
         return fanbase.isJoined && fanbase.createdBy.id != _currentUserId;
       } else if (tabIndex == 2) {
-        // Owned tab
         return fanbase.createdBy.id == _currentUserId;
       }
-      return false; // Ensure a boolean is always returned
+      return false;
     }).toList();
   }
 
@@ -261,7 +256,7 @@ class _FanbasePageState extends State<FanbasePage>
                   _selectedTabIndex = 0;
                 });
                 _tabController.animateTo(0);
-                _loadFanbases(); // <-- Add this line
+                _loadFanbases();
               },
               child: const Text('Explore'),
             ),
@@ -285,7 +280,7 @@ class _FanbasePageState extends State<FanbasePage>
                   _selectedTabIndex = 1;
                 });
                 _tabController.animateTo(1);
-                _loadFanbases(); // <-- Add this line
+                _loadFanbases();
               },
               child: const Text('Join'),
             ),
@@ -309,7 +304,7 @@ class _FanbasePageState extends State<FanbasePage>
                   _selectedTabIndex = 2;
                 });
                 _tabController.animateTo(2);
-                _loadFanbases(); // <-- Add this line
+                _loadFanbases();
               },
               child: const Text('Creator'),
             ),
@@ -323,15 +318,16 @@ class _FanbasePageState extends State<FanbasePage>
   void _showCreateFanbaseSheet() {
     final nameController = TextEditingController();
     final topicController = TextEditingController();
-    final urlController = TextEditingController();
     File? selectedImage;
-    String? networkImageUrl;
-    String? nameErrorText; // Moved here
+    String? uploadedImageUrl;
+    String? nameErrorText;
+    bool uploading = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.primary,
+      barrierColor: Colors.black.withOpacity(0.8), // Darker background
       builder: (context) {
         return DraggableScrollableSheet(
           expand: false,
@@ -341,51 +337,76 @@ class _FanbasePageState extends State<FanbasePage>
           builder: (context, scrollController) {
             return StatefulBuilder(
               builder: (context, setModalState) {
-                /// Picks an image from the device gallery
-                Future<void> _pickImage() async {
-                  final picker = ImagePicker();
-                  final pickedFile =
-                      await picker.pickImage(source: ImageSource.gallery);
-                  if (pickedFile != null) {
+                /// Picks an image from gallery or camera and uploads to Cloudinary
+                Future<void> _pickAndUploadImage(ImageSource source) async {
+                  try {
+                    final pickedFile = await _imagePicker.pickImage(
+                      source: source,
+                      maxWidth: 1024,
+                      maxHeight: 1024,
+                      imageQuality: 85,
+                    );
+
+                    if (pickedFile == null) return;
+
+                    setModalState(() => uploading = true);
+
+                    // Upload to Cloudinary
+                    final file = File(pickedFile.path);
+                    final imageUrl = await _cloudinaryService.uploadImage(
+                      file,
+                      folder: 'fanbase_pictures',
+                    );
+
                     setModalState(() {
-                      selectedImage = File(pickedFile.path);
-                      networkImageUrl = null;
+                      selectedImage = file;
+                      uploadedImageUrl = imageUrl;
+                      uploading = false;
                     });
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Image uploaded successfully!')),
+                    );
+                  } catch (e) {
+                    setModalState(() => uploading = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to upload image: $e')),
+                    );
                   }
                 }
 
-                /// Shows dialog for entering image URL
-                void _showUrlInputDialog() {
-                  showDialog(
+                /// Shows dialog for selecting image source
+                void _showImageSourceDialog() async {
+                  final source = await showDialog<ImageSource>(
                     context: context,
-                    builder: (context) {
-                      return AlertDialog(
-                        title: const Text('Enter the fanbase Photo URL'),
-                        content: TextField(
-                          controller: urlController,
-                          decoration:
-                              const InputDecoration(hintText: 'https://...'),
-                          keyboardType: TextInputType.url,
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancel'),
+                    barrierColor: Colors.black.withOpacity(0.8),
+                    builder: (context) => AlertDialog(
+                      title: const Text('Select Image Source'),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.photo_library),
+                            title: const Text('Gallery'),
+                            onTap: () =>
+                                Navigator.pop(context, ImageSource.gallery),
                           ),
-                          ElevatedButton(
-                            onPressed: () {
-                              setModalState(() {
-                                networkImageUrl = urlController.text.trim();
-                                selectedImage = null;
-                              });
-                              Navigator.pop(context);
-                            },
-                            child: const Text('Use URL'),
+                          ListTile(
+                            leading: const Icon(Icons.camera_alt),
+                            title: const Text('Camera'),
+                            onTap: () =>
+                                Navigator.pop(context, ImageSource.camera),
                           ),
                         ],
-                      );
-                    },
+                      ),
+                    ),
                   );
+
+                  if (source != null) {
+                    await _pickAndUploadImage(source);
+                  }
                 }
 
                 return Container(
@@ -410,71 +431,62 @@ class _FanbasePageState extends State<FanbasePage>
                         ),
                         const SizedBox(height: 20),
 
-                        // Image selection section
+                        // Image selection section with upload indicator
                         GestureDetector(
-                          onTap: () async {
-                            final result = await showMenu<String>(
-                              context: context,
-                              position: const RelativeRect.fromLTRB(
-                                  100, 400, 100, 100),
-                              items: [
-                                const PopupMenuItem(
-                                  value: 'gallery',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.photo),
-                                      SizedBox(width: 8),
-                                      Text("Gallery"),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'url',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.link),
-                                      SizedBox(width: 8),
-                                      Text("Enter URL"),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            );
-
-                            if (result == 'gallery') {
-                              await _pickImage();
-                            } else if (result == 'url') {
-                              _showUrlInputDialog();
-                            }
-                          },
-                          child: Column(
+                          onTap: uploading ? null : _showImageSourceDialog,
+                          child: Stack(
                             children: [
-                              // Profile image preview
                               CircleAvatar(
-                                radius: 34,
+                                radius: 48,
                                 backgroundColor: Colors.grey[300],
                                 backgroundImage: selectedImage != null
                                     ? FileImage(selectedImage!)
-                                    : (networkImageUrl != null &&
-                                            networkImageUrl!.isNotEmpty)
-                                        ? NetworkImage(networkImageUrl!)
-                                            as ImageProvider
+                                    : (uploadedImageUrl != null
+                                        ? NetworkImage(uploadedImageUrl!)
                                         : const NetworkImage(
                                             'https://developers.elementor.com/docs/assets/img/elementor-placeholder-image.png',
-                                          ),
+                                          )) as ImageProvider,
                               ),
-                              const SizedBox(height: 6),
-                              const Text(
-                                'Edit',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF8E24AA),
+                              if (uploading)
+                                Positioned.fill(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.5),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: CommonLoading.purple(size: 24),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              if (!uploading)
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.surface,
+                                    child: Icon(Icons.camera_alt,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
+                                        size: 18),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        if (!uploading)
+                          const Text(
+                            'Tap to change photo',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF8E24AA),
+                            ),
+                          ),
                         const SizedBox(height: 20),
 
                         // Fanbase name input
@@ -501,16 +513,14 @@ class _FanbasePageState extends State<FanbasePage>
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onPrimary, // same as border
+                                color: Theme.of(context).colorScheme.onPrimary,
                                 width: 0.5,
                               ),
                             ),
                           ),
                         ),
                         if (nameErrorText != null) ...[
-                          const SizedBox(height: 2), // reduced
+                          const SizedBox(height: 2),
                           Text(
                             nameErrorText!,
                             style: const TextStyle(
@@ -577,57 +587,63 @@ class _FanbasePageState extends State<FanbasePage>
                             ),
                             const SizedBox(width: 10),
                             FloatingActionButton(
-                              onPressed: () async {
-                                final name = nameController.text.trim();
-                                // Check if the name is unique among all fanbases
-                                final isNameUnique = !_allFanbases.any(
-                                    (fanbase) =>
-                                        fanbase.fanbaseName
-                                            .trim()
-                                            .toLowerCase() ==
-                                        name.toLowerCase());
-                                if (!isNameUnique) {
-                                  setModalState(() {
-                                    // Show error message below the name field
-                                    nameErrorText =
-                                        'Fanbase name already exists. Please choose a different name.';
-                                  });
-                                  return;
-                                }
-                                final topic = topicController.text.trim();
-                                if (name.isNotEmpty && topic.isNotEmpty) {
-                                  try {
-                                    await FanbaseService.createFanbase(
-                                      name,
-                                      topic,
-                                      context,
-                                      imageFile: selectedImage,
-                                      imageUrl: networkImageUrl,
-                                    );
-                                    if (!context.mounted) return;
-                                    Navigator.pop(context);
+                              onPressed: uploading
+                                  ? null
+                                  : () async {
+                                      final name = nameController.text.trim();
+                                      // Check if the name is unique
+                                      final isNameUnique = !_allFanbases.any(
+                                          (fanbase) =>
+                                              fanbase.fanbaseName
+                                                  .trim()
+                                                  .toLowerCase() ==
+                                              name.toLowerCase());
+                                      if (!isNameUnique) {
+                                        setModalState(() {
+                                          nameErrorText =
+                                              'Fanbase name already exists. Please choose a different name.';
+                                        });
+                                        return;
+                                      }
+                                      final topic = topicController.text.trim();
+                                      if (name.isNotEmpty && topic.isNotEmpty) {
+                                        try {
+                                          await FanbaseService.createFanbase(
+                                            name,
+                                            topic,
+                                            context,
+                                            imageUrl: uploadedImageUrl,
+                                          );
+                                          if (!context.mounted) return;
+                                          Navigator.pop(context);
 
-                                    // Switch to Owned tab to show the newly created fanbase
-                                    setState(() {
-                                      _selectedTabIndex = 1;
-                                    });
-                                    _tabController.animateTo(1);
-                                    _loadFanbases();
+                                          setState(() {
+                                            _selectedTabIndex = 2;
+                                          });
+                                          _tabController.animateTo(2);
+                                          _loadFanbases();
 
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              'Fanbase created successfully!')),
-                                    );
-                                  } catch (e) {
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error: $e')),
-                                    );
-                                  }
-                                }
-                              },
-                              backgroundColor: const Color(0xFFDB0DF9),
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                                content: Text(
+                                                    'Fanbase created successfully!')),
+                                          );
+                                        } catch (e) {
+                                          if (context.mounted) {
+                                            Navigator.pop(context);
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                  content: Text('Error: $e')),
+                                            );
+                                          }
+                                        }
+                                      }
+                                    },
+                              backgroundColor: uploading
+                                  ? Colors.grey
+                                  : const Color(0xFFDB0DF9),
                               foregroundColor: Colors.white,
                               heroTag: 'create_fanbase_fab',
                               shape: RoundedRectangleBorder(
@@ -653,7 +669,6 @@ class _FanbasePageState extends State<FanbasePage>
   Widget build(BuildContext context) {
     final body = Column(
       children: [
-        // Page title
         const Padding(
           padding: EdgeInsets.fromLTRB(16.0, 3.0, 0, 4.0),
           child: Align(
@@ -665,23 +680,14 @@ class _FanbasePageState extends State<FanbasePage>
           ),
         ),
         const SizedBox(height: 2),
-
-        // Tab bar with button style
         _buildTabBar(),
         const SizedBox(height: 0),
-
-        // Tab view content
         Expanded(
           child: TabBarView(
             controller: _tabController,
             children: [
-              // Feed tab - shows non-owned fanbases
               _buildFanbaseList(0),
-
-              // Joined tab - shows joined fanbases
               _buildFanbaseList(1),
-
-              // Owned tab - shows owned fanbases
               _buildFanbaseList(2),
             ],
           ),
@@ -702,7 +708,6 @@ class _FanbasePageState extends State<FanbasePage>
       heroTag: 'add_fanbase_fab',
     );
 
-    // If inside shell, don't use Scaffold (ShellScreenV2 provides it)
     if (widget.inShell) {
       return Stack(
         children: [
@@ -721,7 +726,6 @@ class _FanbasePageState extends State<FanbasePage>
       );
     }
 
-    // If not in shell, use full Scaffold
     return Scaffold(
       appBar: NootAppBar(),
       body: body,

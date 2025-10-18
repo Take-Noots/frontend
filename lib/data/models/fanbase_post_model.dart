@@ -1,25 +1,28 @@
-class FanbasePostComment {
+class FanbasePostSubComment {
   final String userId;
   final String userName;
   final String comment;
+  final String commentId; // ✅ Changed from commentIndex
   final int likeCount;
   final List<String> likeUserIds;
   final DateTime createdAt;
 
-  FanbasePostComment({
+  FanbasePostSubComment({
     required this.userId,
     required this.userName,
     required this.comment,
+    required this.commentId,
     required this.likeCount,
     required this.likeUserIds,
     required this.createdAt,
   });
 
-  factory FanbasePostComment.fromJson(Map<String, dynamic> json) {
-    return FanbasePostComment(
+  factory FanbasePostSubComment.fromJson(Map<String, dynamic> json) {
+    return FanbasePostSubComment(
       userId: json['userId'] ?? '',
       userName: json['userName'] ?? '',
       comment: json['comment'] ?? '',
+      commentId: json['commentId'] ?? '', // ✅ Changed
       likeCount: json['likeCount'] ?? 0,
       likeUserIds: List<String>.from(json['likeUserIds'] ?? []),
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
@@ -31,9 +34,62 @@ class FanbasePostComment {
       'userId': userId,
       'userName': userName,
       'comment': comment,
+      'commentId': commentId, // ✅ Changed
       'likeCount': likeCount,
       'likeUserIds': likeUserIds,
       'createdAt': createdAt.toIso8601String(),
+    };
+  }
+}
+
+class FanbasePostComment {
+  final String userId;
+  final String userName;
+  final String comment;
+  final String commentId; // ✅ Changed from commentIndex
+  final int likeCount;
+  final List<String> likeUserIds;
+  final DateTime createdAt;
+  final List<FanbasePostSubComment> subComments;
+
+  FanbasePostComment({
+    required this.userId,
+    required this.userName,
+    required this.comment,
+    required this.commentId,
+    required this.likeCount,
+    required this.likeUserIds,
+    required this.createdAt,
+    this.subComments = const [],
+  });
+
+  factory FanbasePostComment.fromJson(Map<String, dynamic> json) {
+    return FanbasePostComment(
+      userId: json['userId'] ?? '',
+      userName: json['userName'] ?? '',
+      comment: json['comment'] ?? '',
+      commentId: json['commentId'] ?? '', // ✅ Changed
+      likeCount: json['likeCount'] ?? 0,
+      likeUserIds: List<String>.from(json['likeUserIds'] ?? []),
+      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      subComments: (json['subComments'] as List<dynamic>?)
+              ?.map((sc) =>
+                  FanbasePostSubComment.fromJson(sc as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'userId': userId,
+      'userName': userName,
+      'comment': comment,
+      'commentId': commentId, // ✅ Changed
+      'likeCount': likeCount,
+      'likeUserIds': likeUserIds,
+      'createdAt': createdAt.toIso8601String(),
+      'subComments': subComments.map((sc) => sc.toJson()).toList(),
     };
   }
 }
