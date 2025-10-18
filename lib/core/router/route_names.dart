@@ -54,4 +54,8 @@ class AppRoutes {
 
   // Chat routes
   static const String chat = '/chat';
+
+  // Advertisement routes
+  static const String createAdvertisement = '/create/advertisement';
+  static const String setAudience = '/create/advertisement/set-audience';
 }

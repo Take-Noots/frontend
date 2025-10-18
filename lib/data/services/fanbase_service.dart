@@ -273,6 +273,58 @@ class FanbaseService {
     }
   }
 
+  // Add a sub-comment to a fanbase post comment
+  static Future<FanbasePost> addSubCommentToFanbasePost(
+    String postId,
+    String commentIndex,
+    String comment,
+    BuildContext context, {
+    String? fanbaseId,
+  }) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      String actualFanbaseId = fanbaseId ?? '';
+
+      // If fanbaseId is not provided, try to get it from the post
+      if (actualFanbaseId.isEmpty) {
+        try {
+          final postResponse = await dio.get('/fanbase/posts/$postId');
+          final postData = postResponse.data;
+          actualFanbaseId = postData['fanbaseId'] ?? '';
+        } catch (e) {
+          print('[DEBUG] Could not fetch post to get fanbaseId: $e');
+        }
+      }
+
+      if (actualFanbaseId.isEmpty) {
+        throw Exception('FanbaseId is required to add a sub-comment');
+      }
+
+      print('[DEBUG] Adding sub-comment to fanbase post');
+      print('[DEBUG] PostId: $postId');
+      print('[DEBUG] CommentIndex: $commentIndex');
+      print('[DEBUG] FanbaseId: $actualFanbaseId');
+
+      final response = await dio.post(
+        '/fanbase/$actualFanbaseId/posts/$postId/comment/$commentIndex/subcomment',
+        data: {'comment': comment},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return FanbasePost.fromJson(response.data);
+      } else {
+        throw Exception('Failed to add sub-comment: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data?['message'] ?? e.message;
+      throw Exception('Failed to add sub-comment: $errorMessage');
+    } catch (e) {
+      throw Exception('Failed to add sub-comment: $e');
+    }
+  }
+
   /// Fetches the rules for a given fanbase
   static Future<List<String>> getRules(
     String fanbaseId,
