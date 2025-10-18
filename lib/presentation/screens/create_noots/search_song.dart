@@ -9,6 +9,9 @@ import 'dart:convert';
 
 import '/data/services/spotify_service.dart';
 import '../../../data/services/auth_service.dart';
+import '../../../data/services/profile_service.dart';
+import '../../../data/models/profile_model.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../widgets/create_post/button.dart';
 import '../../widgets/common/musicplayer_bar.dart';
 import 'create_new_noot.dart';
@@ -24,23 +27,28 @@ class CreatePostPage extends StatefulWidget {
 }
 
 class _CreatePostPageState extends State<CreatePostPage> {
-  
+
   // Controller for song search input
   final TextEditingController _searchController = TextEditingController();
-  
+
   //Loading state for API calls
   bool _isLoading = false;
-  
+
   //store the search results from Spotify API
   Map<String, dynamic>? _searchResults;
-  
+
   //a timer to avoid searching too frequently
   Timer? _debounce;
+
+  // User type for conditional UI
+  String? userType;
+  bool isProfileLoading = true;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+    _fetchUserType();
   }
 
   @override
@@ -48,6 +56,44 @@ class _CreatePostPageState extends State<CreatePostPage> {
     _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  // Fetch user type from profile
+  Future<void> _fetchUserType() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userId = authProvider.user?.id;
+      if (userId == null) {
+        setState(() {
+          isProfileLoading = false;
+        });
+        return;
+      }
+
+      final profileService = ProfileService();
+      final profileResult = await profileService.getUserProfile(userId);
+
+      if (profileResult['success'] == true && profileResult['data'] != null) {
+        final profile = ProfileModel.fromJson(profileResult['data']);
+        setState(() {
+          userType = profile.userType;
+          isProfileLoading = false;
+        });
+      } else {
+        setState(() {
+          isProfileLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isProfileLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching profile: $e')),
+        );
+      }
+    }
   }
 
   //waits for 600ms after user stops typing, then searches for songs
@@ -239,6 +285,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
             ),
           );
         },
+        onMakeAdvertisements: userType == 'business' ? () => context.go(AppRoutes.createAdvertisement) : null,
       ),
     );
   }
