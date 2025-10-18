@@ -525,40 +525,74 @@ class _ProfilePictureWidgetState extends State<ProfilePictureWidget> {
     }
   }
 
+  void _openUserProfile(BuildContext context) async {
+    if (widget.userId == null || widget.userId!.isEmpty) return;
+
+    try {
+      String? username = 'User'; // Default username
+
+      // Try to get username
+      final profileResult = await ProfileService().getUserProfile(widget.userId!);
+      if (profileResult['success'] == true && profileResult['data'] != null) {
+        username = profileResult['data']['username'] ?? 'User';
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => UserProfileScreen(
+            userId: widget.userId!,
+            username: username,
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to load user profile'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        isLoading
-            ? CircleAvatar(
-                radius: widget.radius,
-                backgroundColor: Colors.grey[300],
-                child: const CircularProgressIndicator(strokeWidth: 2),
-              )
-            : CircleAvatar(
-                radius: widget.radius,
-                backgroundImage: profileImageUrl != null && profileImageUrl!.isNotEmpty
-                    ? NetworkImage(profileImageUrl!)
-                    : const AssetImage('assets/images/hehe.png') as ImageProvider,
-              ),
-        if (widget.showOnlineIndicator && widget.isOnline)
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Container(
-              width: widget.radius * 0.6,
-              height: widget.radius * 0.6,
-              decoration: BoxDecoration(
-                color: Colors.green,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.primary,
-                  width: 2,
+    return GestureDetector(
+      onTap: () => _openUserProfile(context),
+      child: Stack(
+        children: [
+          isLoading
+              ? CircleAvatar(
+                  radius: widget.radius,
+                  backgroundColor: Colors.grey[300],
+                  child: const CircularProgressIndicator(strokeWidth: 2),
+                )
+              : CircleAvatar(
+                  radius: widget.radius,
+                  backgroundImage: profileImageUrl != null && profileImageUrl!.isNotEmpty
+                      ? NetworkImage(profileImageUrl!)
+                      : const AssetImage('assets/images/hehe.png') as ImageProvider,
+                ),
+          if (widget.showOnlineIndicator && widget.isOnline)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: widget.radius * 0.6,
+                height: widget.radius * 0.6,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 2,
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
