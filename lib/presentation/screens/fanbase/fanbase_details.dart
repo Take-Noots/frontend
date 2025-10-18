@@ -14,7 +14,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../data/models/fanbase_post_model.dart';
 import '../../../data/services/fanbase_post_service.dart';
-import '../../widgets/common/bottom_bar.dart';
 import '../fanbasePost/fanbasePost_screen.dart';
 import '../profile/user_profiles.dart';
 import '../../widgets/fanbasepost/fanbase_post_feed.dart';
@@ -421,7 +420,10 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
   Future<void> _handleDeleteFanbase() async {
     final confirm = await showDialog<bool>(
       context: context,
+      barrierColor: Colors.black
+          .withOpacity(0.7),
       builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.primary,
         title: const Text('Delete Fanbase'),
         content: Text(
           'Are you sure you want to permanently delete "${_fanbase?.fanbaseName}"? '
@@ -430,7 +432,11 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text('Cancel',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),

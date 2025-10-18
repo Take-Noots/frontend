@@ -1,0 +1,114 @@
+import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
+import 'auth_service.dart';
+import '../models/advertisement_model.dart';
+
+class AdvertisementService {
+  final AuthService authService;
+
+  AdvertisementService(this.authService);
+
+  Dio get dio => authService.dio;
+
+  Future<Map<String, dynamic>> createAdvertisement({
+    required String title,
+    required String description,
+    String? image,
+    String? video,
+    String? contactDetails,
+    String? location,
+    String? genre,
+    String? hashtags,
+    String? keywords,
+  }) async {
+    try {
+      await authService.initialize();
+      final response = await dio.post(
+        '/advertisement/create',
+        data: {
+          'title': title,
+          'description': description,
+          'image': image,
+          'video': video,
+          'contactDetails': contactDetails,
+          'location': location,
+          'genre': genre,
+          'hashtags': hashtags,
+          'keywords': keywords,
+        },
+      );
+
+      if (response.statusCode == 201) {
+        return {
+          'success': true,
+          'data': response.data,
+          'message': 'Advertisement created successfully'
+        };
+      } else {
+        return {
+          'success': false,
+          'message': response.data['message'] ?? 'Failed to create advertisement'
+        };
+      }
+    } on DioException catch (e) {
+      debugPrint('Create advertisement error: ${e.message}');
+      if (e.response != null) {
+        return {
+          'success': false,
+          'message': e.response?.data?['message'] ?? 'Failed to create advertisement'
+        };
+      }
+      return {
+        'success': false,
+        'message': 'Connection error. Please check your connection and try again.'
+      };
+    } catch (e) {
+      debugPrint('Create advertisement error: $e');
+      return {
+        'success': false,
+        'message': 'An error occurred. Please try again.'
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchAdvertisementsByUser(String userId) async {
+    try {
+      await authService.initialize();
+      final response = await dio.get('/advertisement/user/$userId');
+
+      if (response.statusCode == 200) {
+        List<Advertisement> advertisements = (response.data as List)
+            .map((json) => Advertisement.fromJson(json))
+            .toList();
+        return {
+          'success': true,
+          'data': advertisements,
+          'message': 'Advertisements fetched successfully'
+        };
+      } else {
+        return {
+          'success': false,
+          'message': response.data['message'] ?? 'Failed to fetch advertisements'
+        };
+      }
+    } on DioException catch (e) {
+      debugPrint('Fetch advertisements error: ${e.message}');
+      if (e.response != null) {
+        return {
+          'success': false,
+          'message': e.response?.data?['message'] ?? 'Failed to fetch advertisements'
+        };
+      }
+      return {
+        'success': false,
+        'message': 'Connection error. Please check your connection and try again.'
+      };
+    } catch (e) {
+      debugPrint('Fetch advertisements error: $e');
+      return {
+        'success': false,
+        'message': 'An error occurred. Please try again.'
+      };
+    }
+  }
+}

@@ -288,7 +288,7 @@ class PostArtWidget extends StatefulWidget {
   final String trackId;
   final String songName;
   final String artists;
-  final List<Map<String, String>> comments;
+  final List<Map<String, dynamic>> comments; // ✅ Change from String to dynamic
   final String username;
   final String userImage;
   final bool isLiked;

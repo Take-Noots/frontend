@@ -1,12 +1,41 @@
 import 'package:flutter/material.dart';
 import '../../screens/chat/chat_list_screen.dart';
+import '../../screens/notifications/notifications_screen.dart';
+import '../../../data/services/notification_service.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-class NootAppBar extends StatelessWidget implements PreferredSizeWidget {
+class NootAppBar extends StatefulWidget implements PreferredSizeWidget {
   const NootAppBar({super.key});
 
   @override
   Size get preferredSize => const Size.fromHeight(60);
+
+  @override
+  State<NootAppBar> createState() => _NootAppBarState();
+}
+
+class _NootAppBarState extends State<NootAppBar> {
+  final NotificationService _notificationService = NotificationService();
+  int _unreadCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    try {
+      final result = await _notificationService.getUnreadCount();
+      if (result['success'] && mounted) {
+        setState(() {
+          _unreadCount = result['data']['count'] ?? 0;
+        });
+      }
+    } catch (e) {
+      // Handle error silently
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

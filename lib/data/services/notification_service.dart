@@ -42,7 +42,7 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['error'] ?? 'Failed to retrieve notifications',
+          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to retrieve notifications',
         };
       }
     } catch (e) {
@@ -87,7 +87,7 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['error'] ?? 'Failed to get unread count',
+          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to get unread count',
         };
       }
     } catch (e) {
@@ -135,7 +135,7 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['error'] ?? 'Failed to mark as read',
+          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to mark as read',
         };
       }
     } catch (e) {
@@ -180,7 +180,7 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['error'] ?? 'Failed to mark all as read',
+          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to mark all as read',
         };
       }
     } catch (e) {
@@ -228,7 +228,7 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['error'] ?? 'Failed to delete notification',
+          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to delete notification',
         };
       }
     } catch (e) {

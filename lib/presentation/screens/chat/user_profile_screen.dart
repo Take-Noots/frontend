@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../data/services/user_service.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -16,35 +19,153 @@ class UserProfileScreen extends StatefulWidget {
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _isLoading = true;
+  bool _isFollowLoading = false;
   Map<String, dynamic>? userProfile;
+  String? currentUserId;
+  bool isFollowing = false;
+  bool isSelf = false;
+  final UserService _userService = UserService();
 
   @override
   void initState() {
     super.initState();
-    _loadUserProfile();
+    _initializeProfile();
+  }
+
+  Future<void> _initializeProfile() async {
+    await _loadCurrentUser();
+    await _loadUserProfile();
+    if (!isSelf) {
+      await _checkFollowStatus();
+    }
+  }
+
+  Future<void> _loadCurrentUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userDataString = prefs.getString('user_data');
+    if (userDataString != null) {
+      final userData = jsonDecode(userDataString);
+      setState(() {
+        currentUserId = userData['id'];
+        isSelf = currentUserId == widget.userId;
+      });
+    }
   }
 
   Future<void> _loadUserProfile() async {
-    // TODO: Implement user profile loading from backend
-    // For now, using placeholder data
-    await Future.delayed(const Duration(seconds: 1));
-    
+    try {
+      final result = await _userService.getUserProfile(widget.userId);
+
+      if (result['success']) {
+        final profile = result['data'];
+        setState(() {
+          userProfile = {
+            'id': profile['_id'] ?? profile['userId'],
+            'username': profile['username'] ?? widget.username,
+            'email': profile['email'] ?? '',
+            'fullName': profile['fullName'] ?? '',
+            'profileImage': profile['profileImage'],
+            'bio': profile['bio'] ?? 'No bio available',
+            'joinDate': DateTime.now().subtract(const Duration(days: 30)), // Default
+            'isOnline': false, // We don't have online status yet
+            'lastSeen': 'Recently',
+            'followers': profile['followers']?.length ?? 0,
+            'following': profile['following']?.length ?? 0,
+            'posts': profile['posts'] ?? 0,
+          };
+          _isLoading = false;
+        });
+      } else {
+        // Fallback data if profile fetch fails
+        setState(() {
+          userProfile = {
+            'id': widget.userId,
+            'username': widget.username,
+            'email': '',
+            'fullName': '',
+            'profileImage': null,
+            'bio': 'No bio available',
+            'joinDate': DateTime.now().subtract(const Duration(days: 30)),
+            'isOnline': false,
+            'lastSeen': 'Recently',
+            'followers': 0,
+            'following': 0,
+            'posts': 0,
+          };
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _checkFollowStatus() async {
+    if (currentUserId == null) return;
+
+    final result = await _userService.checkFollowStatus(currentUserId!, widget.userId);
+    if (result['success']) {
+      setState(() {
+        isFollowing = result['isFollowing'];
+      });
+    }
+  }
+
+  Future<void> _toggleFollow() async {
+    if (currentUserId == null || _isFollowLoading) return;
+
     setState(() {
-      userProfile = {
-        'id': widget.userId,
-        'username': widget.username,
-        'email': '${widget.username}@example.com',
-        'profileImage': null,
-        'bio': 'Music lover and social media enthusiast',
-        'joinDate': DateTime.now().subtract(const Duration(days: 120)),
-        'isOnline': true,
-        'lastSeen': 'Online',
-        'followers': 156,
-        'following': 89,
-        'posts': 42,
-      };
-      _isLoading = false;
+      _isFollowLoading = true;
     });
+
+    try {
+      Map<String, dynamic> result;
+
+      if (isFollowing) {
+        result = await _userService.unfollowUser(currentUserId!, widget.userId);
+      } else {
+        result = await _userService.followUser(currentUserId!, widget.userId);
+      }
+
+      if (result['success']) {
+        setState(() {
+          isFollowing = !isFollowing;
+          // Update follower count
+          if (userProfile != null) {
+            userProfile!['followers'] = isFollowing
+                ? userProfile!['followers'] + 1
+                : userProfile!['followers'] - 1;
+          }
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isFollowing ? 'Following ${widget.username}' : 'Unfollowed ${widget.username}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Action failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Network error occurred'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isFollowLoading = false;
+      });
+    }
   }
 
   @override
@@ -62,7 +183,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          widget.username,
+          isSelf ? 'You' : (userProfile?['fullName']?.isNotEmpty == true
+              ? userProfile!['fullName']
+              : widget.username),
           style: TextStyle(
             color: Theme.of(context).colorScheme.onPrimary,
             fontSize: 20,
@@ -70,15 +193,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: Icon(
-              Icons.more_vert,
-              color: Theme.of(context).colorScheme.onPrimary,
+          if (!isSelf)
+            IconButton(
+              icon: Icon(
+                Icons.more_vert,
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
+              onPressed: () {
+                _showOptionsMenu();
+              },
             ),
-            onPressed: () {
-              _showOptionsMenu();
-            },
-          ),
         ],
       ),
       body: _isLoading
@@ -129,13 +253,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          userProfile!['username'],
+                          isSelf ? 'You' : (userProfile!['fullName']?.isNotEmpty == true
+                              ? userProfile!['fullName']
+                              : userProfile!['username']),
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onPrimary,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        if (!isSelf && userProfile!['fullName']?.isNotEmpty == true)
+                          Text(
+                            '@${userProfile!['username']}',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.secondary,
+                              fontSize: 16,
+                            ),
+                          ),
                         const SizedBox(height: 4),
                         Text(
                           userProfile!['isOnline'] ? 'Online' : userProfile!['lastSeen'],
@@ -200,140 +334,114 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   const SizedBox(height: 20),
 
                   // Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // TODO: Implement message functionality
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Message feature will open chat'),
-                                backgroundColor: Colors.green,
+                  if (!isSelf)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Message feature will open chat'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.message, size: 18),
+                                SizedBox(width: 8),
+                                Text('Message', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ],
                             ),
                           ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.message, size: 18),
-                              SizedBox(width: 8),
-                              Text('Message', style: TextStyle(fontWeight: FontWeight.bold)),
-                            ],
-                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            // TODO: Implement follow functionality
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Follow feature coming soon!'),
-                                backgroundColor: Colors.orange,
-                              ),
-                            );
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                            side: BorderSide(color: Theme.of(context).colorScheme.onPrimary),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.person_add, size: 18),
-                              SizedBox(width: 8),
-                              Text('Follow', style: TextStyle(fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Recent Activity Section
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Recent Activity',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No recent activity to show',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.secondary,
-                            fontSize: 14,
-                          ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _isFollowLoading
+                              ? ElevatedButton(
+                                  onPressed: null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.grey,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : OutlinedButton(
+                                  onPressed: _toggleFollow,
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: isFollowing
+                                        ? Colors.green
+                                        : Theme.of(context).colorScheme.onPrimary,
+                                    side: BorderSide(
+                                        color: isFollowing
+                                            ? Colors.green
+                                            : Theme.of(context).colorScheme.onPrimary),
+                                    backgroundColor: isFollowing
+                                        ? Colors.green.withOpacity(0.1)
+                                        : Colors.transparent,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        isFollowing ? Icons.person_remove : Icons.person_add,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        isFollowing ? 'Following' : 'Follow',
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                         ),
                       ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Music Preferences Section
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Music Preferences',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    )
+                  else
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'This is your profile',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.secondary,
+                          fontSize: 16,
+                          fontStyle: FontStyle.italic,
                         ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _buildGenreChip('Pop'),
-                            _buildGenreChip('Rock'),
-                            _buildGenreChip('Hip Hop'),
-                            _buildGenreChip('Electronic'),
-                            _buildGenreChip('Jazz'),
-                          ],
-                        ),
-                      ],
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                  ),
+
                 ],
               ),
             ),
@@ -363,24 +471,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  Widget _buildGenreChip(String genre) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.green.withOpacity(0.5)),
-      ),
-      child: Text(
-        genre,
-        style: const TextStyle(
-          color: Colors.green,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
 
   void _showOptionsMenu() {
     showModalBottomSheet(
