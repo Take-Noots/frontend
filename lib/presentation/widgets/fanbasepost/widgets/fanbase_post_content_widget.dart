@@ -15,7 +15,7 @@ class Post extends StatelessWidget {
   final String userImage;
   final String descriptionTitle;
   final String description;
-  final List<Map<String, String>> comments;
+  final List<Map<String, dynamic>> comments; // ✅ Change from String to dynamic
   final VoidCallback? onLike;
   final VoidCallback? onComment;
   final VoidCallback? onShare;
@@ -84,7 +84,7 @@ class Post extends StatelessWidget {
           trackId: trackId,
           songName: songName,
           artists: artists,
-          comments: comments,
+          comments: comments, // ✅ Remove the .map().toString() conversion
           username: username,
           userImage: userImage,
           isLiked: isLiked,
