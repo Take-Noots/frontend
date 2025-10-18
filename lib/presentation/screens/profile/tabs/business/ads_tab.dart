@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../../../../../data/services/advertisement_service.dart';
@@ -89,12 +91,7 @@ class _BusinessAdsTabState extends State<BusinessAdsTab> {
         itemBuilder: (context, index) {
           final ad = advertisements[index];
           return GestureDetector(
-            onTap: () {
-              // For now, just show a snackbar with ad title
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(ad.title)),
-              );
-            },
+            onTap: () => _showAdDialog(context, ad),
             child: ad.image != null && ad.image!.isNotEmpty
                 ? Image.network(
                     ad.image!,
@@ -115,6 +112,123 @@ class _BusinessAdsTabState extends State<BusinessAdsTab> {
           );
         },
       ),
+    );
+  }
+
+  void _showAdDialog(BuildContext context, Advertisement ad) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'AdDetails',
+      barrierColor: Colors.black.withOpacity(0.4),
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (ctx, anim1, anim2) {
+        return SafeArea(
+          child: GestureDetector(
+            onTap: () => Navigator.of(ctx).pop(),
+            child: Material(
+              color: Colors.transparent,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () {}, // prevent taps from closing when tapping content
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        width: MediaQuery.of(ctx).size.width * 0.95,
+                        color: Theme.of(ctx).dialogBackgroundColor,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Top: title
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      ad.title,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close),
+                                    onPressed: () => Navigator.of(ctx).pop(),
+                                  )
+                                ],
+                              ),
+                            ),
+
+                            // Image
+                            if (ad.image != null && ad.image!.isNotEmpty)
+                              AspectRatio(
+                                aspectRatio: 1,
+                                child: Image.network(
+                                  ad.image!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (c, e, s) => Container(
+                                    color: Colors.grey[300],
+                                    child: const Icon(Icons.broken_image, size: 48),
+                                  ),
+                                ),
+                              ),
+
+                            // Description
+                            Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Text(
+                                ad.description ?? '',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+
+                            // Likes / comments row (basic)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              child: Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.favorite_border),
+                                    onPressed: () {
+                                      // TODO: wire up like action
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        const SnackBar(content: Text('Liked')),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.comment_outlined),
+                                    onPressed: () {
+                                      // TODO: open comments view
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        const SnackBar(content: Text('Comments (not implemented)')),
+                                      );
+                                    },
+                                  ),
+                                  const Spacer(),
+                                  // counts
+                                  Text('${ad.likesCount} likes'),
+                                  const SizedBox(width: 8),
+                                  Text('${ad.commentsCount} comments'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
