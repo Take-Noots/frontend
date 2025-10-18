@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../../../core/router/route_names.dart';
 
 class CreateAdvertisementScreen extends StatefulWidget {
   const CreateAdvertisementScreen({Key? key}) : super(key: key);
@@ -135,10 +137,8 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
 
   void _onNextPressed() {
     if (_formKey.currentState!.validate()) {
-      // Handle next action - for now just show a snackbar
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Advertisement details saved!')),
-      );
+      // Navigate to set audience screen
+      context.go(AppRoutes.setAudience);
     }
   }
 
