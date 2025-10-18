@@ -71,20 +71,18 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
       return;
     }
     try {
-      print(
-          'ThoughtPostsTab: fetching user thoughts for userId=${widget.userId} (profile endpoint)');
+      
       var result = await _service.getUserThoughts(widget.userId!, context);
-      print('ThoughtPostsTab: raw getUserThoughts result: $result');
+      //print('ThoughtPostsTab: raw getUserThoughts result: $result');
       if (!(result['success'] == true && result['data'] != null)) {
-        print(
-            'ThoughtPostsTab: getUserThoughts returned no data or failed, falling back to followers endpoint');
+        print('ThoughtPostsTab: getUserThoughts returned no data or failed, falling back to followers endpoint');
         result = await _service.getFollowerThoughts(widget.userId!);
-        print('ThoughtPostsTab: raw getFollowerThoughts result: $result');
+        //print('ThoughtPostsTab: raw getFollowerThoughts result: $result');
       }
 
       if (result['success'] == true && result['data'] != null) {
         final List<dynamic> data = result['data'];
-        print('ThoughtPostsTab: fetched data length=${data.length}');
+        //print('ThoughtPostsTab: fetched data length=${data.length}');
         final posts = data
             .map<ThoughtsPost>((json) {
               if (json is ThoughtsPost) return json;
@@ -94,7 +92,7 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
             })
             .where((p) => p.isHidden == 0 && p.isDeleted == 0)
             .toList();
-        print('ThoughtPostsTab: parsed ${posts.length} visible thought posts');
+        //print('ThoughtPostsTab: parsed ${posts.length} visible thought posts');
         setState(() {
           _posts = posts;
           _isLoading = false;

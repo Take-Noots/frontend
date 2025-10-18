@@ -963,6 +963,30 @@ class _HomeScreenState extends State<HomeScreen> {
       onThoughtPlay: (ThoughtsPost post) {
         _handleThoughtsPlay(post);
       },
+      onThoughtHide: (ThoughtsPost post) async {
+        try {
+          final result = await _thoughtsService.hidePost(post.id);
+          if (result['success'] == true) {
+            setState(() {
+              _feedItems.removeWhere((item) => item.thoughtsPost?.id == post.id);
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Post hidden successfully'),
+                  backgroundColor: Colors.purple),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text(result['message'] ?? 'Failed to hide post')),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error hiding post: $e')),
+          );
+        }
+      },
       currentlyPlayingTrackId: _currentlyPlayingTrackId,
       isPlaying: _isPlaying,
       currentUserId: userId,

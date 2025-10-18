@@ -139,8 +139,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         _handleDeletePost();
       } : null,
       onHide: isOwnPost ? () {
-        print('Hide pressed for thoughts post: ${_currentPost.id}');
-        // TODO: Implement hide functionality
+        _handleHidePost();
       } : null,
     );
   }
@@ -807,6 +806,56 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleHidePost() async {
+    if (_currentUserId == null) {
+      _showMessage('Please log in to hide posts', Colors.orange);
+      return;
+    }
+
+    bool? shouldHide = await _showHideDialog();
+    if (shouldHide != true) return;
+
+  
+    try {
+      final result = await _thoughtsService.hidePost(_currentPost.id);
+      
+      if (result['success'] == true) {
+      
+        _showMessage('Post hidden successfully', AppColors.primaryPurple);
+        
+
+        widget.onPostUpdated?.call(_currentPost);
+      } else {
+
+        _showMessage(result['message'] ?? 'Failed to hide post', Colors.red);
+      }
+    } catch (e) {
+
+      _showMessage('Error: $e', Colors.red);
+    }
+  }
+
+  Future<bool?> _showHideDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hide Post'),
+        content: const Text('Are you sure you want to hide this post?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.purple),
+            child: const Text('Hide'),
           ),
         ],
       ),
