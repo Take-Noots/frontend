@@ -1,14 +1,10 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import '../../core/constants/app_constants.dart';
 
 class RequestService {
   static final Dio _dio = Dio();
-  static String get _baseUrl {
-    if (Platform.isAndroid) {
-      return 'https://backend-nestjs-production-8204.up.railway.app';
-    }
-    return 'http://localhost:3000';
-  }
+  static String get _baseUrl => AppConstants.baseUrl;
 
   static Future<List<Map<String, dynamic>>> getPendingRequests() async {
     try {

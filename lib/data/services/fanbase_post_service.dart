@@ -4,12 +4,13 @@
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import '../../core/constants/app_constants.dart';
 // import '../../core/providers/auth_provider.dart';
 import '../models/fanbase_post_model.dart';
 import 'auth_service.dart';
 
 class FanbasePostService {
-  final String baseUrl = 'http://localhost:3000';
+  final String baseUrl = AppConstants.baseUrl;
 
   // Create a fanbase post
   static Future<FanbasePost> createFanbasePost({
@@ -36,7 +37,8 @@ class FanbasePostService {
         if (albumArt != null) 'albumArt': albumArt,
       };
 
-      final response = await dio.post('/fanbase/$fanbaseId/posts', data: postData);
+      final response =
+          await dio.post('/fanbase/$fanbaseId/posts', data: postData);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return FanbasePost.fromJson(response.data);
@@ -111,7 +113,7 @@ class FanbasePostService {
       final dio = authService.dio;
 
       String actualFanbaseId = fanbaseId ?? '';
-      
+
       // If fanbaseId is not provided, try to get it from the post
       if (actualFanbaseId.isEmpty) {
         try {
@@ -130,10 +132,12 @@ class FanbasePostService {
       print('[DEBUG] Liking fanbase post');
       print('[DEBUG] PostId: $postId');
       print('[DEBUG] FanbaseId: $actualFanbaseId');
-      print('[DEBUG] Making POST request to: /fanbase/$actualFanbaseId/posts/$postId/like');
-      
-      final response = await dio.post('/fanbase/$actualFanbaseId/posts/$postId/like');
-      
+      print(
+          '[DEBUG] Making POST request to: /fanbase/$actualFanbaseId/posts/$postId/like');
+
+      final response =
+          await dio.post('/fanbase/$actualFanbaseId/posts/$postId/like');
+
       print('[DEBUG] Response status: ${response.statusCode}');
       print('[DEBUG] Response data: ${response.data}');
 
@@ -162,7 +166,7 @@ class FanbasePostService {
       final dio = authService.dio;
 
       String actualFanbaseId = fanbaseId ?? '';
-      
+
       // If fanbaseId is not provided, try to get it from the post
       if (actualFanbaseId.isEmpty) {
         try {
@@ -182,12 +186,14 @@ class FanbasePostService {
       print('[DEBUG] PostId: $postId');
       print('[DEBUG] FanbaseId: $actualFanbaseId');
       print('[DEBUG] Comment: $comment');
-      print('[DEBUG] Making POST request to: /fanbase/$actualFanbaseId/posts/$postId/comment');
-      
-      final response = await dio.post('/fanbase/$actualFanbaseId/posts/$postId/comment', data: {
+      print(
+          '[DEBUG] Making POST request to: /fanbase/$actualFanbaseId/posts/$postId/comment');
+
+      final response = await dio
+          .post('/fanbase/$actualFanbaseId/posts/$postId/comment', data: {
         'comment': comment.trim(),
       });
-      
+
       print('[DEBUG] Response status: ${response.statusCode}');
       print('[DEBUG] Response data: ${response.data}');
 

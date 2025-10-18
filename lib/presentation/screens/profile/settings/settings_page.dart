@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/providers/theme_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/route_names.dart';
 
@@ -7,155 +9,185 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: ListView(
         children: [
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Text(
               'General Settings',
               style: TextStyle(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           SwitchListTile(
-            title: const Text(
+            title: Text(
               'Push Notifications',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
-            subtitle: const Text(
+            subtitle: Text(
               'Receive notifications about likes and comments',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12),
             ),
             value: true,
             onChanged: (bool value) {
               // Handle notification toggle
             },
-            secondary: const Icon(Icons.notifications, color: Colors.white),
-            activeColor: Colors.green,
+            secondary: Icon(Icons.notifications,
+                color: Theme.of(context).colorScheme.onSurface),
+            activeColor: Theme.of(context).colorScheme.primary,
           ),
-          const Divider(color: Colors.white24),
+          Divider(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.24)),
           SwitchListTile(
-            title: const Text(
+            title: Text(
               'Dark Mode',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
-            subtitle: const Text(
+            subtitle: Text(
               'Use dark theme throughout the app',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12),
             ),
-            value: true,
+            value: isDarkMode,
             onChanged: (bool value) {
-              // Handle dark mode toggle
+              themeProvider.toggleTheme();
             },
-            secondary: const Icon(Icons.dark_mode, color: Colors.white),
-            activeColor: Colors.green,
+            secondary: Icon(Icons.dark_mode,
+                color: Theme.of(context).colorScheme.onSurface),
+            activeColor: Theme.of(context).colorScheme.primary,
           ),
-          const Divider(color: Colors.white24),
+          Divider(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.24)),
           SwitchListTile(
-            title: const Text(
+            title: Text(
               'Auto-play Videos',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
-            subtitle: const Text(
-              'Automatically play videos in feed',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+            subtitle: Text(
+              'Automatically play songs in feed',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12),
             ),
             value: false,
             onChanged: (bool value) {
               // Handle auto-play toggle
             },
-            secondary: const Icon(Icons.play_circle, color: Colors.white),
-            activeColor: Colors.green,
+            secondary: Icon(Icons.play_circle,
+                color: Theme.of(context).colorScheme.onSurface),
+            activeColor: Theme.of(context).colorScheme.primary,
           ),
-          const Divider(color: Colors.white24),
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Divider(color: Theme.of(context).dividerColor),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Text(
               'Account Settings',
               style: TextStyle(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.language, color: Colors.white),
-            title: const Text(
+            leading: Icon(Icons.language,
+                color: Theme.of(context).colorScheme.onSurface),
+            title: Text(
               'Language',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
-            subtitle: const Text(
+            subtitle: Text(
               'English',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12),
             ),
-            trailing: const Icon(Icons.arrow_forward_ios,
-                color: Colors.white54, size: 16),
+            trailing: Icon(Icons.arrow_forward_ios,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                size: 16),
             onTap: () {
               // Navigate to language selection
             },
           ),
-          const Divider(color: Colors.white24),
+          Divider(color: Theme.of(context).dividerColor),
           ListTile(
-            leading: const Icon(Icons.visibility_off, color: Colors.white),
-            title: const Text(
+            leading: Icon(Icons.visibility_off,
+                color: Theme.of(context).colorScheme.onSurface),
+            title: Text(
               'Hidden Posts',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
-            subtitle: const Text(
+            subtitle: Text(
               'View and manage your hidden posts',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12),
             ),
-            trailing: const Icon(Icons.arrow_forward_ios,
-                color: Colors.white54, size: 16),
+            trailing: Icon(Icons.arrow_forward_ios,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                size: 16),
             onTap: () {
               context.go(AppRoutes.hiddenPosts);
             },
           ),
-          const Divider(color: Colors.white24),
+          Divider(color: Theme.of(context).dividerColor),
           ListTile(
-            leading: const Icon(Icons.language, color: Colors.white),
-            title: const Text(
+            leading: Icon(Icons.language,
+                color: Theme.of(context).colorScheme.onSurface),
+            title: Text(
               'Language',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
-            subtitle: const Text(
+            subtitle: Text(
               'Manage data and storage settings',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12),
             ),
-            trailing: const Icon(Icons.arrow_forward_ios,
-                color: Colors.white54, size: 16),
+            trailing: Icon(Icons.arrow_forward_ios,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                size: 16),
             onTap: () {
               // Navigate to data usage settings
             },
           ),
-          const Divider(color: Colors.white24),
+          Divider(color: Theme.of(context).dividerColor),
           ListTile(
-            leading: const Icon(Icons.music_note, color: Colors.white),
-            title: const Text(
+            leading: Icon(Icons.music_note,
+                color: Theme.of(context).colorScheme.onSurface),
+            title: Text(
               'Music Quality',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
-            subtitle: const Text(
+            subtitle: Text(
               'High quality audio playback',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12),
             ),
-            trailing: const Icon(Icons.arrow_forward_ios,
-                color: Colors.white54, size: 16),
+            trailing: Icon(Icons.arrow_forward_ios,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                size: 16),
             onTap: () {
               // Navigate to music quality settings
             },

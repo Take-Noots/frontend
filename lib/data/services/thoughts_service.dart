@@ -4,11 +4,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/utils/color_extractor.dart';
 import 'auth_service.dart';
 
 class ThoughtsService {
-  final String baseUrl = 'http://localhost:3000';
+  final String baseUrl = AppConstants.baseUrl;
 
   // Create a new thoughts post
   Future<Map<String, dynamic>> createThoughts({
@@ -58,6 +60,17 @@ class ThoughtsService {
           };
         }
 
+        // Extract background color from cover image
+        String? backgroundColor;
+        if (coverImage != null && coverImage.isNotEmpty) {
+          backgroundColor = await ColorExtractor.extractBackgroundColor(coverImage);
+        }
+        
+        // Use default color if extraction failed
+        if (backgroundColor == null && context != null) {
+          backgroundColor = ColorExtractor.getDefaultBackgroundColor(context);
+        }
+
         final postData = {
           'userId': currentUserId,
           'thoughtsText': postText,
@@ -65,6 +78,7 @@ class ThoughtsService {
           if (songName != null) 'songName': songName,
           if (artistName != null) 'artistName': artistName,
           if (trackId != null) 'trackId': trackId,
+          if (backgroundColor != null) 'backgroundColor': backgroundColor,
           'inAFanbase': inAFanbase ?? false,
           'FanbaseID': fanbaseID,
         };
@@ -108,6 +122,17 @@ class ThoughtsService {
           };
         }
 
+        // Extract background color from cover image (fallback method)
+        String? backgroundColor;
+        if (coverImage != null && coverImage.isNotEmpty) {
+          backgroundColor = await ColorExtractor.extractBackgroundColor(coverImage);
+        }
+        
+        // Use default color if extraction failed
+        if (backgroundColor == null && context != null) {
+          backgroundColor = ColorExtractor.getDefaultBackgroundColor(context);
+        }
+
         final response = await http.post(
           Uri.parse('$baseUrl/thoughts'),
           headers: {
@@ -120,6 +145,7 @@ class ThoughtsService {
             if (songName != null) 'songName': songName,
             if (artistName != null) 'artistName': artistName,
             if (trackId != null) 'trackId': trackId,
+            if (backgroundColor != null) 'backgroundColor': backgroundColor,
             'inAFanbase': inAFanbase ?? false,
             'FanbaseID': fanbaseID,
           }),
@@ -609,6 +635,129 @@ class ThoughtsService {
     } catch (e) {
       return {
         'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  
+  Future<Map<String, dynamic>> savePost(String userId, String postId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/profile/$userId/save-thoughts/$postId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': data['success'] ?? true,
+          'message': data['message'] ?? 'Thoughts post saved successfully',
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['error'] ??
+              errorData['message'] ??
+              'Failed to save thoughts post',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  
+  Future<Map<String, dynamic>> unsavePost(String userId, String postId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/profile/$userId/save-thoughts/$postId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': data['success'] ?? true,
+          'message': data['message'] ?? 'Thoughts post unsaved successfully',
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['error'] ??
+              errorData['message'] ??
+              'Failed to unsave thoughts post',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+
+  Future<Map<String, dynamic>> isPostSaved(String userId, String postId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/profile/$userId/saved-thoughts/$postId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'isSaved': data['isSaved'] ?? false,
+        };
+      } else {
+        return {
+          'success': false,
+          'isSaved': false,
+          'message': 'Failed to check saved status',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'isSaved': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+ 
+  Future<Map<String, dynamic>> getSavedThoughtsPosts(
+      String userId, BuildContext context) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.get('/profile/$userId/saved-thoughts-posts');
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        return {
+          'success': true,
+          'savedPosts': data['savedPosts'] ?? [],
+        };
+      } else {
+        return {
+          'success': false,
+          'savedPosts': [],
+          'message': 'Failed to get saved thoughts posts',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'savedPosts': [],
         'message': 'Network error: $e',
       };
     }

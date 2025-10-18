@@ -49,7 +49,7 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: NootAppBar(),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: ScrollablePositionedList.builder(
         itemScrollController: _itemScrollController,
         itemPositionsListener: _itemPositionsListener,
@@ -64,7 +64,7 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
             onComment: () {
               // no-op - could navigate to detailed comment view later
             },
-            onUserTap: (userId) {
+            onUserTap: (String userId, String? username) {
               // Optionally navigate to the tapped user's profile; left as no-op to avoid
               // introducing additional dependencies here.
             },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../widgets/home/header_bar.dart';
+import '../../../core/providers/theme_provider.dart';
+// import '../../widgets/home/header_bar.dart';
 import '../../widgets/home/feed_widget.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../data/models/post_model.dart' as data_model;
@@ -15,6 +16,8 @@ import '../song_posts/update.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import './user_profiles.dart';
+import '../../../core/styles/app_colors.dart';
+import '../../../../presentation/widgets/loading_screens/common_loading.dart';
 
 class ProfileFeedScreen extends StatefulWidget {
   final String userId;
@@ -42,6 +45,8 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
   bool _isPlaying = false;
   String? _currentlyPlayingTrackId;
   String? _currentUserId;
+  Map<String, bool> _followingStatus =
+      {}; // Track following status for each user
 
   @override
   void initState() {
@@ -133,10 +138,19 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
       final userData =
-          userDataString != null ? jsonDecode(userDataString) : {'id': null};
+          userDataString != null ? jsonDecode(userDataString) : {'id': ''};
       currentUserId = userData['id'];
     }
-    if (currentUserId == null) return;
+
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('User ID not found. Please log in again.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
 
     setState(() {
       if (post.likedByMe) {
@@ -148,19 +162,30 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
       }
     });
 
-    final result = await _songPostService.likePost(post.id, currentUserId);
-    if (!(result['success'] == true)) {
-      setState(() {
-        if (post.likedByMe) {
-          post.likedByMe = false;
-          post.likes--;
-        } else {
-          post.likedByMe = true;
-          post.likes++;
-        }
-      });
+    //print('[DEBUG] ProfileScreen: Attempting to like post ${post.id}');
+    //print('[DEBUG] ProfileScreen: Current user ID: $currentUserId');
+
+    final result =
+        await _songPostService.likePost(post.id, currentUserId, context);
+    //print('[DEBUG] ProfileScreen: Like result: $result');
+
+    if (result['success'] != true) {
+      if (mounted) {
+        setState(() {
+          if (post.likedByMe) {
+            post.likedByMe = false;
+            post.likes--;
+          } else {
+            post.likedByMe = true;
+            post.likes++;
+          }
+        });
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? 'Failed to like post')),
+        SnackBar(
+          content: Text(result['message'] ?? 'Failed to like post'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   }
@@ -169,7 +194,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -182,10 +207,21 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             final userDataString = prefs.getString('user_data');
             final userData = userDataString != null
                 ? jsonDecode(userDataString)
-                : {'id': null, 'name': 'Anonymous'};
+                : {'id': '685fb750cc084ba7e0ef8533', 'name': 'owl'};
             final result = await _songPostService.addComment(
-                post.id, userData['id'], userData['name'], text);
-            if (result['success']) {
+                post.id, userData['id'], userData['name'], text, context);
+
+            // Handle different success response formats
+            bool isSuccess = false;
+            if (result['success'] is bool) {
+              isSuccess = result['success'];
+            } else if (result['success'] is int) {
+              isSuccess = result['success'] == 1;
+            } else if (result['success'] is String) {
+              isSuccess = result['success'].toString().toLowerCase() == 'true';
+            }
+
+            if (isSuccess && result['data'] != null) {
               final updatedComments =
                   (result['data']['comments'] as List<dynamic>)
                       .map((c) => data_model.Comment.fromJson(c))
@@ -197,8 +233,9 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                    content:
-                        Text(result['message'] ?? 'Failed to add comment')),
+                  content: Text(result['message'] ?? 'Failed to add comment'),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
               );
               return post.comments;
             }
@@ -280,27 +317,57 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
     Share.share(shareText, subject: 'Music from Noot');
   }
 
-  void _handlePostOptions(data_model.Post post) {
-    print('ProfileFeedScreen _handlePostOptions - Post ID: ${post.id}');
-    print(
-        'ProfileFeedScreen _handlePostOptions - Post User ID: ${post.userId}');
-    print(
-        'ProfileFeedScreen _handlePostOptions - Current User ID: $_currentUserId');
-
+  Future<void> _handlePostOptions(data_model.Post post) async {
     // Check if either ID is null or empty
     if (post.userId == null || post.userId!.isEmpty) {
-      print('WARNING: Post userId is null or empty');
+      // WARNING: Post userId is null or empty
     }
     if (_currentUserId == null || _currentUserId!.isEmpty) {
-      print('WARNING: Current userId is null or empty');
+      // WARNING: Current userId is null or empty
     }
 
     bool isUsersOwnPost = false;
     if (post.userId != null && _currentUserId != null) {
       isUsersOwnPost = post.userId == _currentUserId;
-      print('Calculated isUsersOwnPost: $isUsersOwnPost');
     } else {
-      print('Cannot determine if post is user\'s own due to null IDs');
+      // Cannot determine if post is user's own due to null IDs
+    }
+
+    // Check if post is saved
+    bool isSaved = false;
+    if (_currentUserId != null) {
+      try {
+        final savedResult = await _songPostService.isPostSaved(
+            _currentUserId!, post.id, context);
+        isSaved = savedResult['isSaved'] ?? false;
+      } catch (e) {
+        // If we can't check saved status, assume it's not saved
+        isSaved = false;
+      }
+    }
+
+    // Check if current user is following the post's author
+    bool isFollowing = false;
+    if (_currentUserId != null &&
+        post.userId != null &&
+        _currentUserId != post.userId) {
+      // Use cached following status if available, otherwise check from API
+      if (_followingStatus.containsKey(post.userId)) {
+        isFollowing = _followingStatus[post.userId]!;
+      } else {
+        try {
+          final authService = Provider.of<dynamic>(context, listen: false);
+          final profileService = ProfileService(authService: authService);
+          final followingList =
+              await profileService.getFollowingListWithDetails(_currentUserId!);
+          isFollowing = followingList.any((user) => user['id'] == post.userId);
+          // Cache the result
+          _followingStatus[post.userId!] = isFollowing;
+        } catch (e) {
+          // If we can't check following status, assume not following
+          isFollowing = false;
+        }
+      }
     }
 
     PostOptionsMenu.show(
@@ -309,37 +376,134 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
       currentUserId: _currentUserId,
       postId: post.id,
       isOwnPost: isUsersOwnPost,
-      onCopyLink: () {
+      isSaved: isSaved,
+      isFollowing: isFollowing,
+      onSharePost: () {
         final shareText =
             'Check out this song: ${post.songName} by ${post.artists}';
         Share.share(shareText, subject: 'Music from Noot');
       },
-      onSavePost: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Post saved'),
-            backgroundColor: const Color(0xFFA855F7),
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(10),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+      onSavePost: () async {
+        if (_currentUserId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Please log in to save posts'),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+
+        try {
+          final result = await _songPostService.savePost(
+              _currentUserId!, post.id, context);
+          if (result['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Post saved successfully'),
+                backgroundColor: const Color(0xFFA855F7),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message'] ?? 'Failed to save post'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error saving post: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       },
-      onUnfollow: () {
-        // Implement unfollow user functionality
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Unfollowed ${post.username ?? "user"}'),
-            backgroundColor: const Color(0xFFA855F7),
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(10),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+      onUnsavePost: () async {
+        if (_currentUserId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Please log in to unsave posts'),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+
+        try {
+          final result = await _songPostService.unsavePost(
+              _currentUserId!, post.id, context);
+          if (result['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Post unsaved successfully'),
+                backgroundColor: const Color(0xFFA855F7),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message'] ?? 'Failed to unsave post'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(10),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error unsaving post: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(10),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      },
+      onUnfollow: () async {
+        await _handleUnfollowUser(post.userId!);
+      },
+      onFollow: () async {
+        await _handleFollowUser(post.userId!);
       },
       onReport: () {
         // Report functionality is handled inside PostOptionsMenu
@@ -365,7 +529,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
           builder: (context) => AlertDialog(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            backgroundColor: Colors.black,
+            backgroundColor: Theme.of(context).dialogBackgroundColor,
             title: Row(
               children: [
                 Icon(Icons.warning_amber_rounded, color: Color(0xFFA855F7)),
@@ -377,14 +541,15 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             ),
             content: Text(
               'Are you sure you want to delete this post? This action cannot be undone.',
-              style: TextStyle(color: Colors.white, fontSize: 15),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface, fontSize: 15),
             ),
             actionsPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   textStyle: TextStyle(fontWeight: FontWeight.w600),
                   shape: RoundedRectangleBorder(
@@ -396,7 +561,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
                 onPressed: () => Navigator.pop(context, true),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFFA855F7),
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                   textStyle: TextStyle(fontWeight: FontWeight.bold),
                   shape: RoundedRectangleBorder(
@@ -416,7 +581,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text('Post deleted successfully'),
-                  backgroundColor: const Color(0xFFA855F7),
+                  backgroundColor: AppColors.primaryPurple,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
@@ -430,7 +595,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(result['message'] ?? 'Failed to delete post'),
-                  backgroundColor: Colors.red,
+                  backgroundColor: Theme.of(context).colorScheme.error,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
@@ -443,7 +608,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Error deleting post: $e'),
-                backgroundColor: Colors.red,
+                backgroundColor: Theme.of(context).colorScheme.error,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
@@ -461,7 +626,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('Post hidden from your feed'),
-                backgroundColor: const Color(0xFFA855F7),
+                backgroundColor: AppColors.primaryPurple,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
@@ -474,7 +639,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(result['message'] ?? 'Failed to hide post'),
-                backgroundColor: Colors.red,
+                backgroundColor: Theme.of(context).colorScheme.error,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
@@ -487,7 +652,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error hiding post: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: Theme.of(context).colorScheme.error,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
@@ -500,19 +665,151 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
     );
   }
 
+  Future<void> _handleFollowUser(String targetUserId) async {
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please log in to follow users'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final authService = Provider.of<dynamic>(context, listen: false);
+      final profileService = ProfileService(authService: authService);
+      final result =
+          await profileService.followUser(_currentUserId!, targetUserId);
+      if (result['success'] == true) {
+        // Update local following status
+        setState(() {
+          _followingStatus[targetUserId] = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('User followed successfully'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to follow user'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error following user: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleUnfollowUser(String targetUserId) async {
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please log in to unfollow users'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final authService = Provider.of<dynamic>(context, listen: false);
+      final profileService = ProfileService(authService: authService);
+      final result =
+          await profileService.unfollowUser(_currentUserId!, targetUserId);
+      if (result['success'] == true) {
+        // Update local following status
+        setState(() {
+          _followingStatus[targetUserId] = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('User unfollowed successfully'),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to unfollow user'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error unfollowing user: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Center(child: CommonLoading.purple()),
       );
     }
     if (_error != null) {
       return Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
-            child: Text(_error!, style: const TextStyle(color: Colors.white))),
+            child: Text(_error!,
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface))),
       );
     }
 
@@ -532,7 +829,25 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
     });
 
     return Scaffold(
-      appBar: NootAppBar(),
+      appBar: AppBar(
+        title: const Text('Profile Feed'),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        centerTitle: true,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).colorScheme.onSurface),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.brightness_6,
+                color: Theme.of(context).colorScheme.onSurface),
+            onPressed: () {
+              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+            },
+          ),
+        ],
+      ),
       body: FeedWidget(
         feedItems: _posts.map((p) => FeedItem.song(p)).toList(),
         isLoading: false,
@@ -546,11 +861,12 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
         isPlaying: _isPlaying,
         currentUserId: _currentUserId,
         onPostOptions: _handlePostOptions,
-        onUserTap: (String userId) {
+        onUserTap: (String userId, String? username) {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => UserProfilePage(userId: userId),
+              builder: (context) =>
+                  UserProfilePage(userId: userId, username: username),
             ),
           );
         },
@@ -558,7 +874,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
         itemPositionsListener: _itemPositionsListener,
         initialIndex: _initialIndex,
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     );
   }
 }

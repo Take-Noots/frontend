@@ -1,20 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 // import 'dart:math';
 import '../../../data/services/profile_service.dart';
+import '../../../data/services/auth_service.dart';
+import '../../../data/services/chat_service.dart';
 import '../../../data/models/profile_model.dart';
+import '../../../data/models/chat_model.dart';
+import '../../screens/chat/chat_screen.dart';
+import '../../widgets/loading_screens/chat_loading_screen.dart';
+import '../../widgets/loading_screens/profile_loading_screen.dart';
 import 'tabs/album_art_posts_tab.dart';
 import 'tabs/thought_posts_tab.dart';
 import 'tabs/tagged_posts_tab.dart';
 import 'my_profile.dart';
-import 'followers_list.dart';
-import 'following_list.dart';
+import 'followers_list_wrapper.dart';
+import 'following_list_wrapper.dart';
 import 'profile_feed_screen.dart'; // Add this import for navigation
 
 class UserProfilePage extends StatefulWidget {
   final String userId;
-  const UserProfilePage({Key? key, required this.userId}) : super(key: key);
+  final String? username;
+  final String? highlightPostId;
+  const UserProfilePage(
+      {Key? key, required this.userId, this.username, this.highlightPostId})
+      : super(key: key);
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
@@ -105,6 +116,31 @@ class _UserProfilePageState extends State<UserProfilePage>
         isFollowingUser = follows;
         isLoading = false;
       });
+
+      // If this is the logged user's own profile, redirect to my profile page
+      if (widget.userId == loggedUserId) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => const NormalUserProfilePage()),
+        );
+        return;
+      }
+
+      // If highlightPostId is provided, navigate to the profile feed to show that post
+      if (widget.highlightPostId != null) {
+        Future.microtask(() {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProfileFeedScreen(
+                userId: widget.userId,
+                initialPostId: widget.highlightPostId,
+              ),
+            ),
+          );
+        });
+      }
     } else {
       setState(() {
         isLoading = false;
@@ -112,47 +148,150 @@ class _UserProfilePageState extends State<UserProfilePage>
     }
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  Future<void> _handleFollow() async {
+    if (loggedUserId == null || profile == null) return;
+
+    // Prevent following yourself
+    if (loggedUserId == profile!.userId) return;
+
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final profileService = ProfileService(authService: authService);
+      final result = isFollowingUser
+          ? await profileService.unfollowUser(loggedUserId!, profile!.userId)
+          : await profileService.followUser(loggedUserId!, profile!.userId);
+
+      if (result['success'] == true) {
+        setState(() {
+          isFollowingUser = !isFollowingUser;
+          if (isFollowingUser) {
+            profile!.followers.add(loggedUserId!);
+          } else {
+            profile!.followers.remove(loggedUserId!);
+          }
+        });
+      } else {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ??
+                'Failed to ${isFollowingUser ? 'unfollow' : 'follow'} user'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Error: ${isFollowingUser ? 'unfollowing' : 'following'} user failed'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  void _handleMessage() async {
+    if (profile == null || loggedUserId == null) return;
+
+    // Prevent messaging yourself
+    if (loggedUserId == profile!.userId) return;
+
+    // Navigate immediately to loading screen with seamless transition
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            ChatLoadingScreen(
+          profile: profile,
+          loadingText: 'Starting chat...',
+          onBackPressed: () => Navigator.of(context).pop(),
+        ),
+        transitionDuration: Duration.zero, // No transition animation
+        reverseTransitionDuration: Duration.zero,
+      ),
+    );
+
+    try {
+      final chatService = ChatService();
+      final result = await chatService.createChat(profile!.userId);
+
+      if (result['success']) {
+        final chatData = result['data'];
+        final chat = Chat.fromJson(chatData, loggedUserId!);
+
+        // Replace loading screen with actual chat screen seamlessly
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => ChatScreen(
+              chat: chat,
+              currentUserId: loggedUserId!,
+            ),
+            transitionDuration: Duration.zero, // No transition animation
+            reverseTransitionDuration: Duration.zero,
+          ),
+        );
+      } else {
+        // Show error and go back to profile
+        Navigator.of(context).pop(); // Remove loading screen
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to start chat'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } catch (e) {
+      // Show error and go back to profile
+      Navigator.of(context).pop(); // Remove loading screen
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error starting chat: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator()),
+      return ProfileLoadingScreen(
+        title: widget.username ?? 'User Profile',
+        // subtitle: 'Loading profile...',
+        onBackPressed: () => Navigator.of(context).pop(),
+        showSkeleton: true,
       );
     }
-
-    // If viewing own profile, redirect to my profile page
-    if (loggedUserId != null && widget.userId == loggedUserId) {
-      // Use Future.microtask to avoid build context issues
-      Future.microtask(() {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const NormalUserProfilePage()),
-        );
-      });
-      return const SizedBox.shrink();
-    }
-
     if (profile == null) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('User Profile'),
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor ??
+              Theme.of(context).scaffoldBackgroundColor,
+          centerTitle: true,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back,
+                color: Theme.of(context).colorScheme.onSurface),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
             child: Text('Failed to load profile',
-                style: TextStyle(color: Colors.white))),
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface))),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(profile!.username),
+        title: Text(profile?.username ?? 'User Profile'),
         centerTitle: true,
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
       ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
           AlbumArtPostsTab(
@@ -166,28 +305,22 @@ class _UserProfilePageState extends State<UserProfilePage>
             showGrid: false,
             profileImage: profile!.profileImage,
             postsList: posts,
-            onFollowersTap: () async {
-              final profileService = ProfileService();
-              final followersList = await profileService
-                  .getFollowersListWithDetails(profile!.userId);
+            onFollowersTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => FollowersListPage(
-                    followers: followersList,
+                  builder: (context) => FollowersListPageWrapper(
+                    userId: profile!.userId,
                   ),
                 ),
               );
             },
-            onFollowingTap: () async {
-              final profileService = ProfileService();
-              final followingList = await profileService
-                  .getFollowingListWithDetails(profile!.userId);
+            onFollowingTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => FollowingListPage(
-                    following: followingList,
+                  builder: (context) => FollowingListPageWrapper(
+                    userId: profile!.userId,
                   ),
                 ),
               );
@@ -234,33 +367,65 @@ class _UserProfilePageState extends State<UserProfilePage>
           ),
           // Add Follow and Message buttons for other users
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            padding:
+                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                OutlinedButton(
-                  onPressed: () {
-                    // TODO: Implement follow functionality
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white),
-                  ),
-                  child: Text(
-                    isFollowingUser ? 'Following' : 'Follow',
-                    style: const TextStyle(color: Colors.white),
+                SizedBox(
+                  width: 140,
+                  height: 44,
+                  child: ElevatedButton(
+                    onPressed: _handleFollow,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isFollowingUser
+                          ? Theme.of(context).colorScheme.surface
+                          : const Color(0xFFA855F7), // Purple for follow
+                      foregroundColor: isFollowingUser
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: isFollowingUser
+                            ? BorderSide(
+                                color: Theme.of(context).colorScheme.outline)
+                            : BorderSide.none,
+                      ),
+                    ),
+                    child: Text(
+                      isFollowingUser ? 'Following' : 'Follow',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
-                OutlinedButton(
-                  onPressed: () {
-                    // TODO: Implement message functionality
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white),
-                  ),
-                  child: const Text(
-                    'Message',
-                    style: TextStyle(color: Colors.white),
+                SizedBox(
+                  width: 140,
+                  height: 44,
+                  child: OutlinedButton(
+                    onPressed: _handleMessage,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.outline,
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    child: const Text(
+                      'Message',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -270,10 +435,10 @@ class _UserProfilePageState extends State<UserProfilePage>
           // Only show tabs if the profile is not private or if the user follows this profile
           if (!isPrivateProfile || isFollowingUser) ...[
             Container(
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.surface,
               child: TabBar(
                 controller: _tabController,
-                indicatorColor: Colors.white,
+                indicatorColor: Theme.of(context).colorScheme.onSurface,
                 tabs: const [
                   Tab(icon: Icon(Icons.grid_on)),
                   Tab(icon: Icon(Icons.description)),
@@ -347,21 +512,21 @@ class _UserProfilePageState extends State<UserProfilePage>
             ),
           ] else
             // Show private account message when profile is private and user doesn't follow
-            const Expanded(
+            Expanded(
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.lock,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       size: 64,
                     ),
                     SizedBox(height: 16),
                     Text(
                       'This Account is Private',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -370,7 +535,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                     Text(
                       'Follow this account to see their posts',
                       style: TextStyle(
-                        color: Colors.grey,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 16,
                       ),
                       textAlign: TextAlign.center,
@@ -382,7 +547,6 @@ class _UserProfilePageState extends State<UserProfilePage>
             ),
         ],
       ),
-      backgroundColor: Colors.black,
     );
   }
 }

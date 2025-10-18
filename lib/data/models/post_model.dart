@@ -29,7 +29,6 @@ class Comment {
 
   Map<String, dynamic> toJson() => {
         '_id': id,
-        '_id': id,
         'userId': userId,
         'username': username,
         'text': text,
@@ -48,14 +47,15 @@ class Post {
   final String artists;
   final String? albumImage;
   final String? caption;
-  final String? userId; 
+  final String? backgroundColor;
+  final String? userId;
   final String? username;
   final String? userImage;
   int likes;
   int commentsCount;
   List<String> likedBy;
   bool likedByMe;
-  bool isSaved; 
+  bool isSaved;
   final DateTime createdAt;
   final DateTime updatedAt;
   List<Comment> comments;
@@ -69,6 +69,7 @@ class Post {
     required this.artists,
     this.albumImage,
     this.caption,
+    this.backgroundColor,
     this.userId,
     this.username,
     this.userImage,
@@ -92,6 +93,7 @@ class Post {
       artists: json['artists'] ?? '',
       albumImage: json['albumImage'],
       caption: json['caption'],
+      backgroundColor: json['backgroundColor'],
       userId: json['userId'] as String?,
       username: json['username'] as String?,
       userImage: json['userImage'] as String?,
@@ -176,7 +178,6 @@ class Post {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
-
   }
 
   Post copyWith({
@@ -208,6 +209,7 @@ class Post {
       artists: artists ?? this.artists,
       albumImage: albumImage ?? this.albumImage,
       caption: caption ?? this.caption,
+      backgroundColor: backgroundColor ?? this.backgroundColor,
       userId: userId ?? this.userId,
       username: username ?? this.username,
       likes: likes ?? this.likes,

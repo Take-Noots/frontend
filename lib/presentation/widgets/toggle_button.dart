@@ -8,13 +8,18 @@ class ToggleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    ThemeMode mode = themeProvider.themeMode;
+    Brightness brightness = Theme.of(context).brightness;
+
+    IconData icon;
+    if (mode == ThemeMode.system) {
+      icon = brightness == Brightness.dark ? Icons.dark_mode : Icons.light_mode;
+    } else {
+      icon = mode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode;
+    }
 
     return IconButton(
-      icon: Icon(
-        themeProvider.themeMode == ThemeMode.dark
-            ? Icons.dark_mode
-            : Icons.light_mode,
-      ),
+      icon: Icon(icon),
       onPressed: () {
         themeProvider.toggleTheme();
       },

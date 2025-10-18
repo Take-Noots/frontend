@@ -4,6 +4,7 @@ import 'dart:convert'; // Add for JSON decoding
 import 'package:shared_preferences/shared_preferences.dart'; // Add for user data access
 import 'package:Noot/data/models/fanbase_model.dart';
 import 'package:Noot/data/services/fanbase_service.dart';
+import '../../screens/fanbase/fanbase_details.dart';
 import './fanbase_interations.dart';
 // import './fanbase_profilebar.dart';
 
@@ -259,7 +260,24 @@ class _FanbaseCardState extends State<FanbaseCard> {
     final theme = Theme.of(context).colorScheme;
 
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/fanbase/${_fanbase.id}'),
+      onTap: () {
+        if (_currentUserId != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => FanbaseDetailScreen(
+                fanbaseId: _fanbase.id,
+                userId: _currentUserId!,
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please log in to view fanbase details'),
+            ),
+          );
+        }
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 0.0, horizontal: 16.0),
         padding: const EdgeInsets.all(12.0),

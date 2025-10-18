@@ -1,12 +1,15 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AppConstants {
-  // Base URL for the backend API
+  // Base URL for the backend API - automatically switches based on platform
   static String get baseUrl {
-    if (Platform.isAndroid) {
-      return 'https://backend-nestjs-production-8204.up.railway.app';
+    if (kIsWeb) {
+      // Running on browser
+      return 'http://localhost:3000';
+    } else {
+      // Running on Android/iOS (mobile)
+      return 'https://unthreshed-eugenic-edgar.ngrok-free.dev';
     }
-    return 'http://localhost:3000';
   }
 
   // Base URL for Spotify API

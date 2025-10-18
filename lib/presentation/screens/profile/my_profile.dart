@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Uncomment this
 import 'dart:convert'; // Uncomment this
-import '../../../core/router/route_names.dart';
 import 'tabs/album_art_posts_tab.dart';
 import 'tabs/thought_posts_tab.dart';
 import 'tabs/tagged_posts_tab.dart';
@@ -11,20 +10,23 @@ import 'tabs/tagged_posts_tab.dart';
 import 'settings/create_profile.dart';
 import 'settings/edit_profile.dart';
 import './settings/options.dart';
-import 'followers_list.dart';
-import 'following_list.dart';
+import 'followers_list_wrapper.dart';
+import 'following_list_wrapper.dart';
 import 'profile_feed_screen.dart';
+import './user_profiles.dart';
 import 'tabs/artist/new_releases_tab.dart'; // Create this for artist features
 import 'tabs/artist/concerts_tab.dart'; // Create this for artist features
 import 'tabs/artist/upcoming_tab.dart'; // Create this for artist features
 import 'tabs/artist/insights_tab.dart'; // Create this for artist features
 import 'tabs/business/ads_tab.dart'; // Create this for business features
 import 'tabs/business/ad_insights_tab.dart'; // Create this for business features
+import '../../widgets/loading_screens/profile_loading_screen.dart';
 
 import '../../../data/services/profile_service.dart';
 import '../../../data/models/profile_model.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../data/models/post_model.dart';
+import '../../../core/router/route_names.dart';
 
 class NormalUserProfilePage extends StatefulWidget {
   static const routeName = '/profile/normal';
@@ -41,6 +43,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
   final ScrollController _tabScrollController = ScrollController(); // Add this
 
   String? userId;
+  String? username;
   ProfileModel? profile;
   List<dynamic> posts = [];
   List<String> albumImages = [];
@@ -70,7 +73,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
       print("AuthProvider user ID: $id");
 
       // If ID is null, try to get it from SharedPreferences directly
-      if (id == null) {
+      if (authProvider.user == null) {
         final prefs = await SharedPreferences.getInstance();
         final userDataString = prefs.getString('user_data');
         print("SharedPrefs user_data: $userDataString");
@@ -78,13 +81,16 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
         if (userDataString != null) {
           final userData = jsonDecode(userDataString);
           id = userData['id'] as String?;
+          username = userData['username'] as String?;
           print("Extracted ID from SharedPrefs: $id");
+          print("Extracted username from SharedPrefs: $username");
         }
       }
 
       if (mounted) {
         setState(() {
           userId = id;
+          username = username;
         });
       }
 
@@ -235,7 +241,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
         ThoughtPostsTab(postsList: posts, userId: userId),
         ArtistConcertsTab(userId: userId!), // Implement this tab
         ArtistUpcomingTab(userId: userId!), // Implement this tab
-        // ArtistInsightsTab(userId: userId!), // REMOVE
+        // ArtistInsightsTab(userId: userId!),
         const TaggedPostsTab(),
       ];
     } else if (userType == 'business') {
@@ -309,19 +315,20 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator()),
+      return ProfileLoadingScreen(
+        title: username ?? 'My Profile',
+        showSkeleton: true,
+        isMyProfile: true,
       );
     }
 
     if (userId == null) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: Text(
             'User not found. Please log in again.',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           ),
         ),
       );
@@ -329,54 +336,51 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
 
     if (profile == null && profileNotFound) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Profile'),
-          centerTitle: true,
-          backgroundColor: Colors.black,
-        ),
-        backgroundColor: Colors.black,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 32.0),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32.0),
+              child: Text(
+                'No profile found for this user.',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 18),
+              ),
+            ),
+            SizedBox(
+              width: 160,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const CreateProfilePage()),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(
+                      color: Theme.of(context).colorScheme.onSurface),
+                ),
                 child: Text(
-                  'No profile found for this user.',
-                  style: TextStyle(color: Colors.white, fontSize: 18),
+                  'Create Profile',
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 ),
               ),
-              SizedBox(
-                width: 160,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const CreateProfilePage()),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white),
-                  ),
-                  child: const Text(
-                    'Create Profile',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
 
     if (profile == null) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
             child: Text('Failed to load profile',
-                style: TextStyle(color: Colors.white))),
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface))),
       );
     }
 
@@ -385,7 +389,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
         // Remove leading, add actions for right top
         title: Text(profile?.username ?? 'Profile'),
         centerTitle: true,
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         actions: [
           IconButton(
             icon: const Icon(Icons.menu),
@@ -416,31 +420,61 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
             postsList: posts,
 
             // --- Add gesture detectors for followers/following ---
-            onFollowersTap: () async {
+            onFollowersTap: () {
               if (profile != null) {
-                final profileService = ProfileService();
-                final followersList = await profileService
-                    .getFollowersListWithDetails(profile!.userId);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => FollowersListPage(
-                      followers: followersList,
+                    builder: (context) => FollowersListPageWrapper(
+                      userId: profile!.userId,
+                      onUserTap: (userId, username) {
+                        final authProvider =
+                            Provider.of<AuthProvider>(context, listen: false);
+                        final currentUserId = authProvider.user?.id;
+                        if (userId == currentUserId) {
+                          context.go(AppRoutes.profile);
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => UserProfilePage(
+                                userId: userId,
+                                username: username,
+                              ),
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ),
                 );
               }
             },
-            onFollowingTap: () async {
+            onFollowingTap: () {
               if (profile != null) {
-                final profileService = ProfileService();
-                final followingList = await profileService
-                    .getFollowingListWithDetails(profile!.userId);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => FollowingListPage(
-                      following: followingList,
+                    builder: (context) => FollowingListPageWrapper(
+                      userId: profile!.userId,
+                      onUserTap: (userId, username) {
+                        final authProvider =
+                            Provider.of<AuthProvider>(context, listen: false);
+                        final currentUserId = authProvider.user?.id;
+                        if (userId == currentUserId) {
+                          context.go(AppRoutes.profile);
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => UserProfilePage(
+                                userId: userId,
+                                username: username,
+                              ),
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ),
                 );
@@ -479,13 +513,16 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                           ),
                         );
                       },
-                      icon: const Icon(Icons.insights, color: Colors.white),
-                      label: const Text(
+                      icon: Icon(Icons.insights,
+                          color: Theme.of(context).colorScheme.onSurface),
+                      label: Text(
                         'Insights',
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface),
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.white),
+                        side: BorderSide(
+                            color: Theme.of(context).colorScheme.onSurface),
                         backgroundColor: Colors.transparent,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -511,13 +548,16 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                         _fetchProfileData();
                       }
                     },
-                    icon: const Icon(Icons.edit, color: Colors.white),
-                    label: const Text(
+                    icon: Icon(Icons.edit,
+                        color: Theme.of(context).colorScheme.onSurface),
+                    label: Text(
                       'Edit Profile',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white),
+                      side: BorderSide(
+                          color: Theme.of(context).colorScheme.onSurface),
                       backgroundColor: Colors.transparent,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -531,17 +571,18 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           ),
           // TabBar under profile details
           Container(
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.surface,
             width: MediaQuery.of(context).size.width,
             padding: EdgeInsets.zero,
             margin: EdgeInsets.zero,
             child: TabBar(
               controller: _tabController,
-              indicatorColor: Colors.white,
+              indicatorColor: Theme.of(context).colorScheme.onSurface,
               isScrollable: false,
               labelPadding: const EdgeInsets.symmetric(horizontal: 0),
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.grey,
+              labelColor: Theme.of(context).colorScheme.onSurface,
+              unselectedLabelColor:
+                  Theme.of(context).colorScheme.onSurfaceVariant,
               tabs: getProfileTabs(),
             ),
           ),
@@ -554,16 +595,17 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                     controller: _tabController,
                     children: getProfileTabViews(),
                   )
-                : const Center(
+                : Center(
                     child: Text(
                       'No profile data available.',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface),
                     ),
                   ),
           ),
         ],
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     );
   }
 }

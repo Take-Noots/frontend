@@ -2,39 +2,31 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/constants/app_constants.dart';
 
 class ChatService {
-  static String get baseUrl {
-    if (Platform.isAndroid) {
-      return 'https://backend-nestjs-production-8204.up.railway.app/chat';
-    }
-    return 'http://localhost:3000/chat';
-  }
-  static String get userBaseUrl {
-    if (Platform.isAndroid) {
-      return 'https://backend-nestjs-production-8204.up.railway.app/user';
-    }
-    return 'http://localhost:3000/user';
-  }
+  static String get baseUrl => '${AppConstants.baseUrl}/chat';
+  static String get userBaseUrl =>
+      '${AppConstants.baseUrl}/user'; // Fixed: changed from 'users' to 'user'
 
   // Search users by username
   Future<Map<String, dynamic>> searchUsers(String query) async {
     try {
       print('🔍 Searching for users with query: $query'); // Debug log
-      
+
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in. Please log in to search users.',
         };
       }
-      
+
       final url = '$userBaseUrl/search?q=$query';
       print('🌐 Making request to: $url'); // Debug log
-      
+
       final response = await http.get(
         Uri.parse(url),
         headers: {
@@ -58,7 +50,9 @@ class ChatService {
         print('❌ Search failed: ${errorData}'); // Debug log
         return {
           'success': false,
-          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to search users',
+          'message': errorData['message'] ??
+              errorData['error'] ??
+              'Failed to search users',
         };
       }
     } catch (e) {

@@ -1,26 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import './user_profiles.dart'; // Import the ProfileScreen
+import '../../../core/providers/auth_provider.dart';
+import '../../../core/router/route_names.dart';
+import '../../widgets/loading_screens/user_list_skeleton.dart';
 
 // followers: List<Map<String, dynamic>> with userId, username, profileImage
 class FollowersListPage extends StatelessWidget {
   final List<dynamic> followers;
+  final void Function(String userId, String? username)? onUserTap;
+  final bool isLoading;
+  final Set<String> currentUserFollowing;
+  final Future<void> Function(String targetUserId, bool isFollow)
+      onFollowToggle;
 
-  const FollowersListPage({Key? key, required this.followers})
-      : super(key: key);
+  const FollowersListPage({
+    Key? key,
+    required this.followers,
+    this.onUserTap,
+    this.isLoading = false,
+    required this.currentUserFollowing,
+    required this.onFollowToggle,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Show skeleton loading screen while loading
+    if (isLoading) {
+      return const UserListSkeleton(title: 'Followers');
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Followers'),
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: followers.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
                 'No followers yet.',
-                style: TextStyle(color: Colors.white54),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             )
           : ListView.builder(
@@ -35,56 +57,124 @@ class FollowersListPage extends StatelessWidget {
                               follower['profileImage'].toString().isNotEmpty)
                           ? NetworkImage(follower['profileImage'])
                           : null,
-                      backgroundColor: Colors.grey,
+                      backgroundColor:
+                          Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                     title: Text(
                       follower['username'] ?? follower['userId'] ?? 'Unknown',
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface),
                     ),
                     subtitle: (follower['fullName'] != null &&
                             follower['fullName'].toString().isNotEmpty)
                         ? Text(
                             follower['fullName'],
-                            style: const TextStyle(
-                                color: Colors.white54, fontSize: 12),
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                fontSize: 12),
                           )
                         : null,
                     onTap: () {
                       if (follower['userId'] != null) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => UserProfilePage(
-                              userId: follower['userId'],
-                            ),
-                          ),
-                        );
+                        final authProvider =
+                            Provider.of<AuthProvider>(context, listen: false);
+                        final currentUserId = authProvider.user?.id;
+                        if (follower['userId'] == currentUserId) {
+                          context.go(AppRoutes.profile);
+                        } else {
+                          if (onUserTap != null) {
+                            onUserTap!(
+                                follower['userId'], follower['username']);
+                          } else {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => UserProfilePage(
+                                  userId: follower['userId'],
+                                  username: follower['username'],
+                                ),
+                              ),
+                            );
+                          }
+                        }
                       }
                     },
+                    trailing: (follower['userId'] != null &&
+                            follower['userId'] !=
+                                Provider.of<AuthProvider>(context,
+                                        listen: false)
+                                    .user
+                                    ?.id)
+                        ? ElevatedButton(
+                            onPressed: () {
+                              final isFollowing = currentUserFollowing
+                                  .contains(follower['userId']);
+                              onFollowToggle(follower['userId'], !isFollowing);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: currentUserFollowing
+                                      .contains(follower['userId'])
+                                  ? Theme.of(context).colorScheme.surface
+                                  : const Color(0xFF8E08EF),
+                              foregroundColor: currentUserFollowing
+                                      .contains(follower['userId'])
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Colors.white,
+                              side: currentUserFollowing
+                                      .contains(follower['userId'])
+                                  ? BorderSide(
+                                      color:
+                                          Theme.of(context).colorScheme.outline)
+                                  : null,
+                            ),
+                            child: Text(currentUserFollowing
+                                    .contains(follower['userId'])
+                                ? 'Unfollow'
+                                : 'Follow'),
+                          )
+                        : null,
                   );
                 } else if (follower is String) {
                   // fallback for string-only entries
                   return ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Colors.grey,
-                      child: Icon(Icons.person, color: Colors.white),
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          Theme.of(context).colorScheme.onSurfaceVariant,
+                      child: Icon(Icons.person,
+                          color: Theme.of(context).colorScheme.onSurface),
                     ),
                     title: Text(
                       follower,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface),
                     ),
-                    subtitle: const Text(
+                    subtitle: Text(
                       'No details available',
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 12),
                     ),
                     onTap: () {
                       // For string entries, we'll assume the string is the userId
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => UserProfilePage(
-                            userId: follower,
-                          ),
-                        ),
-                      );
+                      final authProvider =
+                          Provider.of<AuthProvider>(context, listen: false);
+                      final currentUserId = authProvider.user?.id;
+                      if (follower == currentUserId) {
+                        context.go(AppRoutes.profile);
+                      } else {
+                        if (onUserTap != null) {
+                          onUserTap!(follower, null);
+                        } else {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => UserProfilePage(
+                                userId: follower,
+                              ),
+                            ),
+                          );
+                        }
+                      }
                     },
                   );
                 } else {
