@@ -39,6 +39,7 @@ class FeedWidget extends StatefulWidget {
   final Function(ThoughtsPost)? onThoughtLike;
   final Function(ThoughtsPost)? onThoughtComment;
   final Function(ThoughtsPost)? onThoughtPlay;
+  final Future<void> Function(ThoughtsPost)? onThoughtHide;
   final Function(data_model.Post)? onSongShare;
 
   const FeedWidget({
@@ -69,6 +70,7 @@ class FeedWidget extends StatefulWidget {
     this.onThoughtLike,
     this.onThoughtComment,
     this.onThoughtPlay,
+    this.onThoughtHide,
   }) : super(key: key);
 
   @override
@@ -217,6 +219,12 @@ class _FeedWidgetState extends State<FeedWidget> {
             widget.currentlyPlayingTrackId == thoughtsTrackId,
         isCurrentTrack: widget.currentlyPlayingTrackId == thoughtsTrackId,
         onUserTap: widget.onUserTap,
+        onPostUpdated: (updatedPost) {
+          // Handle post updates (hide, delete, etc.)
+          if (widget.onThoughtHide != null) {
+            widget.onThoughtHide!(updatedPost);
+          }
+        },
       );
     }
     return const SizedBox.shrink();
