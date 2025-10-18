@@ -14,7 +14,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../data/models/fanbase_post_model.dart';
 import '../../../data/services/fanbase_post_service.dart';
-import '../../widgets/common/bottom_bar.dart';
 import '../fanbasePost/fanbasePost_screen.dart';
 import '../profile/user_profiles.dart';
 import '../../widgets/fanbasepost/fanbase_post_feed.dart';
