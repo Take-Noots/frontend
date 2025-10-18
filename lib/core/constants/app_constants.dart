@@ -1,6 +1,16 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class AppConstants {
-  // Base URL for the backend API
-  static const String baseUrl = 'http://localhost:3000';
+  // Base URL for the backend API - automatically switches based on platform
+  static String get baseUrl {
+    if (kIsWeb) {
+      // Running on browser
+      return 'http://localhost:3000';
+    } else {
+      // Running on Android/iOS (mobile)
+      return 'https://unthreshed-eugenic-edgar.ngrok-free.dev';
+    }
+  }
 
   // Base URL for Spotify API
   static const String spotifyBaseUrl = 'https://api.spotify.com/v1';

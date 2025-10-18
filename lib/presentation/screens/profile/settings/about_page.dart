@@ -7,15 +7,17 @@ class AboutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('About'),
-        backgroundColor: Colors.black,
+        title: Text('About',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -28,44 +30,44 @@ class AboutPage extends StatelessWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: Colors.purple,
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.music_note,
                   size: 60,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Noot',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Version 1.0.0',
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 14,
                 ),
               ),
               const SizedBox(height: 40),
-              const Text(
+              Text(
                 'Connect through music, share your thoughts, and discover new sounds with the community.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 16,
                   height: 1.5,
                 ),
               ),
               const SizedBox(height: 40),
-              const Divider(color: Colors.white24),
+              Divider(color: Theme.of(context).dividerColor),
               const SizedBox(height: 20),
               _buildInfoRow('Developer', 'Team Take-Noots'),
               const SizedBox(height: 16),
@@ -73,11 +75,12 @@ class AboutPage extends StatelessWidget {
               const SizedBox(height: 16),
               _buildInfoRow('Platform', 'iOS & Android'),
               const SizedBox(height: 40),
-              const Divider(color: Colors.white24),
+              Divider(color: Theme.of(context).dividerColor),
               const SizedBox(height: 20),
               ListTile(
-                leading: const Icon(Icons.description, color: Colors.white),
-                title: const Text(
+                leading: Icon(Icons.description,
+                    color: Theme.of(context).colorScheme.onSurface),
+                title: Text(
                   'Terms of Service',
                   style: TextStyle(color: Colors.white),
                 ),

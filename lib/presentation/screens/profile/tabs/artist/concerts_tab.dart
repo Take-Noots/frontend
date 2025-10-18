@@ -11,7 +11,7 @@ class ArtistConcertsTab extends StatelessWidget {
     return Center(
       child: Text(
         'Concerts (Artist)',
-        style: TextStyle(color: Colors.white),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       ),
     );
   }

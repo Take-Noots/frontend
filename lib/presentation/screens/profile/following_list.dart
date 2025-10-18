@@ -1,26 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import './user_profiles.dart'; // Import the UserProfilePage
+import '../../../core/providers/auth_provider.dart';
+import '../../../core/router/route_names.dart';
+import '../../widgets/loading_screens/user_list_skeleton.dart';
 
 // following: List<Map<String, dynamic>> with userId, username, profileImage
 class FollowingListPage extends StatelessWidget {
   final List<dynamic> following;
+  final void Function(String userId, String? username)? onUserTap;
+  final bool isLoading;
+  final Set<String> currentUserFollowing;
+  final Future<void> Function(String targetUserId, bool isFollow)
+      onFollowToggle;
 
-  const FollowingListPage({Key? key, required this.following})
-      : super(key: key);
+  const FollowingListPage({
+    Key? key,
+    required this.following,
+    this.onUserTap,
+    this.isLoading = false,
+    required this.currentUserFollowing,
+    required this.onFollowToggle,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Show skeleton loading screen while loading
+    if (isLoading) {
+      return const UserListSkeleton(title: 'Following');
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Following'),
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: following.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
                 'Not following anyone yet.',
-                style: TextStyle(color: Colors.white54),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             )
           : ListView.builder(
@@ -33,31 +55,79 @@ class FollowingListPage extends StatelessWidget {
                             user['profileImage'].toString().isNotEmpty)
                         ? NetworkImage(user['profileImage'])
                         : null,
-                    backgroundColor: Colors.grey,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
                   ),
                   title: Text(
                     user['username'] ?? 'Unknown',
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                   ),
                   subtitle: (user['fullName'] != null &&
                           user['fullName'].toString().isNotEmpty)
                       ? Text(
                           user['fullName'],
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 12),
+                          style: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              fontSize: 12),
                         )
                       : null,
                   onTap: () {
                     if (user['userId'] != null) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => UserProfilePage(
-                            userId: user['userId'],
-                          ),
-                        ),
-                      );
+                      final authProvider =
+                          Provider.of<AuthProvider>(context, listen: false);
+                      final currentUserId = authProvider.user?.id;
+                      if (user['userId'] == currentUserId) {
+                        context.go(AppRoutes.profile);
+                      } else {
+                        if (onUserTap != null) {
+                          onUserTap!(user['userId'], user['username']);
+                        } else {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => UserProfilePage(
+                                userId: user['userId'],
+                                username: user['username'],
+                              ),
+                            ),
+                          );
+                        }
+                      }
                     }
                   },
+                  trailing: (user['userId'] != null &&
+                          user['userId'] !=
+                              Provider.of<AuthProvider>(context, listen: false)
+                                  .user
+                                  ?.id)
+                      ? ElevatedButton(
+                          onPressed: () {
+                            final isFollowing =
+                                currentUserFollowing.contains(user['userId']);
+                            onFollowToggle(user['userId'], !isFollowing);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                currentUserFollowing.contains(user['userId'])
+                                    ? Theme.of(context).colorScheme.surface
+                                    : const Color(0xFF8E08EF),
+                            foregroundColor:
+                                currentUserFollowing.contains(user['userId'])
+                                    ? Theme.of(context).colorScheme.onSurface
+                                    : Colors.white,
+                            side: currentUserFollowing.contains(user['userId'])
+                                ? BorderSide(
+                                    color:
+                                        Theme.of(context).colorScheme.outline)
+                                : null,
+                          ),
+                          child: Text(
+                              currentUserFollowing.contains(user['userId'])
+                                  ? 'Unfollow'
+                                  : 'Follow'),
+                        )
+                      : null,
                 );
               },
             ),

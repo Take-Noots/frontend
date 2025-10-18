@@ -1,9 +1,16 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
+import '../../core/constants/app_constants.dart';
+import 'auth_service.dart';
 
 class ProfileService {
-  // Base URL for backend API
-  static const String baseUrl = 'http://localhost:3000/profile';
+  final AuthService? authService;
+
+  ProfileService({this.authService});
+
+  static String get baseUrl => '${AppConstants.baseUrl}/profile';
 
   // Fetch user profile info (username, profileImage, bio, stats)
   Future<Map<String, dynamic>> getUserProfile(String userId) async {
@@ -253,6 +260,92 @@ class ProfileService {
       }
     } catch (e) {
       return [];
+    }
+  }
+
+  // Follow a user
+  Future<Map<String, dynamic>> followUser(
+      String followerId, String followingId) async {
+    if (authService == null) {
+      return {
+        'success': false,
+        'message': 'Authentication service not available',
+      };
+    }
+
+    try {
+      final response = await authService!.dio.post(
+        '$baseUrl/follow',
+        data: {
+          'followerId': followerId,
+          'followingId': followingId,
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': response.data['message'] ?? 'User followed successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': response.data['message'] ?? 'Failed to follow user',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': e.response?.data['message'] ?? 'Network error: ${e.message}',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  // Unfollow a user
+  Future<Map<String, dynamic>> unfollowUser(
+      String followerId, String followingId) async {
+    if (authService == null) {
+      return {
+        'success': false,
+        'message': 'Authentication service not available',
+      };
+    }
+
+    try {
+      final response = await authService!.dio.post(
+        '$baseUrl/unfollow',
+        data: {
+          'followerId': followerId,
+          'followingId': followingId,
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': response.data['message'] ?? 'User unfollowed successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': response.data['message'] ?? 'Failed to unfollow user',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': e.response?.data['message'] ?? 'Network error: ${e.message}',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
     }
   }
 }

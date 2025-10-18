@@ -4,11 +4,11 @@ import 'dart:convert'; // Add for JSON decoding
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Add for user data access
 
-import 'package:frontend/data/models/fanbase_model.dart';
-import 'package:frontend/data/services/fanbase_service.dart';
-import 'package:frontend/presentation/widgets/fanbases/fanbase_card.dart';
-import 'package:frontend/presentation/widgets/common/bottom_bar.dart';
-import 'package:frontend/presentation/widgets/home/header_bar.dart';
+import 'package:Noot/data/models/fanbase_model.dart';
+import 'package:Noot/data/services/fanbase_service.dart';
+import 'package:Noot/presentation/widgets/fanbases/fanbase_card.dart';
+import 'package:Noot/presentation/widgets/common/bottom_bar.dart';
+import 'package:Noot/presentation/widgets/home/header_bar.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 /// Main fanbase page with Feed and Owned tabs
@@ -24,7 +24,7 @@ class FanbasePage extends StatefulWidget {
 
 class _FanbasePageState extends State<FanbasePage>
     with SingleTickerProviderStateMixin {
-  late Future<List<Fanbase>> futureFanbases;
+  Future<List<Fanbase>>? futureFanbases; // Changed from 'late' to nullable
   late TabController _tabController;
   String? _currentUserId; // Current user's ID for filtering
   List<Fanbase> _allFanbases = []; // Cache all fanbases
@@ -33,7 +33,7 @@ class _FanbasePageState extends State<FanbasePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       setState(() {
         _selectedTabIndex = _tabController.index;
@@ -48,13 +48,13 @@ class _FanbasePageState extends State<FanbasePage>
     super.dispose();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_currentUserId != null) {
-      _loadFanbases();
-    }
-  }
+  // @override
+  // void didChangeDependencies() {
+  //   super.didChangeDependencies();
+  //   if (_currentUserId != null && futureFanbases == null) {
+  //     _loadFanbases();
+  //   }
+  // }
 
   /// Loads current user ID and then fetches all fanbases
   Future<void> _loadCurrentUserAndFanbases() async {
@@ -87,17 +87,26 @@ class _FanbasePageState extends State<FanbasePage>
   }
 
   /// Filters fanbases based on ownership
-  List<Fanbase> _filterFanbases(List<Fanbase> fanbases, bool showOwned) {
+  List<Fanbase> _filterFanbases(List<Fanbase> fanbases, int tabIndex) {
     if (_currentUserId == null) return fanbases;
 
     return fanbases.where((fanbase) {
-      bool isOwned = fanbase.createdBy.id == _currentUserId;
-      return showOwned ? isOwned : !isOwned;
+      if (tabIndex == 0) {
+        // Explore(No Joined) tab
+        return fanbase.createdBy.id != _currentUserId && !fanbase.isJoined;
+      } else if (tabIndex == 1) {
+        // Joined tab
+        return fanbase.isJoined && fanbase.createdBy.id != _currentUserId;
+      } else if (tabIndex == 2) {
+        // Owned tab
+        return fanbase.createdBy.id == _currentUserId;
+      }
+      return false; // Ensure a boolean is always returned
     }).toList();
   }
 
   /// Builds the fanbase list based on current tab
-  Widget _buildFanbaseList(bool showOwned) {
+  Widget _buildFanbaseList(int tabIndex) {
     return FutureBuilder<List<Fanbase>>(
       future: futureFanbases,
       builder: (context, snapshot) {
@@ -124,13 +133,21 @@ class _FanbasePageState extends State<FanbasePage>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  showOwned ? Icons.create : Icons.explore,
+                  tabIndex == 2
+                      ? Icons.create
+                      : tabIndex == 1
+                          ? Icons.group
+                          : Icons.explore,
                   size: 64,
                   color: Colors.grey[400],
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  showOwned ? 'No owned fanbases yet' : 'No fanbases found',
+                  tabIndex == 2
+                      ? 'No owned fanbases yet'
+                      : tabIndex == 1
+                          ? 'No joined fanbases yet'
+                          : 'No fanbases found',
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.grey[600],
@@ -138,9 +155,11 @@ class _FanbasePageState extends State<FanbasePage>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  showOwned
+                  tabIndex == 2
                       ? 'Create your first fanbase!'
-                      : 'Check back later for new fanbases',
+                      : tabIndex == 1
+                          ? 'Explore and join fanbases'
+                          : 'Check back later for new fanbases',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[500],
@@ -152,7 +171,8 @@ class _FanbasePageState extends State<FanbasePage>
         }
 
         _allFanbases = snapshot.data!;
-        final filteredFanbases = _filterFanbases(_allFanbases, showOwned);
+        final filteredFanbases =
+            _filterFanbases(_allFanbases, _selectedTabIndex);
 
         if (filteredFanbases.isEmpty) {
           return Center(
@@ -160,15 +180,21 @@ class _FanbasePageState extends State<FanbasePage>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  showOwned ? Icons.create : Icons.explore,
+                  _selectedTabIndex == 2
+                      ? Icons.create
+                      : _selectedTabIndex == 1
+                          ? Icons.group
+                          : Icons.explore,
                   size: 64,
                   color: Colors.grey[400],
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  showOwned
+                  _selectedTabIndex == 2
                       ? 'No owned fanbases yet'
-                      : 'No other fanbases found',
+                      : _selectedTabIndex == 1
+                          ? 'No joined fanbases yet'
+                          : 'No fanbases found',
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.grey[600],
@@ -176,9 +202,11 @@ class _FanbasePageState extends State<FanbasePage>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  showOwned
+                  _selectedTabIndex == 2
                       ? 'Create your first fanbase using the + button!'
-                      : 'All visible fanbases are owned by you',
+                      : _selectedTabIndex == 1
+                          ? 'Explore and join fanbases'
+                          : 'All visible fanbases are owned by you',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[500],
@@ -218,10 +246,10 @@ class _FanbasePageState extends State<FanbasePage>
           Expanded(
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: _selectedTabIndex == 0
+                backgroundColor: _selectedTabIndex != 0
                     ? Colors.grey[500]
                     : Theme.of(context).colorScheme.primary,
-                foregroundColor: _selectedTabIndex == 0
+                foregroundColor: _selectedTabIndex != 0
                     ? Theme.of(context).colorScheme.primary
                     : Theme.of(context).colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
@@ -233,18 +261,19 @@ class _FanbasePageState extends State<FanbasePage>
                   _selectedTabIndex = 0;
                 });
                 _tabController.animateTo(0);
+                _loadFanbases(); // <-- Add this line
               },
-              child: const Text('Feed'),
+              child: const Text('Explore'),
             ),
           ),
           const SizedBox(width: 1),
           Expanded(
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: _selectedTabIndex == 1
+                backgroundColor: _selectedTabIndex != 1
                     ? Colors.grey[500]
                     : Theme.of(context).colorScheme.primary,
-                foregroundColor: _selectedTabIndex == 1
+                foregroundColor: _selectedTabIndex != 1
                     ? Theme.of(context).colorScheme.primary
                     : Theme.of(context).colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
@@ -256,8 +285,33 @@ class _FanbasePageState extends State<FanbasePage>
                   _selectedTabIndex = 1;
                 });
                 _tabController.animateTo(1);
+                _loadFanbases(); // <-- Add this line
               },
-              child: const Text('Owned'),
+              child: const Text('Join'),
+            ),
+          ),
+          const SizedBox(width: 1),
+          Expanded(
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _selectedTabIndex != 2
+                    ? Colors.grey[500]
+                    : Theme.of(context).colorScheme.primary,
+                foregroundColor: _selectedTabIndex != 2
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(0),
+                ),
+              ),
+              onPressed: () {
+                setState(() {
+                  _selectedTabIndex = 2;
+                });
+                _tabController.animateTo(2);
+                _loadFanbases(); // <-- Add this line
+              },
+              child: const Text('Creator'),
             ),
           ),
         ],
@@ -272,17 +326,18 @@ class _FanbasePageState extends State<FanbasePage>
     final urlController = TextEditingController();
     File? selectedImage;
     String? networkImageUrl;
+    String? nameErrorText; // Moved here
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).colorScheme.primary,
       builder: (context) {
         return DraggableScrollableSheet(
           expand: false,
-          initialChildSize: 0.9,
+          initialChildSize: 0.85,
           minChildSize: 0.5,
-          maxChildSize: 0.9,
+          maxChildSize: 0.85,
           builder: (context, scrollController) {
             return StatefulBuilder(
               builder: (context, setModalState) {
@@ -334,10 +389,10 @@ class _FanbasePageState extends State<FanbasePage>
                 }
 
                 return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
                     borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(24)),
+                        const BorderRadius.vertical(top: Radius.circular(24)),
                   ),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -425,31 +480,73 @@ class _FanbasePageState extends State<FanbasePage>
                         // Fanbase name input
                         TextField(
                           controller: nameController,
-                          style: const TextStyle(color: Colors.black),
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.onPrimary),
                           decoration: InputDecoration(
                             labelText: 'Fanbase Name',
+                            labelStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.onPrimary),
                             filled: true,
-                            fillColor: const Color(0xFFF0F2FF),
+                            fillColor: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.9),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide.none,
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                                width: 0.5,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimary, // same as border
+                                width: 0.5,
+                              ),
                             ),
                           ),
                         ),
+                        if (nameErrorText != null) ...[
+                          const SizedBox(height: 2), // reduced
+                          Text(
+                            nameErrorText!,
+                            style: const TextStyle(
+                                color: Colors.red, fontSize: 12),
+                          ),
+                        ],
                         const SizedBox(height: 16),
 
                         // Fanbase topic input
                         TextField(
                           controller: topicController,
-                          maxLines: 4,
-                          style: const TextStyle(color: Colors.black),
+                          maxLines: 7,
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.onPrimary),
                           decoration: InputDecoration(
                             labelText: 'What is this fanbase about?',
+                            labelStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.onPrimary),
                             filled: true,
-                            fillColor: const Color(0xFFF0F2FF),
+                            fillColor: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.9),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide.none,
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                                width: 0.5,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                                width: 0.5,
+                              ),
                             ),
                           ),
                         ),
@@ -461,12 +558,42 @@ class _FanbasePageState extends State<FanbasePage>
                           children: [
                             TextButton(
                               onPressed: () => Navigator.pop(context),
+                              style: TextButton.styleFrom(
+                                side: BorderSide(
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                foregroundColor:
+                                    Theme.of(context).colorScheme.onPrimary,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 35,
+                                  vertical: 24,
+                                ),
+                              ),
                               child: const Text('Cancel'),
                             ),
                             const SizedBox(width: 10),
                             FloatingActionButton(
                               onPressed: () async {
                                 final name = nameController.text.trim();
+                                // Check if the name is unique among all fanbases
+                                final isNameUnique = !_allFanbases.any(
+                                    (fanbase) =>
+                                        fanbase.fanbaseName
+                                            .trim()
+                                            .toLowerCase() ==
+                                        name.toLowerCase());
+                                if (!isNameUnique) {
+                                  setModalState(() {
+                                    // Show error message below the name field
+                                    nameErrorText =
+                                        'Fanbase name already exists. Please choose a different name.';
+                                  });
+                                  return;
+                                }
                                 final topic = topicController.text.trim();
                                 if (name.isNotEmpty && topic.isNotEmpty) {
                                   try {
@@ -503,6 +630,9 @@ class _FanbasePageState extends State<FanbasePage>
                               backgroundColor: const Color(0xFFDB0DF9),
                               foregroundColor: Colors.white,
                               heroTag: 'create_fanbase_fab',
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                               child: const Icon(LucideIcons.check, size: 18),
                             ),
                           ],
@@ -521,57 +651,81 @@ class _FanbasePageState extends State<FanbasePage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: NootAppBar(),
-      body: Column(
+    final body = Column(
+      children: [
+        // Page title
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16.0, 3.0, 0, 4.0),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Fanbases',
+              style: TextStyle(fontSize: 16),
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+
+        // Tab bar with button style
+        _buildTabBar(),
+        const SizedBox(height: 0),
+
+        // Tab view content
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // Feed tab - shows non-owned fanbases
+              _buildFanbaseList(0),
+
+              // Joined tab - shows joined fanbases
+              _buildFanbaseList(1),
+
+              // Owned tab - shows owned fanbases
+              _buildFanbaseList(2),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    final fab = FloatingActionButton.extended(
+      onPressed: _showCreateFanbaseSheet,
+      label: const Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Page title
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16.0, 3.0, 0, 4.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Fanbases',
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-          ),
-
-          // Tab bar with button style
-          _buildTabBar(),
-          const SizedBox(height: 0),
-
-          // Tab view content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // Feed tab - shows non-owned fanbases
-                _buildFanbaseList(false),
-
-                // Owned tab - shows owned fanbases
-                _buildFanbaseList(true),
-              ],
-            ),
-          ),
+          Icon(Icons.add, size: 18),
+          SizedBox(width: 4),
         ],
       ),
+      backgroundColor: const Color.fromARGB(82, 221, 0, 255),
+      heroTag: 'add_fanbase_fab',
+    );
 
-      // Floating action button for creating new fanbases
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreateFanbaseSheet,
-        label: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.add, size: 18),
-            SizedBox(width: 4),
-          ],
-        ),
-        backgroundColor: const Color.fromARGB(82, 221, 0, 255),
-        heroTag: 'add_fanbase_fab',
-      ),
+    // If inside shell, don't use Scaffold (ShellScreenV2 provides it)
+    if (widget.inShell) {
+      return Stack(
+        children: [
+          Column(
+            children: [
+              NootAppBar(),
+              Expanded(child: body),
+            ],
+          ),
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: fab,
+          ),
+        ],
+      );
+    }
 
-      bottomNavigationBar: const BottomBar(),
+    // If not in shell, use full Scaffold
+    return Scaffold(
+      appBar: NootAppBar(),
+      body: body,
+      floatingActionButton: fab,
     );
   }
 }

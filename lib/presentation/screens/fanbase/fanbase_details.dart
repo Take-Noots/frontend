@@ -2,12 +2,12 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:frontend/data/models/fanbase_model.dart';
-import 'package:frontend/data/services/auth_service.dart';
-import 'package:frontend/data/services/fanbase_service.dart';
-import 'package:frontend/presentation/widgets/fanbasepost/widgets/post_options_menu.dart';
+import 'package:Noot/data/models/fanbase_model.dart';
+import 'package:Noot/data/services/auth_service.dart';
+import 'package:Noot/data/services/fanbase_service.dart';
+import 'package:Noot/presentation/widgets/fanbasepost/widgets/post_options_menu.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:frontend/presentation/screens/fanbasePost/fanbasePost_creation_screen.dart';
+import 'package:Noot/presentation/screens/fanbasePost/fanbasePost_creation_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -417,6 +417,104 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
     );
   }
 
+  // Add this method to _FanbaseDetailScreenState class
+  Future<void> _handleDeleteFanbase() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Fanbase'),
+        content: Text(
+          'Are you sure you want to permanently delete "${_fanbase?.fanbaseName}"? '
+          'This will delete all posts and cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && _fanbase != null) {
+      setState(() => _isLoading = true);
+
+      try {
+        await FanbaseService.deleteFanbase(_fanbase!.id, context);
+
+        if (mounted) {
+          // Navigate back to previous screen after successful deletion
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Fanbase deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete fanbase: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  // Add this method to show options menu
+  void _showFanbaseOptionsMenu() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isCurrentUserOwner) ...[
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text(
+                    'Delete Fanbase',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context); // Close bottom sheet
+                    _handleDeleteFanbase();
+                  },
+                ),
+              ] else ...[
+                ListTile(
+                  leading: const Icon(Icons.flag, color: Colors.orange),
+                  title: const Text('Report Fanbase'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // TODO: Implement report functionality
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Report functionality coming soon')),
+                    );
+                  },
+                ),
+              ],
+              ListTile(
+                leading: const Icon(Icons.cancel),
+                title: const Text('Cancel'),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -435,6 +533,13 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _loadFanbasePosts();
             });
+          }
+
+          Widget aboutTabContent;
+          if (_isCurrentUserOwner) {
+            aboutTabContent = FanbaseDetailsCreatorAbout(fanbase: _fanbase!);
+          } else {
+            aboutTabContent = FanbaseDetailsUserAbout(fanbase: _fanbase!);
           }
 
           return Column(
@@ -462,6 +567,7 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                   }
                 },
                 onJoinPressed: _handleJoin,
+                onOptionsPressed: _showFanbaseOptionsMenu, // Add this line
                 isLoading: _isLoading,
               ),
               // Tab block separated from the header (white card with subtle shadow)
@@ -469,18 +575,19 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(0),
-                ),  
+                  border: Border.all(color: Colors.grey.shade500),
+                ),
                 child: Row(
                   children: [
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _selectedTabIndex == 0
-                              ? Colors.grey[500]
-                              : Theme.of(context).colorScheme.primary,
-                          foregroundColor: _selectedTabIndex == 0
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onPrimary,
+                              : Colors.grey[500],
+                          foregroundColor: _selectedTabIndex == 0
+                              ? Theme.of(context).colorScheme.onPrimary
+                              : Theme.of(context).colorScheme.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(0),
                           ),
@@ -495,11 +602,11 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _selectedTabIndex == 1
-                              ? Colors.grey[500]
-                              : Theme.of(context).colorScheme.primary,
-                          foregroundColor: _selectedTabIndex == 1
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onPrimary,
+                              : Colors.grey[500],
+                          foregroundColor: _selectedTabIndex == 1
+                              ? Theme.of(context).colorScheme.onPrimary
+                              : Theme.of(context).colorScheme.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(0),
                           ),
@@ -540,14 +647,8 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                     },
                   ),
                 )
-              else if (_isCurrentUserOwner)
-                Expanded(
-                  child: FanbaseDetailsCreatorAbout(fanbase: _fanbase!),
-                )
               else
-                Expanded(
-                  child: FanbaseDetailsUserAbout(fanbase: _fanbase!),
-                ),
+                aboutTabContent,
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Center(
@@ -564,7 +665,6 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
           );
         },
       ),
-      bottomNavigationBar: const BottomBar(),
     );
   }
 }
@@ -577,6 +677,7 @@ class FanbaseDetailsHeader extends StatelessWidget {
   final ValueChanged<int> onTabChanged;
   final VoidCallback onPostCreated;
   final VoidCallback onJoinPressed;
+  final VoidCallback onOptionsPressed; // Add this
   final bool isLoading;
 
   const FanbaseDetailsHeader({
@@ -587,6 +688,7 @@ class FanbaseDetailsHeader extends StatelessWidget {
     required this.onTabChanged,
     required this.onPostCreated,
     required this.onJoinPressed,
+    required this.onOptionsPressed, // Add this
     required this.isLoading,
   });
 
@@ -596,7 +698,7 @@ class FanbaseDetailsHeader extends StatelessWidget {
     final btnW = (screenW * 0.22).clamp(80.0, 140.0);
 
     return Container(
-      color: Theme.of(context).colorScheme.onPrimary,
+      color: Theme.of(context).colorScheme.primary,
       padding: const EdgeInsets.fromLTRB(8.0, 20.0, 8.0, 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -625,8 +727,9 @@ class FanbaseDetailsHeader extends StatelessWidget {
                                 .textTheme
                                 .headlineSmall
                                 ?.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.primary),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimary),
                           ),
                         ),
                         if (isCurrentUserOwner) ...[
@@ -637,6 +740,16 @@ class FanbaseDetailsHeader extends StatelessWidget {
                             color: Color(0xFFC20BF5),
                           ),
                         ],
+                        const Spacer(),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: Icon(
+                            Icons.more_vert_rounded,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                          onPressed: onOptionsPressed, // Use the callback
+                        ),
                       ],
                     ),
                     const SizedBox(height: 0.5),
@@ -671,7 +784,9 @@ class FanbaseDetailsHeader extends StatelessWidget {
                   width: btnW,
                   child: OutlinedButton.icon(
                     onPressed: onPostCreated,
-                    icon: const Icon(LucideIcons.plus, size: 16),
+                    icon: Icon(LucideIcons.plus,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onPrimary),
                     label: const Text("Post"),
                     style: OutlinedButton.styleFrom(
                       shape: RoundedRectangleBorder(
@@ -679,6 +794,8 @@ class FanbaseDetailsHeader extends StatelessWidget {
                       ),
                       padding: EdgeInsets.zero,
                       minimumSize: Size(btnW, 36),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
                 ),
@@ -690,7 +807,8 @@ class FanbaseDetailsHeader extends StatelessWidget {
                     ? OutlinedButton(
                         onPressed: null,
                         style: OutlinedButton.styleFrom(
-                          backgroundColor: Colors.white,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.purple,
                           side: const BorderSide(color: Colors.purple),
                           shape: RoundedRectangleBorder(
@@ -704,10 +822,8 @@ class FanbaseDetailsHeader extends StatelessWidget {
                           children: [
                             Text(
                               'Owner',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.purple
-                              ),
+                              style:
+                                  TextStyle(fontSize: 14, color: Colors.purple),
                             ),
                           ],
                         ),
@@ -716,7 +832,8 @@ class FanbaseDetailsHeader extends StatelessWidget {
                         ? OutlinedButton(
                             onPressed: onJoinPressed,
                             style: OutlinedButton.styleFrom(
-                              backgroundColor: Colors.white,
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
                               foregroundColor: Colors.purple,
                               side: const BorderSide(color: Colors.purple),
                               shape: RoundedRectangleBorder(

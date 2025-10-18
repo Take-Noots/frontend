@@ -15,10 +15,6 @@ class PostOptionsMenu {
     VoidCallback? onDelete,
     VoidCallback? onHide,
   }) {
-    // Debug output to understand the values
-    print(
-        'PostOptionsMenu - postUserId: $postUserId, currentUserId: $currentUserId');
-
     // Enhanced logic to determine if post belongs to current user
     bool isCurrentUserPost;
 
@@ -34,8 +30,6 @@ class PostOptionsMenu {
     else {
       isCurrentUserPost = false;
     }
-
-    print('PostOptionsMenu - isCurrentUserPost: $isCurrentUserPost');
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor =

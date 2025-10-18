@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/signup_screen.dart';
@@ -8,6 +9,7 @@ import '../../presentation/screens/auth/link_spotify_screen.dart';
 import '../../presentation/screens/home_screen.dart';
 import '../../presentation/screens/search/search_feed_screen.dart';
 import '../../presentation/screens/fanbase/fanbase.dart';
+import '../../presentation/screens/fanbase/fanbase_details.dart';
 import '../../presentation/screens/profile/my_profile.dart';
 import '../../presentation/screens/profile/user_profiles.dart';
 import '../../presentation/screens/profile/settings/edit_profile.dart';
@@ -17,12 +19,14 @@ import '../../presentation/screens/profile/settings/options.dart';
 import '../../presentation/screens/profile/settings/privacy_page.dart';
 import '../../presentation/screens/profile/settings/help_page.dart';
 import '../../presentation/screens/profile/settings/about_page.dart';
-import '../../presentation/screens/profile/settings/saved_posts_page.dart';
+import '../../presentation/screens/profile/settings/savedPosts/saved_posts.dart';
 import '../../presentation/screens/profile/settings/hiddenPosts/hidden_posts.dart';
 import '../../presentation/screens/request/request.dart';
 import '../../presentation/screens/advertisement/create_advertisement_screen.dart';
 import '../../presentation/screens/advertisement/set_audience_screen.dart';
 import '../../presentation/screens/shell_screen_v2.dart';
+import '../../presentation/screens/create_noots/search_song.dart';
+import '../../presentation/screens/create_noots/create_description_noot.dart';
 import 'route_names.dart';
 
 /// Main application router configuration using GoRouter
@@ -34,7 +38,7 @@ class AppRouter {
   late final GoRouter router = GoRouter(
     debugLogDiagnostics: true,
     refreshListenable: authProvider,
-    initialLocation: AppRoutes.home,
+    initialLocation: AppRoutes.login,
 
     // Redirect logic for authentication
     redirect: (context, state) {
@@ -90,7 +94,15 @@ class AppRouter {
 
       // Main app shell with persistent bottom bar and music player
       ShellRoute(
-        builder: (context, state, child) => ShellScreenV2(child: child),
+        builder: (context, state, child) {
+          // Hide bottom bar for create noot routes
+          final isCreateRoute =
+              state.matchedLocation.startsWith('/create-noot');
+          return ShellScreenV2(
+            hideBottomBar: isCreateRoute,
+            child: child,
+          );
+        },
         routes: [
           // Home
           GoRoute(
@@ -110,6 +122,20 @@ class AppRouter {
             builder: (context, state) => const FanbasePage(),
           ),
 
+          // Individual Fanbase Details
+          GoRoute(
+            path: '${AppRoutes.fanbaseList}/:fanbaseId',
+            builder: (context, state) {
+              final fanbaseId = state.pathParameters['fanbaseId']!;
+              final userId = state.uri.queryParameters['userId'] ?? '';
+
+              return FanbaseDetailScreen(
+                fanbaseId: fanbaseId,
+                userId: userId,
+              );
+            },
+          ),
+
           // Profile routes
           GoRoute(
             path: AppRoutes.profile,
@@ -119,7 +145,9 @@ class AppRouter {
                 path: 'user/:userId',
                 builder: (context, state) {
                   final userId = state.pathParameters['userId']!;
-                  return UserProfilePage(userId: userId);
+                  final postId = state.uri.queryParameters['postId'];
+                  return UserProfilePage(
+                      userId: userId, highlightPostId: postId);
                 },
               ),
               GoRoute(
@@ -148,7 +176,12 @@ class AppRouter {
               ),
               GoRoute(
                 path: 'saved-posts',
-                builder: (context, state) => const SavedPostsPage(),
+                builder: (context, state) {
+                  final authProvider =
+                      Provider.of<AuthProvider>(context, listen: false);
+                  final userId = authProvider.user?.id ?? '';
+                  return SavedPostsPage(userId: userId);
+                },
               ),
               GoRoute(
                 path: 'hidden-posts',
@@ -173,6 +206,20 @@ class AppRouter {
                 builder: (context, state) => SetAudienceScreen(),
               ),
             ],
+          ),
+
+          // Create Noot routes
+          GoRoute(
+            path: AppRoutes.createNoot,
+            builder: (context, state) => const CreatePostPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.searchSong,
+            builder: (context, state) => const CreatePostPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.createDescriptionNoot,
+            builder: (context, state) => const CreateDescriptionNootPage(),
           ),
         ],
       ),

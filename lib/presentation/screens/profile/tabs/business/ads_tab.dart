@@ -11,7 +11,7 @@ class BusinessAdsTab extends StatelessWidget {
     return Center(
       child: Text(
         'Advertisements (Business)',
-        style: TextStyle(color: Colors.white),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       ),
     );
   }

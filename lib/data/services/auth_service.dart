@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/providers/auth_provider.dart';
 import 'token_manager_service.dart';
 
@@ -25,11 +26,29 @@ class AuthService {
   // Get the token manager for direct access when needed
   TokenManagerService get tokenManager => _tokenManager;
 
+  // Helper function to get specific error messages based on DioException type
+  String _getConnectionErrorMessage(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+        return 'Connection timeout. Server is taking too long to respond.';
+      case DioExceptionType.sendTimeout:
+        return 'Send timeout. Request is taking too long to send.';
+      case DioExceptionType.receiveTimeout:
+        return 'Receive timeout. Server response is taking too long.';
+      case DioExceptionType.connectionError:
+        return 'Connection error. Unable to connect to server. ${e.message ?? ''}';
+      case DioExceptionType.unknown:
+        return 'Network error. ${e.message ?? 'Please check your internet connection.'}';
+      default:
+        return 'Connection error. Please check your connection and try again.';
+    }
+  }
+
   // Login with credentials and handle token storage
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await _tokenManager.unauthenticatedDio.post(
-        '/auth/login',
+        '${AppConstants.baseUrl}/auth/login',
         data: {
           'email': email,
           'password': password,
@@ -78,10 +97,10 @@ class AuthService {
               e.response?.data?['message'] ?? 'Login failed. Please try again.'
         };
       }
+
       return {
         'success': false,
-        'message':
-            'Connection error. Please check your connection and try again.'
+        'message': _getConnectionErrorMessage(e),
       };
     } catch (e) {
       debugPrint('Login error: $e');
@@ -135,11 +154,8 @@ class AuthService {
               '[DIO FAIL]Registration failed. Please try again.'
         };
       }
-      return {
-        'success': false,
-        'message':
-            'Connection error. Please check your connection and try again.'
-      };
+
+      return {'success': false, 'message': _getConnectionErrorMessage(e)};
     } catch (e) {
       debugPrint('Registration error: $e');
       return {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:palette_generator/palette_generator.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../song_post/post.dart';
@@ -20,10 +19,10 @@ class FeedWidget extends StatefulWidget {
   final Function(data_model.Post)? onComment;
   final Function(data_model.Post)? onPlay;
   final Function(data_model.Post)? onShare;
-  final Function(data_model.Post)? onPostOptions;
+  final Future<void> Function(data_model.Post)? onPostOptions;
   final String? currentlyPlayingTrackId;
   final bool isPlaying;
-  final void Function(String userId)? onUserTap;
+  final void Function(String userId, String? username)? onUserTap;
 
   final String? currentUserId;
   final Future<void> Function(data_model.Post post)? onHidePost;
@@ -77,8 +76,6 @@ class FeedWidget extends StatefulWidget {
 }
 
 class _FeedWidgetState extends State<FeedWidget> {
-  // Map to store extracted colors for each album image
-  final Map<String, Color> _extractedColors = {};
   Color get _defaultColor {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return isDark
@@ -98,7 +95,6 @@ class _FeedWidgetState extends State<FeedWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _jumpToInitialIndex();
     });
-    _extractColorsFromAlbumImages();
   }
 
   void _jumpToInitialIndex() {
@@ -114,101 +110,12 @@ class _FeedWidgetState extends State<FeedWidget> {
   void didUpdateWidget(FeedWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.feedItems != widget.feedItems) {
-      _extractColorsFromAlbumImages();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _jumpToInitialIndex();
       });
     }
   }
 
-  // Method to extract dark colors from album images
-  Future<void> _extractColorsFromAlbumImages() async {
-    if (widget.feedItems == null) return;
-
-    for (final item in widget.feedItems!) {
-      if (item.type == FeedItemType.song && item.songPost != null) {
-        final albumImageUrl = item.songPost!.albumImage;
-        if (albumImageUrl == null || albumImageUrl.isEmpty) continue;
-        if (!_extractedColors.containsKey(albumImageUrl)) {
-          try {
-            final PaletteGenerator paletteGenerator =
-                await PaletteGenerator.fromImageProvider(
-              NetworkImage(albumImageUrl),
-              size: Size(50, 50), // Smaller size for faster processing
-              maximumColorCount: 5, // Extract up to 10 colors
-            );
-
-            // Try to get the dark muted color first, then fall back to other options
-            Color? extractedColor = paletteGenerator.darkMutedColor?.color;
-
-            // If no dark muted color, try dark vibrant or just the dominant color
-            if (extractedColor == null) {
-              extractedColor = paletteGenerator.darkVibrantColor?.color;
-              if (extractedColor == null) {
-                extractedColor = paletteGenerator.dominantColor?.color;
-              }
-            }
-
-            // If color was extracted, store it, otherwise use default
-            if (extractedColor != null) {
-              // Ensure the color is dark enough
-              if (_isDarkEnough(extractedColor)) {
-                if (mounted) {
-                  setState(() {
-                    _extractedColors[albumImageUrl] = extractedColor!;
-                  });
-                }
-              } else {
-                // Darken the color if it's not dark enough
-                if (mounted) {
-                  setState(() {
-                    _extractedColors[albumImageUrl] =
-                        _darkenColor(extractedColor!);
-                  });
-                }
-              }
-            } else {
-              if (mounted) {
-                setState(() {
-                  _extractedColors[albumImageUrl] = _defaultColor;
-                });
-              }
-            }
-          } catch (e) {
-            print('Error extracting color from $albumImageUrl: $e');
-            if (mounted) {
-              setState(() {
-                _extractedColors[albumImageUrl] = _defaultColor;
-              });
-            }
-          }
-        }
-      }
-      // Skip if not a song post
-    }
-  }
-
-  // Helper method to check if a color is dark enough
-  bool _isDarkEnough(Color color) {
-    // Calculate relative luminance (0 for black, 1 for white)
-    double luminance =
-        0.299 * color.red + 0.587 * color.green + 0.114 * color.blue;
-    luminance = luminance / 255;
-
-    // Return true if the color is dark enough (luminance < 0.5)
-    return luminance < 0.4; // Lower threshold for darker colors
-  }
-
-  // Helper method to darken a color
-  Color _darkenColor(Color color) {
-    const double darkenFactor = 0.6; // Higher values make the color darker
-    return Color.fromARGB(
-      color.alpha,
-      (color.red * darkenFactor).round(),
-      (color.green * darkenFactor).round(),
-      (color.blue * darkenFactor).round(),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -290,10 +197,11 @@ class _FeedWidgetState extends State<FeedWidget> {
     } else if (item.type == FeedItemType.thought && item.thoughtsPost != null) {
       // Create a unique identifier for thoughts posts using song name and artist name
       final thoughtsPost = item.thoughtsPost!;
-      final thoughtsTrackId = thoughtsPost.songName != null && thoughtsPost.artistName != null
-          ? '${thoughtsPost.songName}_${thoughtsPost.artistName}'
-          : null;
-      
+      final thoughtsTrackId =
+          thoughtsPost.songName != null && thoughtsPost.artistName != null
+              ? '${thoughtsPost.songName}_${thoughtsPost.artistName}'
+              : null;
+
       return ThoughtsFeedCard(
         post: thoughtsPost,
         onLike: widget.onThoughtLike != null
@@ -305,7 +213,8 @@ class _FeedWidgetState extends State<FeedWidget> {
         onPlayPause: widget.onThoughtPlay != null
             ? () => widget.onThoughtPlay!(thoughtsPost)
             : null,
-        isPlaying: widget.isPlaying && widget.currentlyPlayingTrackId == thoughtsTrackId,
+        isPlaying: widget.isPlaying &&
+            widget.currentlyPlayingTrackId == thoughtsTrackId,
         isCurrentTrack: widget.currentlyPlayingTrackId == thoughtsTrackId,
         onUserTap: widget.onUserTap,
       );
@@ -317,15 +226,16 @@ class _FeedWidgetState extends State<FeedWidget> {
     // Define the aspect ratio for consistency
     const postAspectRatio = 490 / 595;
 
-    // Get the extracted color for this post or use default if not available yet
-    final albumImageUrl = post.albumImage ?? '';
-    final backgroundColor = _extractedColors[albumImageUrl] ?? _defaultColor;
+    // Use stored background color from database, or default if not available
+    final backgroundColor = post.backgroundColor != null 
+        ? Color(int.parse(post.backgroundColor!.replaceFirst('#', '0xFF')))
+        : _defaultColor;
 
     // Check if the post belongs to the current user
     final bool isOwnPost = post.userId != null &&
         widget.currentUserId != null &&
         post.userId == widget.currentUserId;
-    print(
+    /*print(
         '[DEBUG] FeedWidget._buildSongPostItem: post.userId=${post.userId}, currentUserId=${widget.currentUserId}, isOwnPost=$isOwnPost');
     print(
         '[DEBUG] FeedWidget._buildSongPostItem: post.userId=${post.userId}, currentUserId=${widget.currentUserId}, isOwnPost=$isOwnPost');
@@ -333,7 +243,7 @@ class _FeedWidgetState extends State<FeedWidget> {
     print(
         'FeedWidget - Building post from user: ${post.username}, userId: ${post.userId}');
     print('FeedWidget - Current userId: ${widget.currentUserId}');
-    print('FeedWidget - isOwnPost: $isOwnPost');
+    print('FeedWidget - isOwnPost: $isOwnPost');*/
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -384,7 +294,7 @@ class _FeedWidgetState extends State<FeedWidget> {
                     }
                   },
                   onMoreOptions: widget.onPostOptions != null
-                      ? () => widget.onPostOptions!(post)
+                      ? () async => await widget.onPostOptions!(post)
                       : null,
                   isLiked: post.likedByMe,
                   isPlaying: widget.isPlaying,
@@ -393,7 +303,7 @@ class _FeedWidgetState extends State<FeedWidget> {
                   isSaved: post.isSaved,
                   onUsernameTap: () {
                     if (widget.onUserTap != null && post.userId != null) {
-                      widget.onUserTap!(post.userId!);
+                      widget.onUserTap!(post.userId!, post.username);
                     }
                   },
                   onDelete: isOwnPost && widget.onPostOptions != null

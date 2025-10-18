@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../../data/services/song_post_service.dart';
 import '../../../../../data/models/post_model.dart';
-import 'package:provider/provider.dart';
-import '../../../../../core/providers/auth_provider.dart';
+// import 'package:provider/provider.dart';
+// import '../../../../../core/providers/auth_provider.dart';
 
 class HiddenPostsPage extends StatefulWidget {
   const HiddenPostsPage({Key? key}) : super(key: key);
@@ -192,10 +192,15 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
       future: _songPostsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+              child: CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.primary));
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return Center(
+              child: Text('Error: ${snapshot.error}',
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.error)));
         }
 
         // Prefer snapshot data when available to avoid state desync
@@ -216,7 +221,10 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
         }
 
         if (posts.isEmpty) {
-          return const Center(child: Text('No hidden song posts'));
+          return Center(
+              child: Text('No hidden song posts',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface)));
         }
 
         return RefreshIndicator(
@@ -262,30 +270,44 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
                           ? Image.network(
                               p.albumImage!,
                               fit: BoxFit.cover,
-                              errorBuilder: (c, e, s) =>
-                                  const Icon(Icons.music_note),
+                              errorBuilder: (c, e, s) => Icon(Icons.music_note,
+                                  color: Theme.of(context).colorScheme.primary),
                             )
-                          : const Icon(Icons.music_note),
+                          : Icon(Icons.music_note,
+                              color: Theme.of(context).colorScheme.primary),
                     ),
                   ),
                   title: Text(p.songName,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface)),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(p.artists),
+                      Text(p.artists,
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface)),
                       const SizedBox(height: 6),
                       if (p.caption != null && p.caption!.isNotEmpty)
-                        Text(p.caption!),
+                        Text(p.caption!,
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant)),
                       const SizedBox(height: 6),
                       Text(
                           'Hidden on ${p.createdAt.toLocal().toString().split(' ').first}',
-                          style: const TextStyle(fontSize: 12)),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant)),
                     ],
                   ),
                   isThreeLine: true,
                   trailing: IconButton(
-                    icon: const Icon(Icons.visibility),
+                    icon: Icon(Icons.visibility,
+                        color: Theme.of(context).colorScheme.primary),
                     tooltip: 'Unhide',
                     onPressed: () => _unhideSongPost(p),
                   ),
@@ -308,11 +330,18 @@ class _HiddenPostsPageState extends State<HiddenPostsPage> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Hidden posts'),
-          bottom: const TabBar(
-            tabs: [Tab(text: 'Songs'), Tab(text: 'Thoughts')],
+          title: Text('Hidden posts',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          bottom: TabBar(
+            indicatorColor: Theme.of(context).colorScheme.primary,
+            labelColor: Theme.of(context).colorScheme.onSurface,
+            unselectedLabelColor:
+                Theme.of(context).colorScheme.onSurfaceVariant,
+            tabs: const [Tab(text: 'Songs'), Tab(text: 'Thoughts')],
           ),
         ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: TabBarView(
           children: [
             _buildSongPostsTab(),

@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Emulator setup documentation
+EMULATOR_SETUP.md

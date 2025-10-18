@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Add background modes for notifications -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>background-processing</string>
+	</array>
 </dict>
 </plist>

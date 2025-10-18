@@ -21,7 +21,6 @@ class _SignupScreenState extends State<SignupScreen> {
       TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
-  String? _emailError;
 
   @override
   void dispose() {
@@ -40,10 +39,6 @@ class _SignupScreenState extends State<SignupScreen> {
     if (email.isNotEmpty) {
       final isEmailTaken = await authService.isEmailRegistered(email);
       if (isEmailTaken) {
-        setState(() {
-          _emailError = 'This email is already registered';
-        });
-
         // Show error message to user using CustomSnackBar
         CustomSnackBar.show(
           context,
@@ -54,11 +49,6 @@ class _SignupScreenState extends State<SignupScreen> {
         return false;
       }
     }
-
-    // Clear any previous email error
-    setState(() {
-      _emailError = null;
-    });
 
     return true;
   }
@@ -93,6 +83,7 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false, // Prevent automatic resizing
       body: Stack(
         children: [
           // Background image
@@ -114,156 +105,168 @@ class _SignupScreenState extends State<SignupScreen> {
               borderRadius: BorderRadius.circular(40),
             ),
           ),
-          // Existing widget content
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // App Logo
-                  Padding(
-                    padding:
-                        EdgeInsets.only(left: 20.0, bottom: 40.0, top: 20.0),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        height: 40,
-                      ),
+          // Scrollable content
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20.0),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height -
+                      MediaQuery.of(context).padding.top -
+                      MediaQuery.of(context).padding.bottom -
+                      40,
+                ),
+                child: IntrinsicHeight(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // App Logo
+                        Padding(
+                          padding: EdgeInsets.only(
+                              left: 20.0, bottom: 40.0, top: 20.0),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              height: 40,
+                            ),
+                          ),
+                        ),
+
+                        // Title
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20.0),
+                          child: const Text(
+                            'Sign Up',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                            ),
+                            textAlign: TextAlign.left,
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Description
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20.0),
+                          child: Text(
+                            'Start your journey of rediscovering music socially',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.left,
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Email Field
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                          child: CustomTextFormField(
+                            controller: _emailController,
+                            hintText: 'Enter your email',
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your email';
+                              }
+                              final emailRegex = RegExp(
+                                  r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+
+                              if (!emailRegex.hasMatch(value)) {
+                                return 'Please enter a valid email';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 6),
+
+                        // Password Field
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                          child: CustomTextFormField(
+                            controller: _passwordController,
+                            hintText: 'Enter your password',
+                            obscureText: true,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your password';
+                              }
+                              if (value.length < 6) {
+                                return 'Password must be at least 6 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 6),
+
+                        // Confirm Password Field
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                          child: CustomTextFormField(
+                            controller: _confirmPasswordController,
+                            hintText: 'Confirm your password',
+                            obscureText: true,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please confirm your password';
+                              }
+                              if (value != _passwordController.text) {
+                                return 'Passwords do not match';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Signup Button
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                          child: CustomButton(
+                            onPressed: handleRegister,
+                            isLoading: _isLoading,
+                            text: 'Sign Up',
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        Center(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/login');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0, vertical: 8.0),
+                            ),
+                            child: const Text(
+                              "Already have an account?",
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-
-                  // Title
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20.0),
-                    child: const Text(
-                      'Sign Up',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.left,
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Description
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20.0),
-                    child: Text(
-                      'Start your journey of rediscovering music socially',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.left,
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Email Field
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                    child: CustomTextFormField(
-                      controller: _emailController,
-                      hintText: 'Enter your email',
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        final emailRegex = RegExp(
-                            r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-
-                        if (!emailRegex.hasMatch(value)) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  // Password Field
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                    child: CustomTextFormField(
-                      controller: _passwordController,
-                      hintText: 'Enter your password',
-                      obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  // Confirm Password Field
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                    child: CustomTextFormField(
-                      controller: _confirmPasswordController,
-                      hintText: 'Confirm your password',
-                      obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please confirm your password';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Signup Button
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                    child: CustomButton(
-                      onPressed: handleRegister,
-                      isLoading: _isLoading,
-                      text: 'Sign Up',
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/login');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        elevation: 0,
-                        shadowColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0, vertical: 8.0),
-                      ),
-                      child: const Text(
-                        "Already have an account?",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
