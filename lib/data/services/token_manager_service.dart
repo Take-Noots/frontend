@@ -3,8 +3,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:frontend/core/providers/auth_provider.dart';
-import 'package:frontend/core/constants/app_constants.dart';
+import 'package:Noot/core/providers/auth_provider.dart';
+import 'package:Noot/core/constants/app_constants.dart';
 
 class TokenManagerService {
   // API endpoints

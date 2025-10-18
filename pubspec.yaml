@@ -1,5 +1,5 @@
-name: frontend
-description: "A new Flutter project."
+name: Noot
+description: "A social music platform that connects music lovers through shared listening experiences. Discover, share, and discuss your favorite songs with a vibrant community of music enthusiasts."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
@@ -67,7 +67,23 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
+
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+
+# Configuration for flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/Favicon-Debug.png"
+  adaptive_icon_background: "#cd0cf6"
+  adaptive_icon_foreground: "assets/icons/Favicon-Debug.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/icons/Favicon-Debug.png"
+    background_color: "#cd0cf6"
+    theme_color: "#cd0cf6"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -93,6 +109,7 @@ flutter:
     - assets/backgrounds/black-and-green-background.jpg
     - assets/backgrounds/purple-black-painting.jpg
     - assets/texts/terms_and_conditions.txt
+    - assets/icons/Favicon-Debug.png
 
   # Add Comfortaa font family
   fonts:
