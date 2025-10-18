@@ -43,35 +43,50 @@ ButtonStyle _getOutlinedButtonStyle() {
 class CustomBottomBar extends StatelessWidget {
   final VoidCallback onSharePost;
   final VoidCallback onShareThoughts;
+  final VoidCallback? onMakeAdvertisements;
 
   const CustomBottomBar({
     Key? key,
     required this.onSharePost,
     required this.onShareThoughts,
+    this.onMakeAdvertisements,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: ElevatedButton(
-              onPressed: onSharePost,
-              style: _getElevatedButtonStyle(),
-              child: const Text('Share Post'),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: onSharePost,
+                  style: _getElevatedButtonStyle(),
+                  child: const Text('Share Post'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: onShareThoughts,
+                  style: _getElevatedButtonStyle(),
+                  child: const Text('Share Thoughts'),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: ElevatedButton(
-              onPressed: onShareThoughts,
-              style: _getElevatedButtonStyle(),
-              child: const Text('Share Thoughts'),
+          if (onMakeAdvertisements != null) ...[
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: onMakeAdvertisements,
+              style: _getOutlinedButtonStyle(),
+              child: const Text('Make Advertisements'),
             ),
-          ),
+          ],
         ],
       ),
     );

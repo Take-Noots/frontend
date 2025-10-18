@@ -4,11 +4,19 @@ import 'auth_service.dart';
 import '../models/advertisement_model.dart';
 
 class AdvertisementService {
-  final AuthService authService;
+  // Either an AuthService (for authenticated calls) or a standalone Dio
+  // (for unauthenticated calls) can be provided.
+  final AuthService? authService;
+  final Dio? unauthenticatedDio;
 
-  AdvertisementService(this.authService);
+  // Default constructor for authenticated usage
+  AdvertisementService(this.authService) : unauthenticatedDio = null;
 
-  Dio get dio => authService.dio;
+  // Named constructor for unauthenticated usage with a provided Dio
+  AdvertisementService.unauthenticated(this.unauthenticatedDio)
+      : authService = null;
+
+  Dio get dio => unauthenticatedDio ?? authService!.dio;
 
   Future<Map<String, dynamic>> createAdvertisement({
     required String title,
@@ -22,7 +30,15 @@ class AdvertisementService {
     String? keywords,
   }) async {
     try {
-      await authService.initialize();
+      if (authService == null) {
+        return {
+          'success': false,
+          'message': 'Authentication required to create advertisement'
+        };
+      }
+
+      await authService!.initialize();
+
       final response = await dio.post(
         '/advertisement/create',
         data: {
@@ -73,7 +89,10 @@ class AdvertisementService {
 
   Future<Map<String, dynamic>> fetchAdvertisementsByUser(String userId) async {
     try {
-      await authService.initialize();
+      if (authService != null) {
+        await authService!.initialize();
+      }
+
       final response = await dio.get('/advertisement/user/$userId');
 
       if (response.statusCode == 200) {
