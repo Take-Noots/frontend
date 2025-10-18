@@ -62,11 +62,11 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
   void initState() {
     super.initState();
     _currentPost = widget.post;
-    // print('[DEBUG] ThoughtsFeedCard.initState: post id: ${widget.post.id}');
-    //print('[DEBUG] ThoughtsFeedCard.initState: songName: ${widget.post.songName}');
-    //print('[DEBUG] ThoughtsFeedCard.initState: artistName: ${widget.post.artistName}');
-    //print('[DEBUG] ThoughtsFeedCard.initState: onPlayPause is null? ${widget.onPlayPause == null}');
-    //print('[DEBUG] ThoughtsFeedCard.initState: isPlaying: ${widget.isPlaying}, isCurrentTrack: ${widget.isCurrentTrack}');
+    print('[DEBUG] ThoughtsFeedCard.initState: post id: ${widget.post.id}');
+    print('[DEBUG] ThoughtsFeedCard.initState: songName: ${widget.post.songName}');
+    print('[DEBUG] ThoughtsFeedCard.initState: artistName: ${widget.post.artistName}');
+    print('[DEBUG] ThoughtsFeedCard.initState: onPlayPause is null? ${widget.onPlayPause == null}');
+    print('[DEBUG] ThoughtsFeedCard.initState: isPlaying: ${widget.isPlaying}, isCurrentTrack: ${widget.isCurrentTrack}');
     _loadCurrentUserId();
     _extractColorFromCoverImage();
   }
@@ -837,6 +837,7 @@ class _ThoughtsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('[DEBUG] _ThoughtsContent: onPlayPause is null? ${onPlayPause == null}');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -946,7 +947,6 @@ class _ThoughtsHeader extends StatelessWidget {
             ),
           ),
         ),
-        // Add Spotify controls if song information is available
         if (post.songName != null && post.songName!.isNotEmpty)
           _ThoughtsSpotifyControl(
             post: post,
@@ -1346,6 +1346,7 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('[DEBUG] _ThoughtsSpotifyControl build: onPlayPause is null? ${onPlayPause == null}');
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pillColor = isDark ? Colors.black : Colors.white;
     final iconColor = isDark ? Colors.white : Colors.black;
@@ -1375,16 +1376,15 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
             const SizedBox(width: 20),
             GestureDetector(
               onTap: () {
-                // print('[DEBUG] _ThoughtsSpotifyControl: Play button tapped');
-                // print(
-                //     '[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null? ${onPlayPause == null}');
-                // print(
-                //     '[DEBUG] _ThoughtsSpotifyControl: isPlaying: $isPlaying, isCurrentTrack: $isCurrentTrack');
+                print('[DEBUG] _ThoughtsSpotifyControl: Play button tapped');
+                print('[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null? ${onPlayPause == null}');
+                print('[DEBUG] _ThoughtsSpotifyControl: isPlaying: $isPlaying, isCurrentTrack: $isCurrentTrack');
+                print('[DEBUG] _ThoughtsSpotifyControl: post.songName: ${post.songName}');
                 if (onPlayPause != null) {
+                  print('[DEBUG] _ThoughtsSpotifyControl: Calling onPlayPause!');
                   onPlayPause!();
                 } else {
-                  print(
-                      '[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null!');
+                  print('[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null!');
                 }
               },
               child: Icon(
