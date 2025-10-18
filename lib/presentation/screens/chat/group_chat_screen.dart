@@ -631,8 +631,7 @@ class _ProfilePictureWidgetState extends State<ProfilePictureWidget> {
     if (widget.userId == null || widget.userId!.isEmpty) return;
 
     try {
-      final userService = UserService();
-      String? username = 'User'; // Default username
+      String username = 'User'; // Default username (non-nullable)
 
       // Try to get username
       final profileResult = await ProfileService().getUserProfile(widget.userId!);
