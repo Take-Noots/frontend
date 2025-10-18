@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 
-class BusinessAdInsightsTab extends StatefulWidget {
-  final String userId;
-
-  const BusinessAdInsightsTab({Key? key, required this.userId})
-      : super(key: key);
+class AdInsightsTab extends StatefulWidget {
+  const AdInsightsTab({Key? key}) : super(key: key);
 
   @override
-  State<BusinessAdInsightsTab> createState() => _BusinessAdInsightsTabState();
+  State<AdInsightsTab> createState() => _AdInsightsTabState();
 }
 
-class _BusinessAdInsightsTabState extends State<BusinessAdInsightsTab> {
+class _AdInsightsTabState extends State<AdInsightsTab> {
   String _selectedRange = 'Last 30 days';
 
   final List<String> _ranges = [
@@ -27,75 +24,77 @@ class _BusinessAdInsightsTabState extends State<BusinessAdInsightsTab> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                const Text(
-                  'Ad Insights',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                DropdownButton<String>(
-                  value: _selectedRange,
-                  items: _ranges
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                      .toList(),
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setState(() {
-                      _selectedRange = v;
-                      _chartData = List<double>.from(_chartData.reversed);
-                    });
-                  },
-                ),
-              ],
-            ),
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Ad Insights',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              DropdownButton<String>(
+                value: _selectedRange,
+                items: _ranges
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                    .toList(),
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() {
+                    _selectedRange = v;
+                    // change dummy data slightly to reflect new selection
+                    _chartData = List<double>.from(_chartData.reversed);
+                  });
+                },
+              )
+            ],
+          ),
 
-            const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
-            Row(
-              children: <Widget>[
-                Expanded(child: _metricCard('Total Reach', '12.4K', Colors.purple)),
-                const SizedBox(width: 8),
-                Expanded(child: _metricCard('Total Likes', '3.2K', Colors.orange)),
-              ],
-            ),
+          // Cards row
+          Row(
+            children: [
+              Expanded(child: _metricCard('Total Reach', '12.4K', Colors.purple)),
+              const SizedBox(width: 8),
+              Expanded(child: _metricCard('Total Likes', '3.2K', Colors.orange)),
+            ],
+          ),
 
-            const SizedBox(height: 8),
-            _metricCard('Total Engagement (30 days)', '5.6K', Colors.teal),
+          const SizedBox(height: 8),
+          _metricCard('Total Engagement (30 days)', '5.6K', Colors.teal),
 
-            const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-            const Text('Engagement over time', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+          // Chart title
+          const Text('Engagement over time', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
 
-            SizedBox(
-              height: 180,
-              child: Card(
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: _SimpleLineChart(data: _chartData),
-                ),
+          SizedBox(
+            height: 180,
+            child: Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: _SimpleLineChart(data: _chartData),
               ),
             ),
+          ),
 
-            const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.trending_up_outlined),
-                title: const Text('Top performing ad'),
-                subtitle: const Text('Ad: "Summer Promo" — 23% increase in reach'),
-              ),
+          // Additional insights
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.trending_up_outlined),
+              title: const Text('Top performing ad'),
+              subtitle: const Text('Ad: "Summer Promo" — 23% increase in reach'),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
