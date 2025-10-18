@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../toggle_button.dart';
 import '../../screens/chat/chat_list_screen.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../core/router/route_names.dart';
 
 class NootAppBar extends StatelessWidget implements PreferredSizeWidget {
   const NootAppBar({super.key});
@@ -42,7 +44,7 @@ class NootAppBar extends StatelessWidget implements PreferredSizeWidget {
             icon: Icon(LucideIcons.heart,
                 color: Theme.of(context).colorScheme.onPrimary, size: 22),
             onPressed: () {
-              Navigator.pushNamed(context, '/request');
+              context.push(AppRoutes.requests);
             },
           ),
           // Message Icon - Updated this section

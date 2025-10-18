@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:Noot/data/services/search_service.dart';
 import 'package:Noot/presentation/widgets/loading_screens/common_loading.dart';
 
@@ -208,8 +209,7 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
                                     physics:
                                         const NeverScrollableScrollPhysics(),
                                     onUserTap: (userId, username) {
-                                      Navigator.pushNamed(
-                                          context, '/profile/$userId');
+                                      context.push('/profile/user/$userId');
                                     },
                                   ),
                                 if ((_searchResults['fanbases'] ?? [])
@@ -334,8 +334,7 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
                                     users: users,
                                     query: _query,
                                     onUserTap: (userId, username) {
-                                      Navigator.pushNamed(
-                                          context, '/profile/$userId');
+                                      context.push('/profile/user/$userId');
                                     },
                                   );
                                 },

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../data/models/notification_model.dart';
 import '../../../data/services/notification_service.dart';
 import '../chat/chat_list_screen.dart';
@@ -235,9 +236,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     switch (notification.type) {
       case NotificationType.message:
         if (notification.data.chatId != null) {
-          Navigator.pushNamed(context, '/chat', arguments: {
-            'chatId': notification.data.chatId,
-          });
+          // TODO: Add /chat route to app_router.dart
+          // context.push('/chat?chatId=${notification.data.chatId}');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChatScreen(
+                chatId: notification.data.chatId!,
+              ),
+            ),
+          );
         }
         break;
       case NotificationType.groupMessage:
@@ -256,18 +264,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case NotificationType.postLike:
       case NotificationType.postComment:
         if (notification.data.postId != null) {
-          Navigator.pushNamed(context, '/post', arguments: {
-            'postId': notification.data.postId,
-          });
+          // TODO: Add /post route to app_router.dart
+          // For now, navigate to home or relevant screen
+          context.go('/home');
         }
         break;
       case NotificationType.fanbasePostLike:
       case NotificationType.fanbasePostComment:
         if (notification.data.fanbasePostId != null && notification.data.fanbaseId != null) {
-          Navigator.pushNamed(context, '/fanbase-post', arguments: {
-            'fanbasePostId': notification.data.fanbasePostId,
-            'fanbaseId': notification.data.fanbaseId,
-          });
+          // TODO: Add fanbase post detail route to app_router.dart
+          // For now, navigate to fanbase details
+          context.push('/fanbases/${notification.data.fanbaseId}');
+        }
         }
         break;
     }
