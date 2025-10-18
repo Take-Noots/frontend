@@ -179,17 +179,16 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      // Check saved status for thoughts posts
       final savedThoughtsResult =
           await _thoughtsService.getSavedThoughtsPosts(userId!, context);
-      print('[DEBUG] Saved thoughts result: $savedThoughtsResult');
+      // print('[DEBUG] Saved thoughts result: $savedThoughtsResult');
 
       if (savedThoughtsResult != null &&
           savedThoughtsResult['success'] == true &&
           savedThoughtsResult['savedPosts'] != null) {
         final List<String> savedThoughtsIds =
             List<String>.from(savedThoughtsResult['savedPosts']);
-        print('[DEBUG] Saved thoughts IDs: $savedThoughtsIds');
+        // print('[DEBUG] Saved thoughts IDs: $savedThoughtsIds');
 
         for (var item in feedItems) {
           if (item.type == FeedItemType.thought && item.thoughtsPost != null) {
@@ -202,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e) {
-      // Handle error silently
+     
     }
   }
 

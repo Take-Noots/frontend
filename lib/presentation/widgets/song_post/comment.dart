@@ -36,6 +36,7 @@ class _CommentSectionState extends State<CommentSection> with TickerProviderStat
   late List<Comment> _comments;
   late AnimationController _sendButtonController;
   late Animation<double> _sendButtonScale;
+  bool _isSendingComment = false;
 
   @override
   void initState() {
@@ -235,19 +236,63 @@ class _CommentSectionState extends State<CommentSection> with TickerProviderStat
                               children: [
                                 GestureDetector(
                                   onTap: () async {
-                                    print('[DEBUG] Comment like: postId=${widget.postId}, commentId=${comment.id}, userId=${widget.currentUserId}');
+    // print('[DEBUG] Comment like: postId=${widget.postId}, commentId=${comment.id}, userId=${widget.currentUserId}');
                                     final result = await widget.songPostService.likeComment(
                                       widget.postId, 
                                       comment.id, 
                                       widget.currentUserId,
                                       context,
                                     );
+                                    
+                                    //print('[DEBUG] Comment like result: $result');
+                                    //print('[DEBUG] Comment like result keys: ${result.keys}');
+                                    
                                     if (result['success'] == true) {
                                       setState(() {
-                                        _comments[index] = Comment.fromJson(
-                                          (result['data']['comments'] as List)
-                                              .firstWhere((c) => c['_id'] == comment.id),
-                                        );
+                                        // Handle different response structures
+                                        List<dynamic>? commentsList;
+                                        
+                                        if (result['data']['comments'] != null) {
+                                          commentsList = result['data']['comments'] as List<dynamic>;
+                                        } else if (result['data'] is List) {
+                                          commentsList = result['data'] as List<dynamic>;
+                                        } else if (result['comments'] != null) {
+                                          commentsList = result['comments'] as List<dynamic>;
+                                        }
+                                        
+                                        if (commentsList != null) {
+                                          final updatedComment = commentsList
+                                              .where((c) => c['_id'] == comment.id || c['id'] == comment.id)
+                                              .firstOrNull;
+                                          if (updatedComment != null) {
+                                            _comments[index] = Comment.fromJson(updatedComment);
+                                          }
+                                        } else {
+                                          // Fallback: just toggle the like status optimistically
+                                          final currentComment = _comments[index];
+                                          final isCurrentlyLiked = currentComment.likedBy.contains(widget.currentUserId);
+                                          if (isCurrentlyLiked) {
+                                            _comments[index] = Comment(
+                                              id: currentComment.id,
+                                              userId: currentComment.userId,
+                                              username: currentComment.username,
+                                              text: currentComment.text,
+                                              createdAt: currentComment.createdAt,
+                                              likes: currentComment.likes - 1,
+                                              likedBy: currentComment.likedBy.where((id) => id != widget.currentUserId).toList(),
+                                            );
+                                          } else {
+                                            _comments[index] = Comment(
+                                              id: currentComment.id,
+                                              userId: currentComment.userId,
+                                              username: currentComment.username,
+                                              text: currentComment.text,
+                                              createdAt: currentComment.createdAt,
+                                              likes: currentComment.likes + 1,
+                                              likedBy: [...currentComment.likedBy, widget.currentUserId],
+                                            );
+                                          }
+                                        }
                                       });
                                     }
                                   },
@@ -330,6 +375,7 @@ class _CommentSectionState extends State<CommentSection> with TickerProviderStat
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                       child: TextField(
                         controller: _controller,
+                        enabled: !_isSendingComment,
                         style: TextStyle(
                           color: _getTextColor(context),
                           fontSize: 15,
@@ -353,17 +399,29 @@ class _CommentSectionState extends State<CommentSection> with TickerProviderStat
                     child: ScaleTransition(
                       scale: _sendButtonScale,
                       child: GestureDetector(
-                        onTapDown: (_) => _sendButtonController.forward(),
-                        onTapUp: (_) => _sendButtonController.reverse(),
-                        onTapCancel: () => _sendButtonController.reverse(),
-                        onTap: () async {
-                          if (_controller.text.trim().isNotEmpty) {
-                            final newComments = await widget.onAddComment(_controller.text.trim());
+                        onTapDown: _isSendingComment ? null : (_) => _sendButtonController.forward(),
+                        onTapUp: _isSendingComment ? null : (_) => _sendButtonController.reverse(),
+                        onTapCancel: _isSendingComment ? null : () => _sendButtonController.reverse(),
+                        onTap: _isSendingComment ? null : () async {
+                          if (_controller.text.trim().isNotEmpty && !_isSendingComment) {
                             setState(() {
-                              _comments.clear();
-                              _comments.addAll(newComments);
+                              _isSendingComment = true;
                             });
-                            _controller.clear();
+                            
+                            try {
+                              final newComments = await widget.onAddComment(_controller.text.trim());
+                              setState(() {
+                                _comments.clear();
+                                _comments.addAll(newComments);
+                                _isSendingComment = false;
+                              });
+                              _controller.clear();
+                            } catch (e) {
+                              setState(() {
+                                _isSendingComment = false;
+                              });
+                              // Error handling is done in the parent widget
+                            }
                           }
                         },
                         child: Container(
@@ -387,11 +445,20 @@ class _CommentSectionState extends State<CommentSection> with TickerProviderStat
                               ),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.send_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
+                          child: _isSendingComment
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.send_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
                         ),
                       ),
                     ),

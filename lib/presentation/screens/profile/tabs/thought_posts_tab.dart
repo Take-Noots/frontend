@@ -53,10 +53,10 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
         print(
             'ThoughtPostsTab: loaded ${_posts.length} thought posts from provided list');
         _isLoading = false;
-      } else {
-        // The provided postsList doesn't look like thought posts; fetch from service
-        print(
-            'ThoughtPostsTab: provided postsList does not contain thought posts; will fetch by userId');
+        } else {
+         
+          // print(
+          //     'ThoughtPostsTab: provided postsList does not contain thought posts; will fetch by userId');
         _fetchPosts();
       }
     } else {
@@ -73,7 +73,7 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
     try {
       print(
           'ThoughtPostsTab: fetching user thoughts for userId=${widget.userId} (profile endpoint)');
-      var result = await _service.getUserThoughts(widget.userId!);
+      var result = await _service.getUserThoughts(widget.userId!, context);
       print('ThoughtPostsTab: raw getUserThoughts result: $result');
       if (!(result['success'] == true && result['data'] != null)) {
         print(
@@ -139,9 +139,14 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
                     posts: _posts,
                     userId: widget.userId,
                     initialPostId: post.id,
+                    onRefresh: () {
+                      
+                    },
                   ),
                 ),
-              );
+              ).then((_) {
+                _fetchPosts();
+              });
             },
             child: ThoughtsFeedCard(
               post: post,
@@ -151,6 +156,9 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
               },
               onComment: () {
                 // navigate to comment view if desired
+              },
+              onPostUpdated: (updatedPost) {
+                _fetchPosts();
               },
               onUserTap: (String userId, String? username) {},
             ),

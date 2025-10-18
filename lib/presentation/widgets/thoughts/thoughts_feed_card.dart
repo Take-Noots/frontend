@@ -61,15 +61,11 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
   void initState() {
     super.initState();
     _currentPost = widget.post;
-    print('[DEBUG] ThoughtsFeedCard.initState: post id: ${widget.post.id}');
-    print(
-        '[DEBUG] ThoughtsFeedCard.initState: songName: ${widget.post.songName}');
-    print(
-        '[DEBUG] ThoughtsFeedCard.initState: artistName: ${widget.post.artistName}');
-    print(
-        '[DEBUG] ThoughtsFeedCard.initState: onPlayPause is null? ${widget.onPlayPause == null}');
-    print(
-        '[DEBUG] ThoughtsFeedCard.initState: isPlaying: ${widget.isPlaying}, isCurrentTrack: ${widget.isCurrentTrack}');
+    // print('[DEBUG] ThoughtsFeedCard.initState: post id: ${widget.post.id}');
+    //print('[DEBUG] ThoughtsFeedCard.initState: songName: ${widget.post.songName}');
+    //print('[DEBUG] ThoughtsFeedCard.initState: artistName: ${widget.post.artistName}');
+    //print('[DEBUG] ThoughtsFeedCard.initState: onPlayPause is null? ${widget.onPlayPause == null}');
+    //print('[DEBUG] ThoughtsFeedCard.initState: isPlaying: ${widget.isPlaying}, isCurrentTrack: ${widget.isCurrentTrack}');
     _loadCurrentUserId();
     _extractColorFromCoverImage();
   }
@@ -115,7 +111,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
       postUserId: _currentPost.userId,
       currentUserId: _currentUserId,
       isOwnPost: isOwnPost,
-      isSaved: false, 
+      isSaved: _currentPost.isSaved ?? false, 
       postId: _currentPost.id,
       onSharePost: () {
         print('Copy link pressed for thoughts post: ${_currentPost.id}');
@@ -140,8 +136,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         // TODO: Implement edit functionality
       } : null,
       onDelete: isOwnPost ? () {
-        print('Delete pressed for thoughts post: ${_currentPost.id}');
-        // TODO: Implement delete functionality
+        _handleDeletePost();
       } : null,
       onHide: isOwnPost ? () {
         print('Hide pressed for thoughts post: ${_currentPost.id}');
@@ -308,25 +303,23 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
   }
 
   Future<void> _handleComment() async {
-    // Get current user ID - try AuthProvider first, then SharedPreferences as fallback
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     String? currentUserId = authProvider.user?.id;
 
-    print('[DEBUG] _handleComment: AuthProvider user ID: $currentUserId');
-    print('[DEBUG] _handleComment: AuthProvider user: ${authProvider.user}');
+    //print('[DEBUG] _handleComment: AuthProvider user ID: $currentUserId');
+    //print('[DEBUG] _handleComment: AuthProvider user: ${authProvider.user}');
 
-    // Fallback to SharedPreferences if AuthProvider doesn't have user ID
+    
     if (currentUserId == null) {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      print(
-          '[DEBUG] _handleComment: SharedPreferences user_data: $userDataString');
+      //print('[DEBUG] _handleComment: SharedPreferences user_data: $userDataString');
 
       final userData = userDataString != null
           ? jsonDecode(userDataString)
-          : {'id': '685fb750cc084ba7e0ef8533'}; // Fallback for testing
+          : {'id': '685fb750cc084ba7e0ef8533'}; 
       currentUserId = userData['id'];
-      print('[DEBUG] _handleComment: Fallback user ID: $currentUserId');
+      //print('[DEBUG] _handleComment: Fallback user ID: $currentUserId');
     }
 
     if (currentUserId == null || currentUserId.isEmpty) {
@@ -350,11 +343,11 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         latestComments = (postData['comments'] as List<dynamic>)
             .map((c) => ThoughtsComment.fromJson(c))
             .toList();
-        print('[DEBUG] Fetched latest comments: ${latestComments.length}');
+        // print('[DEBUG] Fetched latest comments: ${latestComments.length}');
       }
     }
 
-    // Convert ThoughtsComment to Comment format
+   
     final convertedComments = latestComments.map((thoughtsComment) {
       return data_model.Comment(
         id: thoughtsComment.id,
@@ -379,10 +372,10 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         child: CommentSection(
           comments: convertedComments,
           onAddComment: (text) async {
-            print('[DEBUG] Adding comment: $text');
-            print('[DEBUG] Post ID: ${_currentPost.id}');
-            print('[DEBUG] User ID: $currentUserId');
-            print('[DEBUG] Comment text: $text');
+            //print('[DEBUG] Adding comment: $text');
+            //print('[DEBUG] Post ID: ${_currentPost.id}');
+            //print('[DEBUG] User ID: $currentUserId');
+            //print('[DEBUG] Comment text: $text');
 
             // Get current user info for optimistic update
             final prefs = await SharedPreferences.getInstance();
@@ -391,9 +384,9 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 ? jsonDecode(userDataString)
                 : {'id': currentUserId, 'name': 'User'};
 
-            // Create optimistic comment (show immediately)
+            // Create optimistic comment 
             final optimisticComment = data_model.Comment(
-              id: 'temp_${DateTime.now().millisecondsSinceEpoch}', // Temporary ID
+              id: 'temp_${DateTime.now().millisecondsSinceEpoch}', 
               userId: currentUserId!,
               username: userData['name'] ?? 'User',
               text: text,
@@ -407,9 +400,9 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 List<data_model.Comment>.from(convertedComments)
                   ..add(optimisticComment);
 
-            print('[DEBUG] Showing optimistic comment immediately');
+            // print('[DEBUG] Showing optimistic comment immediately');
 
-            // Now add to database in background
+            
             try {
               final result = await _thoughtsService.addComment(
                 _currentPost.id,
@@ -418,11 +411,11 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 context,
               );
 
-              print('[DEBUG] Comment add result: $result');
-              print('[DEBUG] Comment add result type: ${result.runtimeType}');
-              print('[DEBUG] Comment add result keys: ${result.keys}');
-              print('[DEBUG] Comment add success value: ${result['success']}');
-              print('[DEBUG] Comment add data value: ${result['data']}');
+              //print('[DEBUG] Comment add result: $result');
+              //print('[DEBUG] Comment add result type: ${result.runtimeType}');
+              //print('[DEBUG] Comment add result keys: ${result.keys}');
+              //print('[DEBUG] Comment add success value: ${result['success']}');
+              //print('[DEBUG] Comment add data value: ${result['data']}');
 
               // Check if success - handle different response formats
               bool isSuccess = false;
@@ -494,21 +487,14 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 // Notify parent widget
                 widget.onPostUpdated?.call(_currentPost);
 
-                print('[DEBUG] Comment successfully added to database');
+                //print('[DEBUG] Comment successfully added to database');
 
-                // Show success message
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Comment added successfully!'),
-                    backgroundColor: Colors.green,
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+                // Comment added successfully - no need to show SnackBar
 
                 return convertedUpdatedComments;
               } else {
-                // Database failed, remove optimistic comment
-                print('[DEBUG] Database failed, removing optimistic comment');
+     
+    // print('[DEBUG] Database failed, removing optimistic comment');
 
                 // Handle error message - it might be a string or array
                 String errorMessage = 'Failed to add comment';
@@ -520,30 +506,34 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                   }
                 }
 
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(errorMessage),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+
+                return convertedComments; 
+              }
+            } catch (e) {
+             
+    // print('[DEBUG] Network error: $e');
+
+              if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(errorMessage),
+                  const SnackBar(
+                    content: Text('Network error. Please try again.'),
                     backgroundColor: Colors.red,
                   ),
                 );
-
-                return convertedComments; // Return original comments without optimistic one
               }
-            } catch (e) {
-              // Network error, remove optimistic comment
-              print('[DEBUG] Network error: $e');
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Network error. Please try again.'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-
-              return convertedComments; // Return original comments without optimistic one
+              return convertedComments; 
             }
 
-            // Return optimistic comments for immediate display
+            
             return optimisticComments;
           },
           postId: _currentPost.id,
@@ -571,7 +561,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
           margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           child: ConstrainedBox(
             constraints: const BoxConstraints(
-              maxHeight: 350, // Reduced height constraint
+              maxHeight: 350, 
             ),
             child: AspectRatio(
               aspectRatio: postAspectRatio,
@@ -744,6 +734,83 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         ),
       );
     }
+  }
+
+
+  Future<void> _handleDeletePost() async {
+ 
+    if (_currentUserId == null) {
+      _showMessage('Please log in to delete posts', Colors.orange);
+      return;
+    }
+
+
+    bool? shouldDelete = await _showDeleteDialog();
+    if (shouldDelete != true) return;
+
+   
+
+    try {
+      final result = await _thoughtsService.deletePost(_currentPost.id, context);
+      
+      if (result['success'] == true) {
+        // Success - remove post from screen
+        _showMessage('Post deleted successfully', AppColors.primaryPurple);
+        
+        // Debug logging
+        //print('[DEBUG] DeleteThoughts: Post deleted successfully, calling onPostUpdated');
+        //print('[DEBUG] DeleteThoughts: onPostUpdated callback exists: ${widget.onPostUpdated != null}');
+        //print('[DEBUG] DeleteThoughts: Post ID: ${_currentPost.id}');
+        
+        widget.onPostUpdated?.call(_currentPost);
+      } else {
+       
+        _showMessage(result['message'] ?? 'Failed to delete post', Colors.red);
+      }
+    } catch (e) {
+      
+      _showMessage('Error: $e', Colors.red);
+    }
+  }
+
+ 
+  void _showMessage(String message, Color color) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: color,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  
+  
+  Future<bool?> _showDeleteDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Post'),
+        content: const Text('Are you sure you want to delete this post?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1222,10 +1289,10 @@ class _InteractionButtonsState extends State<_InteractionButtons> {
     final isLiked =
         currentUserId != null && widget.post.likedBy.contains(currentUserId!);
 
-    print('[DEBUG] _InteractionButtons.build: currentUserId = $currentUserId');
-    print('[DEBUG] _InteractionButtons.build: isLiked = $isLiked');
-    print(
-        '[DEBUG] _InteractionButtons.build: post.likedBy = ${widget.post.likedBy}');
+    // print('[DEBUG] _InteractionButtons.build: currentUserId = $currentUserId');
+    // print('[DEBUG] _InteractionButtons.build: isLiked = $isLiked');
+    // print(
+    //     '[DEBUG] _InteractionButtons.build: post.likedBy = ${widget.post.likedBy}');
 
     return Row(
       children: [
@@ -1306,11 +1373,11 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
             const SizedBox(width: 20),
             GestureDetector(
               onTap: () {
-                print('[DEBUG] _ThoughtsSpotifyControl: Play button tapped');
-                print(
-                    '[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null? ${onPlayPause == null}');
-                print(
-                    '[DEBUG] _ThoughtsSpotifyControl: isPlaying: $isPlaying, isCurrentTrack: $isCurrentTrack');
+                // print('[DEBUG] _ThoughtsSpotifyControl: Play button tapped');
+                // print(
+                //     '[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null? ${onPlayPause == null}');
+                // print(
+                //     '[DEBUG] _ThoughtsSpotifyControl: isPlaying: $isPlaying, isCurrentTrack: $isCurrentTrack');
                 if (onPlayPause != null) {
                   onPlayPause!();
                 } else {
