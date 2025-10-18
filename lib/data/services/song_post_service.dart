@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -464,15 +465,15 @@ class SongPostService {
     }
   }
 
-  Future<Map<String, dynamic>> addRecentlyLikedUser(
-      String userId, String likedUserId) async {
+  Future<Map<String, dynamic>> addRecentlyLikedPosts(
+      String userId, String likedPostId) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/recently-liked-users'),
+        Uri.parse('$baseUrl/recently-liked-post'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'userId': userId,
-          'likedUserId': likedUserId,
+          'likedPostId': likedPostId,
         }),
       );
       if (response.statusCode == 200 || response.statusCode == 201) {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_constants.dart';
@@ -340,6 +341,89 @@ class GroupChatService {
         return {
           'success': false,
           'message': errorData['error'] ?? 'Failed to remove member',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  // Upload group icon using base64
+  Future<Map<String, dynamic>> uploadGroupIconBase64({
+    required String groupChatId,
+    required String imageBase64,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/group/$groupChatId/upload-group-icon-base64'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'imageData': imageBase64,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': data['success'] ?? true,
+          'data': data,
+          'message': data['message'] ?? 'Group icon uploaded successfully',
+          'imageUrl': data['imageUrl'],
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Failed to upload group icon',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  // Upload group icon using file
+  Future<Map<String, dynamic>> uploadGroupIconFile({
+    required String groupChatId,
+    required File imageFile,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/group/$groupChatId/upload-group-icon'),
+      );
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'groupIcon',
+          imageFile.path,
+        ),
+      );
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': data['success'] ?? true,
+          'data': data,
+          'message': data['message'] ?? 'Group icon uploaded successfully',
+          'imageUrl': data['imageUrl'],
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Failed to upload group icon',
         };
       }
     } catch (e) {

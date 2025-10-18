@@ -2,12 +2,12 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:frontend/data/models/fanbase_model.dart';
-import 'package:frontend/data/services/auth_service.dart';
-import 'package:frontend/data/services/fanbase_service.dart';
-import 'package:frontend/presentation/widgets/fanbasepost/widgets/post_options_menu.dart';
+import 'package:Noot/data/models/fanbase_model.dart';
+import 'package:Noot/data/services/auth_service.dart';
+import 'package:Noot/data/services/fanbase_service.dart';
+import 'package:Noot/presentation/widgets/fanbasepost/widgets/post_options_menu.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:frontend/presentation/screens/fanbasePost/fanbasePost_creation_screen.dart';
+import 'package:Noot/presentation/screens/fanbasePost/fanbasePost_creation_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/group_chat_model.dart';
 import '../../../data/services/group_chat_service.dart';
+import '../../../data/services/profile_service.dart';
 import 'group_details_screen.dart';
 
 class GroupChatScreen extends StatefulWidget {
@@ -27,6 +28,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   bool _isLoading = true;
   bool _isSending = false;
   String? _error;
+  bool _isMember = true;
 
   @override
   void initState() {
@@ -54,14 +56,41 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   Future<void> _loadGroupDetails() async {
     try {
       final result = await _groupChatService.getGroupChatDetails(widget.groupChatId);
-      
+
       if (result['success'] && mounted) {
+        final newGroupChat = GroupChat.fromJson(result['data'], widget.currentUserId);
+        final isStillMember = newGroupChat.members.any((member) => member.id == widget.currentUserId);
+
         setState(() {
-          groupChat = GroupChat.fromJson(result['data'], widget.currentUserId);
+          groupChat = newGroupChat;
+          _isMember = isStillMember;
         });
+
+        // If user is no longer a member, show message and prevent further actions
+        if (!isStillMember && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You are no longer a member of this group'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else {
+        // If we can't load group details, assume user is not a member
+        if (mounted) {
+          setState(() {
+            _isMember = false;
+          });
+        }
       }
     } catch (e) {
       print('Error loading group details: $e');
+      // On error, assume user might not be a member
+      if (mounted) {
+        setState(() {
+          _isMember = false;
+        });
+      }
     }
   }
 
@@ -107,7 +136,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   }
 
   Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty || _isSending) return;
+    if (_messageController.text.trim().isEmpty || _isSending || !_isMember) return;
 
     final messageText = _messageController.text.trim();
     _messageController.clear();
@@ -184,7 +213,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         ),
         title: GestureDetector(
           onTap: () {
-            if (groupChat != null) {
+            if (groupChat != null && _isMember) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -194,6 +223,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   ),
                 ),
               ).then((_) => _loadGroupChatData());
+            } else if (!_isMember) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('You cannot access group details as you are not a member'),
+                  backgroundColor: Colors.red,
+                ),
+              );
             }
           },
           child: Row(
@@ -248,7 +284,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               color: Theme.of(context).colorScheme.onPrimary,
             ),
             onPressed: () {
-              if (groupChat != null) {
+              if (groupChat != null && _isMember) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -258,6 +294,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     ),
                   ),
                 ).then((_) => _loadGroupChatData());
+              } else if (!_isMember) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('You cannot access group details as you are not a member'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             },
           ),
@@ -283,55 +326,81 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   ),
                 ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(25),
+              child: _isMember
+                ? Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          child: TextField(
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText: 'Message...',
+                              hintStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                            ),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                            maxLines: null,
+                            onSubmitted: (_) => _sendMessage(),
+                            enabled: !_isSending,
+                          ),
+                        ),
                       ),
-                      child: TextField(
-                        controller: _messageController,
-                        decoration: InputDecoration(
-                          hintText: 'Message...',
-                          hintStyle: TextStyle(
+
+                      IconButton(
+                        icon: _isSending
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.green,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.send,
+                                color: Colors.green,
+                              ),
+                        onPressed: _isSending ? null : _sendMessage,
+                      ),
+                    ],
+                  )
+                : Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.block,
+                          color: Theme.of(context).colorScheme.secondary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'You are not a member of this group',
+                          style: TextStyle(
                             color: Theme.of(context).colorScheme.secondary,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
+                            fontSize: 14,
                           ),
                         ),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                        maxLines: null,
-                        onSubmitted: (_) => _sendMessage(),
-                        enabled: !_isSending,
-                      ),
+                      ],
                     ),
                   ),
-                  
-                  IconButton(
-                    icon: _isSending
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.green,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.send,
-                            color: Colors.green,
-                          ),
-                    onPressed: _isSending ? null : _sendMessage,
-                  ),
-                ],
-              ),
             ),
           ],
         ),
@@ -410,9 +479,9 @@ class GroupMessageBubble extends StatelessWidget {
         mainAxisAlignment: message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           if (!message.isMe) ...[
-            const CircleAvatar(
+            ProfilePictureWidget(
+              userId: message.senderId,
               radius: 12,
-              backgroundImage: AssetImage('assets/images/hehe.png'),
             ),
             const SizedBox(width: 8),
           ],
@@ -481,5 +550,115 @@ class GroupMessageBubble extends StatelessWidget {
     final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
     
     return '$displayHour:$minute $period';
+  }
+}
+// ProfilePictureWidget to fetch and display real profile pictures
+class ProfilePictureWidget extends StatefulWidget {
+  final String? userId;
+  final double radius;
+  final bool showOnlineIndicator;
+  final bool isOnline;
+
+  const ProfilePictureWidget({
+    super.key,
+    required this.userId,
+    required this.radius,
+    this.showOnlineIndicator = false,
+    this.isOnline = false,
+  });
+
+  @override
+  State<ProfilePictureWidget> createState() => _ProfilePictureWidgetState();
+}
+
+class _ProfilePictureWidgetState extends State<ProfilePictureWidget> {
+  String? profileImageUrl;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfileImage();
+  }
+
+  @override
+  void didUpdateWidget(ProfilePictureWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId) {
+      _fetchProfileImage();
+    }
+  }
+
+  Future<void> _fetchProfileImage() async {
+    if (widget.userId == null || widget.userId!.isEmpty) {
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final profileService = ProfileService();
+      final profileResult = await profileService.getUserProfile(widget.userId!);
+
+      if (profileResult['success'] == true && profileResult['data'] != null) {
+        final profileData = profileResult['data'];
+        if (mounted) {
+          setState(() {
+            profileImageUrl = profileData['profileImage'] as String?;
+            isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        isLoading
+            ? CircleAvatar(
+                radius: widget.radius,
+                backgroundColor: Colors.grey[300],
+                child: const CircularProgressIndicator(strokeWidth: 2),
+              )
+            : CircleAvatar(
+                radius: widget.radius,
+                backgroundImage: profileImageUrl != null && profileImageUrl!.isNotEmpty
+                    ? NetworkImage(profileImageUrl!)
+                    : const AssetImage('assets/images/hehe.png') as ImageProvider,
+              ),
+        if (widget.showOnlineIndicator && widget.isOnline)
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: widget.radius * 0.6,
+              height: widget.radius * 0.6,
+              decoration: BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }

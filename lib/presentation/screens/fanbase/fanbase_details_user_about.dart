@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/data/models/fanbase_model.dart';
-import 'package:frontend/data/services/fanbase_service.dart';
+import 'package:Noot/data/models/fanbase_model.dart';
+import 'package:Noot/data/services/fanbase_service.dart';
 
 class FanbaseDetailsUserAbout extends StatefulWidget {
   final Fanbase fanbase;

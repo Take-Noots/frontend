@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/presentation/widgets/fanbases/fanbase_card.dart';
+import 'package:Noot/presentation/widgets/fanbases/fanbase_card.dart';
 
 class FanbaseSearchResults extends StatelessWidget {
   final List<dynamic> fanbases;
