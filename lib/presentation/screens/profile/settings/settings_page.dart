@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/styles/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/providers/theme_provider.dart';
-import 'package:go_router/go_router.dart';
-import '../../../../core/router/route_names.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -131,27 +129,6 @@ class SettingsPage extends StatelessWidget {
                 size: 16),
             onTap: () {
               // Navigate to language selection
-            },
-          ),
-          Divider(color: Theme.of(context).dividerColor),
-          ListTile(
-            leading: Icon(Icons.visibility_off,
-                color: Theme.of(context).colorScheme.onSurface),
-            title: Text(
-              'Hidden Posts',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-            ),
-            subtitle: Text(
-              'View and manage your hidden posts',
-              style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 12),
-            ),
-            trailing: Icon(Icons.arrow_forward_ios,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                size: 16),
-            onTap: () {
-              context.go(AppRoutes.hiddenPosts);
             },
           ),
           Divider(color: Theme.of(context).dividerColor),
