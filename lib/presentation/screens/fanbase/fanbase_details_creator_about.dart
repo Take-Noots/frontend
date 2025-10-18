@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/data/models/fanbase_model.dart';
+import 'package:Noot/data/models/fanbase_model.dart';
 
 /// About tab shown to the fanbase creator (owner)
 class FanbaseDetailsCreatorAbout extends StatelessWidget {

@@ -1,14 +1,9 @@
 // Fanbase Card Widget
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
-import 'package:Noot/data/models/fanbase_model.dart';
-import 'package:Noot/data/services/fanbase_service.dart';
-=======
 import 'dart:convert'; // Add for JSON decoding
 import 'package:shared_preferences/shared_preferences.dart'; // Add for user data access
-import 'package:frontend/data/models/fanbase_model.dart';
-import 'package:frontend/data/services/fanbase_service.dart';
->>>>>>> origin/main
+import 'package:Noot/data/models/fanbase_model.dart';
+import 'package:Noot/data/services/fanbase_service.dart';
 import './fanbase_interations.dart';
 // import './fanbase_profilebar.dart';
 
