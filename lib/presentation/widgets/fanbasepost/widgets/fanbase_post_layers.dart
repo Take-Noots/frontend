@@ -82,12 +82,12 @@ class HeaderWidget extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           // Spotify control pill
-          SongControlWidget(
-            trackId: trackId,
-            isPlaying: isPlaying,
-            isCurrentTrack: isCurrentTrack,
-            onPlayPause: onPlayPause,
-          ),
+          // SongControlWidget(
+          //   trackId: trackId,
+          //   isPlaying: isPlaying,
+          //   isCurrentTrack: isCurrentTrack,
+          //   onPlayPause: onPlayPause,
+          // ),
         ],
       ),
     );
@@ -129,8 +129,10 @@ class _SongControlWidgetState extends State<SongControlWidget> {
       width: 80, // Fixed width for pill shape
       decoration: BoxDecoration(
         color: pillColor,
-        borderRadius:
-            BorderRadius.circular(18.0), // Half of height for perfect pill
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(18.0),
+          topRight: Radius.circular(18.0),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
