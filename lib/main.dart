@@ -22,11 +22,15 @@ void main() async {
   final authProvider = AuthProvider();
   final themeProvider = ThemeProvider();
 
-  // Load user data from shared preferences
+  // Load user data and theme preferences from shared preferences
   await authProvider.loadUserDataFromSharedPreferences();
+  await themeProvider.init();
 
   // Create auth service
   final authService = AuthService(authProvider);
+
+  // Create the router instance
+  final appRouter = AppRouter(authProvider);
 
   // Initialize services (but don't wait for completion - splash screen will handle this)
   authService.initialize().catchError((e) {
@@ -40,21 +44,19 @@ void main() async {
         ChangeNotifierProvider.value(value: authProvider),
         Provider.value(value: authService),
       ],
-      child: const MyApp(),
+      child: MyApp(appRouter: appRouter),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  final AppRouter appRouter;
+
+  const MyApp({Key? key, required this.appRouter}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final authProvider = Provider.of<AuthProvider>(context);
-
-    // Create the router instance
-    final appRouter = AppRouter(authProvider);
 
     return MaterialApp.router(
       title: 'Noot',

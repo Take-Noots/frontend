@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/styles/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/providers/theme_provider.dart';
 import 'package:go_router/go_router.dart';
@@ -36,7 +37,7 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
           ),
-          SwitchListTile(
+          ListTile(
             title: Text(
               'Push Notifications',
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
@@ -47,17 +48,18 @@ class SettingsPage extends StatelessWidget {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12),
             ),
-            value: true,
-            onChanged: (bool value) {
-              // Handle notification toggle
-            },
-            secondary: Icon(Icons.notifications,
+            trailing: CustomSwitch(
+              value: true,
+              onChanged: (bool value) {
+                // Handle notification toggle
+              },
+            ),
+            leading: Icon(Icons.notifications,
                 color: Theme.of(context).colorScheme.onSurface),
-            activeColor: Theme.of(context).colorScheme.primary,
           ),
           Divider(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.24)),
-          SwitchListTile(
+          ListTile(
             title: Text(
               'Dark Mode',
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
@@ -68,19 +70,20 @@ class SettingsPage extends StatelessWidget {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12),
             ),
-            value: isDarkMode,
-            onChanged: (bool value) {
-              themeProvider.toggleTheme();
-            },
-            secondary: Icon(Icons.dark_mode,
+            trailing: CustomSwitch(
+              value: isDarkMode,
+              onChanged: (bool value) async {
+                await themeProvider.toggleTheme();
+              },
+            ),
+            leading: Icon(Icons.dark_mode,
                 color: Theme.of(context).colorScheme.onSurface),
-            activeColor: Theme.of(context).colorScheme.primary,
           ),
           Divider(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.24)),
-          SwitchListTile(
+          ListTile(
             title: Text(
-              'Auto-play Videos',
+              'Auto-play Songs',
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             subtitle: Text(
@@ -89,13 +92,14 @@ class SettingsPage extends StatelessWidget {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12),
             ),
-            value: false,
-            onChanged: (bool value) {
-              // Handle auto-play toggle
-            },
-            secondary: Icon(Icons.play_circle,
+            trailing: CustomSwitch(
+              value: false,
+              onChanged: (bool value) {
+                // Handle auto-play toggle
+              },
+            ),
+            leading: Icon(Icons.play_circle,
                 color: Theme.of(context).colorScheme.onSurface),
-            activeColor: Theme.of(context).colorScheme.primary,
           ),
           Divider(color: Theme.of(context).dividerColor),
           Padding(
@@ -193,6 +197,58 @@ class SettingsPage extends StatelessWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Custom switch with outline for active state
+class CustomSwitch extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  const CustomSwitch({super.key, required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 48,
+        height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          color: value
+              ? AppColors.primaryPurple.withOpacity(0.2)
+              : (isDark ? Colors.grey.shade900 : Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: value ? AppColors.primaryPurple : Colors.grey.shade500,
+            width: 1.2, // Match thickness for both states
+          ),
+        ),
+        child: Align(
+          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: value
+                  ? AppColors.primaryPurple
+                  : (isDark ? Colors.grey.shade800 : Colors.white),
+              shape: BoxShape.circle,
+              boxShadow: [
+                if (value)
+                  BoxShadow(
+                    color: AppColors.primaryPurple.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
