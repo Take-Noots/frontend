@@ -51,6 +51,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
 
   bool profileNotFound = false;
   int postCount = 0;
+  final ValueNotifier<bool> refreshTabNotifier = ValueNotifier(false);
 
   @override
   void initState() {
@@ -225,8 +226,8 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           showGrid: true,
           profileImage: profile!.profileImage,
           postsList: posts,
-          onPostTap: (postId) {
-            Navigator.push(
+          onPostTap: (postId) async {
+            await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => ProfileFeedScreen(
@@ -235,7 +236,9 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                 ),
               ),
             );
+            refreshTabNotifier.value = true;
           },
+          refreshNotifier: refreshTabNotifier,
         ),
         ArtistNewReleasesTab(userId: userId!), // Implement this tab
         ThoughtPostsTab(postsList: posts, userId: userId),
@@ -257,8 +260,8 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           showGrid: true,
           profileImage: profile!.profileImage,
           postsList: posts,
-          onPostTap: (postId) {
-            Navigator.push(
+          onPostTap: (postId) async {
+            await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => ProfileFeedScreen(
@@ -267,7 +270,9 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                 ),
               ),
             );
+            refreshTabNotifier.value = true;
           },
+          refreshNotifier: refreshTabNotifier,
         ),
         BusinessAdsTab(userId: userId!), // Implement this tab
         BusinessAdInsightsTab(userId: userId!), // Implement this tab
@@ -287,8 +292,8 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           showGrid: true,
           profileImage: profile!.profileImage,
           postsList: posts,
-          onPostTap: (postId) {
-            Navigator.push(
+          onPostTap: (postId) async {
+            await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => ProfileFeedScreen(
@@ -297,7 +302,9 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                 ),
               ),
             );
+            refreshTabNotifier.value = true;
           },
+          refreshNotifier: refreshTabNotifier,
         ),
         ThoughtPostsTab(postsList: posts, userId: userId),
         const TaggedPostsTab(),

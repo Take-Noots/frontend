@@ -22,6 +22,9 @@ void main() async {
   final authProvider = AuthProvider();
   final themeProvider = ThemeProvider();
 
+  // Load user data from shared preferences
+  await authProvider.loadUserDataFromSharedPreferences();
+
   // Create auth service
   final authService = AuthService(authProvider);
 

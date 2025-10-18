@@ -42,6 +42,7 @@ class _UserProfilePageState extends State<UserProfilePage>
   int postCount = 0;
   bool isPrivateProfile = false;
   bool isFollowingUser = false;
+  final ValueNotifier<bool> refreshTabNotifier = ValueNotifier(false);
 
   @override
   void initState() {
@@ -162,13 +163,10 @@ class _UserProfilePageState extends State<UserProfilePage>
           : await profileService.followUser(loggedUserId!, profile!.userId);
 
       if (result['success'] == true) {
+        // Refresh profile data to get updated follower/following counts
+        await _fetchProfileData();
         setState(() {
           isFollowingUser = !isFollowingUser;
-          if (isFollowingUser) {
-            profile!.followers.add(loggedUserId!);
-          } else {
-            profile!.followers.remove(loggedUserId!);
-          }
         });
       } else {
         // Show error message
@@ -461,7 +459,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                     showGrid: true,
                     profileImage: profile!.profileImage,
                     postsList: posts,
-                    onPostTap: (postId) {
+                    onPostTap: (postId) async {
                       // Add debug print
                       print("Tapped post ID: $postId");
 
@@ -493,7 +491,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                         final String validPostId = postId.toString();
                         print("Navigating to post ID: $validPostId");
 
-                        Navigator.push(
+                        await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => ProfileFeedScreen(
@@ -502,8 +500,10 @@ class _UserProfilePageState extends State<UserProfilePage>
                             ),
                           ),
                         );
+                        refreshTabNotifier.value = true;
                       }
                     },
+                    refreshNotifier: refreshTabNotifier,
                   ),
                   ThoughtPostsTab(userId: widget.userId),
                   const TaggedPostsTab(),
