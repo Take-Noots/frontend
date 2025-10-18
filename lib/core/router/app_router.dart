@@ -22,6 +22,8 @@ import '../../presentation/screens/profile/settings/about_page.dart';
 import '../../presentation/screens/profile/settings/savedPosts/saved_posts.dart';
 import '../../presentation/screens/profile/settings/hiddenPosts/hidden_posts.dart';
 import '../../presentation/screens/request/request.dart';
+import '../../presentation/screens/advertisement/create_advertisement_screen.dart';
+import '../../presentation/screens/advertisement/set_audience_screen.dart';
 import '../../presentation/screens/shell_screen_v2.dart';
 import '../../presentation/screens/create_noots/search_song.dart';
 import '../../presentation/screens/create_noots/create_description_noot.dart';
@@ -192,6 +194,18 @@ class AppRouter {
           GoRoute(
             path: AppRoutes.requests,
             builder: (context, state) => const RequestScreen(),
+          ),
+
+          // Advertisement
+          GoRoute(
+            path: AppRoutes.createAdvertisement,
+            builder: (context, state) => const CreateAdvertisementScreen(),
+            routes: [
+              GoRoute(
+                path: 'set-audience',
+                builder: (context, state) => SetAudienceScreen(),
+              ),
+            ],
           ),
 
           // Create Noot routes
