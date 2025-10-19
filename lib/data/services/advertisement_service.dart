@@ -130,4 +130,25 @@ class AdvertisementService {
       };
     }
   }
+
+  Future<Map<String, dynamic>> updateAdvertisement(String id, Map<String, dynamic> data) async {
+    try {
+      if (authService == null) {
+        return {'success': false, 'message': 'Authentication required to update advertisement'};
+      }
+
+      await authService!.initialize();
+
+      final response = await dio.post('/advertisement/$id', data: data);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'data': response.data, 'message': 'Advertisement updated successfully'};
+      }
+
+      return {'success': false, 'message': response.data?['message'] ?? 'Failed to update advertisement'};
+    } catch (e) {
+      debugPrint('Update advertisement error: $e');
+      return {'success': false, 'message': 'An error occurred updating advertisement'};
+    }
+  }
 }

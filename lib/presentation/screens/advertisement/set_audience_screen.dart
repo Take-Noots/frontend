@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/route_names.dart';
+import '../../../data/services/advertisement_service.dart';
+import '../../../data/services/auth_service.dart';
+import 'package:provider/provider.dart';
+import '../../../core/providers/auth_provider.dart';
 
 class SetAudienceScreen extends StatefulWidget {
   const SetAudienceScreen({Key? key}) : super(key: key);
@@ -22,6 +26,9 @@ class _SetAudienceScreenState extends State<SetAudienceScreen> {
 
   @override
   Widget build(BuildContext context) {
+  // We'll fetch the current user's latest advertisement instead of using query param
+  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  final currentUserId = authProvider.user?.id ?? '';
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -213,12 +220,71 @@ class _SetAudienceScreenState extends State<SetAudienceScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  // TODO: Navigate to next step or save data
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Audience set to ${_views.toInt()}K views for \$${_totalCost.toStringAsFixed(0)}')),
-                  );
-                },
+                  onPressed: () async {
+                    // Save payed views count to the latest advertisement created by the current user
+                    if (currentUserId.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Unable to determine current user')), 
+                      );
+                      return;
+                    }
+
+                    final authService = Provider.of<AuthService>(context, listen: false);
+                    final advertisementService = AdvertisementService(authService);
+
+                    // Fetch user's advertisements
+                    final fetchResult = await advertisementService.fetchAdvertisementsByUser(currentUserId);
+                    if (fetchResult['success'] != true) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(fetchResult['message'] ?? 'Failed to fetch advertisements')),
+                      );
+                      return;
+                    }
+
+                    final List ads = fetchResult['data'] ?? [];
+                    if (ads.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('No advertisements found for this user')),
+                      );
+                      return;
+                    }
+
+                    // Convert to typed list of Advertisement if possible
+                    List<dynamic> adsDynamic = ads;
+                    adsDynamic.sort((a, b) {
+                      try {
+                        final DateTime aDate = a is Map ? DateTime.parse(a['createdAt']) : a.createdAt;
+                        final DateTime bDate = b is Map ? DateTime.parse(b['createdAt']) : b.createdAt;
+                        return bDate.compareTo(aDate);
+                      } catch (e) {
+                        return 0;
+                      }
+                    });
+
+                    final latestAd = adsDynamic.first;
+                    final String adId = latestAd is Map ? (latestAd['_id'] ?? latestAd['id'] ?? '') : latestAd.id;
+
+                    final int views = _views.toInt() * 1000; // convert K to absolute
+                    final result = await advertisementService.updateAdvertisement(adId, {
+                      'payedViewsCount': views,
+                      'remainViews': views,
+                    });
+
+                    debugPrint('Advertisement update result: $result');
+                    if (result['success'] == true) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Audience set to ${_views.toInt()}K views.')),
+                      );
+                      context.go(AppRoutes.home);
+                      return;
+                    } else {
+                      debugPrint('Failed to update advertisement: ${result['message']}');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(result['message'] ?? 'Failed to update advertisement')),
+                      );
+                      return;
+                    }
+                  },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8E08EF),
                   foregroundColor: Colors.white,
