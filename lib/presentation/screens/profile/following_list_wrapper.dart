@@ -27,6 +27,7 @@ class _FollowingListPageWrapperState extends State<FollowingListPageWrapper> {
   List<dynamic> _following = [];
   String? _errorMessage;
   Set<String> _currentUserFollowing = {};
+  Set<String> _loadingUserIds = {};
 
   @override
   void initState() {
@@ -77,7 +78,27 @@ class _FollowingListPageWrapperState extends State<FollowingListPageWrapper> {
     }
   }
 
+  Future<void> _reloadCurrentUserFollowing() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.user?.id;
+    if (currentUserId != null) {
+      final profileService = ProfileService();
+      final result = await profileService.getUserProfile(currentUserId);
+      if (result['success'] == true) {
+        final profile = result['data'] as Map<String, dynamic>;
+        final following = profile['following'] as List<dynamic>? ?? [];
+        setState(() {
+          _currentUserFollowing = following.map((e) => e.toString()).toSet();
+        });
+      }
+    }
+  }
+
   Future<void> _onFollowToggle(String targetUserId, bool isFollow) async {
+    setState(() {
+      _loadingUserIds.add(targetUserId);
+    });
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final authService = Provider.of<AuthService>(context, listen: false);
     final currentUserId = authProvider.user?.id;
@@ -88,24 +109,30 @@ class _FollowingListPageWrapperState extends State<FollowingListPageWrapper> {
         ? await profileService.followUser(currentUserId, targetUserId)
         : await profileService.unfollowUser(currentUserId, targetUserId);
 
-    if (result['success'] == true) {
+    if (mounted) {
       setState(() {
-        if (isFollow) {
-          _currentUserFollowing.add(targetUserId);
+        _loadingUserIds.remove(targetUserId);
+        if (result['success'] == true) {
+          if (isFollow) {
+            _currentUserFollowing.add(targetUserId);
+          } else {
+            _currentUserFollowing.remove(targetUserId);
+          }
         } else {
-          _currentUserFollowing.remove(targetUserId);
+          // Show error
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ??
+                  'Failed to ${isFollow ? 'follow' : 'unfollow'} user'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
         }
       });
-    } else {
-      // Show error
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ??
-                'Failed to ${isFollow ? 'follow' : 'unfollow'} user'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+
+      // Reload to ensure state matches database after successful operation
+      if (result['success'] == true) {
+        await _reloadCurrentUserFollowing();
       }
     }
   }
@@ -161,6 +188,7 @@ class _FollowingListPageWrapperState extends State<FollowingListPageWrapper> {
       onUserTap: widget.onUserTap,
       currentUserFollowing: _currentUserFollowing,
       onFollowToggle: _onFollowToggle,
+      loadingUserIds: _loadingUserIds,
     );
   }
 }

@@ -179,17 +179,16 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      // Check saved status for thoughts posts
       final savedThoughtsResult =
           await _thoughtsService.getSavedThoughtsPosts(userId!, context);
-      print('[DEBUG] Saved thoughts result: $savedThoughtsResult');
+      // print('[DEBUG] Saved thoughts result: $savedThoughtsResult');
 
       if (savedThoughtsResult != null &&
           savedThoughtsResult['success'] == true &&
           savedThoughtsResult['savedPosts'] != null) {
         final List<String> savedThoughtsIds =
             List<String>.from(savedThoughtsResult['savedPosts']);
-        print('[DEBUG] Saved thoughts IDs: $savedThoughtsIds');
+        // print('[DEBUG] Saved thoughts IDs: $savedThoughtsIds');
 
         for (var item in feedItems) {
           if (item.type == FeedItemType.thought && item.thoughtsPost != null) {
@@ -202,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e) {
-      // Handle error silently
+     
     }
   }
 
@@ -395,7 +394,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Create a unique identifier for thoughts posts
     final thoughtsTrackId = '${post.songName}_${post.artistName}';
-
+    
     if (_currentlyPlayingTrackId == thoughtsTrackId && _isPlaying) {
       setState(() {
         _isPlaying = false;
@@ -419,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _currentlyPlayingTrackId = thoughtsTrackId;
         _isPlaying = true;
       });
-
+      
       try {
         await _playThoughtsTrack(post);
       } catch (e) {
@@ -428,11 +427,11 @@ class _HomeScreenState extends State<HomeScreen> {
           _currentlyPlayingTrackId = null;
           _isPlaying = false;
         });
-
+        
         // Show a more user-friendly error message
         String errorMessage = 'Failed to play track';
         String detailedError = e.toString();
-
+        
         if (detailedError.contains('No Spotify token')) {
           errorMessage = 'Please connect your Spotify account to play music';
         } else if (detailedError.contains('Track not found')) {
@@ -446,7 +445,7 @@ class _HomeScreenState extends State<HomeScreen> {
           errorMessage =
               'Failed to play: ${detailedError.length > 100 ? detailedError.substring(0, 100) : detailedError}';
         }
-
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -458,83 +457,283 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _handleThoughtsLike(ThoughtsPost post) async {
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in to like posts'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final result = await _thoughtsService.likeThoughts(post.id, context);
+      
+      if (result['success'] == true) {
+        // Update the post in the feed
+        setState(() {
+          final itemIndex = _feedItems.indexWhere((item) => item.thoughtsPost?.id == post.id);
+          if (itemIndex != -1) {
+            final item = _feedItems[itemIndex];
+            if (item.thoughtsPost != null) {
+              // Toggle like status
+              final isCurrentlyLiked = item.thoughtsPost!.likedBy.contains(userId!);
+              final newLikedBy = List<String>.from(item.thoughtsPost!.likedBy);
+              
+              if (isCurrentlyLiked) {
+                newLikedBy.remove(userId!);
+              } else {
+                newLikedBy.add(userId!);
+              }
+              
+              final updatedPost = ThoughtsPost(
+                id: item.thoughtsPost!.id,
+                userId: item.thoughtsPost!.userId,
+                username: item.thoughtsPost!.username,
+                userImage: item.thoughtsPost!.userImage,
+                text: item.thoughtsPost!.text,
+                createdAt: item.thoughtsPost!.createdAt,
+                updatedAt: item.thoughtsPost!.updatedAt,
+                likes: isCurrentlyLiked ? item.thoughtsPost!.likes - 1 : item.thoughtsPost!.likes + 1,
+                likedBy: newLikedBy,
+                comments: item.thoughtsPost!.comments,
+                songName: item.thoughtsPost!.songName,
+                artistName: item.thoughtsPost!.artistName,
+                coverImage: item.thoughtsPost!.coverImage,
+                backgroundColor: item.thoughtsPost!.backgroundColor,
+                isHidden: item.thoughtsPost!.isHidden,
+                isDeleted: item.thoughtsPost!.isDeleted,
+                isSaved: item.thoughtsPost!.isSaved,
+              );
+              
+              _feedItems[itemIndex] = FeedItem.thought(updatedPost);
+            }
+          }
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to like post'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error liking post: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleThoughtsComment(ThoughtsPost post) async {
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in to comment on posts'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Fetch latest comments from database
+    final commentsResult = await _thoughtsService.getComments(post.id, context);
+    List<ThoughtsComment> latestComments = post.comments;
+
+    if (commentsResult['success'] == true && commentsResult['data'] != null) {
+      final postData = commentsResult['data'];
+      if (postData['comments'] != null) {
+        latestComments = (postData['comments'] as List<dynamic>)
+            .map((c) => ThoughtsComment.fromJson(c))
+            .toList();
+      }
+    }
+
+    // Convert to Comment format
+    final convertedComments = latestComments.map((thoughtsComment) {
+      return data_model.Comment(
+        id: thoughtsComment.id,
+        userId: thoughtsComment.userId,
+        username: thoughtsComment.username,
+        text: thoughtsComment.text,
+        createdAt: thoughtsComment.createdAt,
+        likes: thoughtsComment.likes,
+        likedBy: thoughtsComment.likedBy,
+      );
+    }).toList();
+
+    if (mounted) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => SizedBox(
+          height: MediaQuery.of(context).size.height * 0.75,
+          child: CommentSection(
+            postId: post.id,
+            comments: convertedComments,
+            currentUserId: userId!,
+            songPostService: _ThoughtsToSongPostAdapter(_thoughtsService),
+          onAddComment: (text) async {
+            try {
+              final result = await _thoughtsService.addComment(
+                post.id,
+                userId!,
+                text,
+                context,
+              );
+
+              // Check if success - handle different response formats
+              bool isSuccess = false;
+              if (result['success'] is bool) {
+                isSuccess = result['success'];
+              } else if (result['success'] is int) {
+                isSuccess = result['success'] == 1;
+              } else if (result['success'] is String) {
+                isSuccess = result['success'].toString().toLowerCase() == 'true';
+              }
+
+              if (isSuccess && result['data'] != null) {
+                List<dynamic>? commentsData;
+
+                // Handle different response structures
+                if (result['data']['comments'] != null) {
+                  commentsData = result['data']['comments'] as List<dynamic>;
+                } else if (result['data'] is List) {
+                  commentsData = result['data'] as List<dynamic>;
+                } else if (result['comments'] != null) {
+                  commentsData = result['comments'] as List<dynamic>;
+                }
+
+                if (commentsData != null) {
+                  final updatedComments = commentsData
+                      .map((c) => ThoughtsComment.fromJson(c))
+                      .toList();
+
+                  // Convert to Comment format
+                  final convertedUpdatedComments = updatedComments.map((thoughtsComment) {
+                    return data_model.Comment(
+                      id: thoughtsComment.id,
+                      userId: thoughtsComment.userId,
+                      username: thoughtsComment.username,
+                      text: thoughtsComment.text,
+                      createdAt: thoughtsComment.createdAt,
+                      likes: thoughtsComment.likes,
+                      likedBy: thoughtsComment.likedBy,
+                    );
+                  }).toList();
+
+                  return convertedUpdatedComments;
+                }
+              }
+
+              // If we get here, something went wrong
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(result['message'] ?? 'Failed to add comment'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+
+              return convertedComments;
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error adding comment: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return convertedComments;
+            }
+          },
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _playThoughtsTrack(ThoughtsPost post) async {
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
-
+      
       // Search for the track first - try with both song name and artist name
       final searchQuery = '${post.songName} ${post.artistName}';
       final searchResponse = await dio.get(
         '/spotify/search/track',
         queryParameters: {'track_name': searchQuery},
       );
-
+      
       // Check if response has the expected structure
       if (searchResponse.data == null) {
         throw Exception('Search returned null data');
       }
-
+      
       if (searchResponse.data['tracks'] == null) {
         throw Exception(
             'Search response missing tracks field. Data: ${searchResponse.data}');
       }
-
+      
       if (searchResponse.data['tracks']['items'] == null) {
         throw Exception(
             'Search response missing items field. Data: ${searchResponse.data}');
       }
-
+      
       if (searchResponse.statusCode == 200 &&
           searchResponse.data['tracks']['items'].isNotEmpty) {
         // Find the track that matches both song name and artist name
         final tracks = searchResponse.data['tracks']['items'] as List;
-
+        
         String? trackId;
-
+        
         for (var track in tracks) {
           final trackName = track['name']?.toString().toLowerCase() ?? '';
-
+          
           // Handle artists - could be a list of strings or list of objects
           String trackArtists = '';
           try {
             final artistsList = track['artists'] as List;
             trackArtists = artistsList
                 .map((a) {
-                  // If artist is a string, use it directly
-                  if (a is String) return a.toLowerCase();
-                  // If artist is a map/object, get the name field
+              // If artist is a string, use it directly
+              if (a is String) return a.toLowerCase();
+              // If artist is a map/object, get the name field
                   if (a is Map && a['name'] != null)
                     return a['name'].toString().toLowerCase();
-                  return '';
+              return '';
                 })
                 .where((name) => name.isNotEmpty)
                 .join(' ');
           } catch (e) {
             trackArtists = '';
           }
-
+          
           final postSongName = post.songName?.toLowerCase() ?? '';
           final postArtistName = post.artistName?.toLowerCase() ?? '';
-
+          
           if (trackName.contains(postSongName) &&
               trackArtists.contains(postArtistName)) {
             trackId = track['id'];
             break;
           }
         }
-
+        
         // If no exact match found, use the first result
         if (trackId == null) {
           trackId = tracks.first['id'];
         }
-
+        
         // Play the track
         final playResponse = await dio.post(
           '/spotify/player/post/play',
           data: {'track_id': trackId},
         );
-
+        
         // Accept any 2xx status code as success
         if (playResponse.statusCode != null &&
             playResponse.statusCode! >= 200 &&
@@ -857,7 +1056,7 @@ class _HomeScreenState extends State<HomeScreen> {
             duration: const Duration(seconds: 2),
           ),
         );
-      } else {
+    } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Failed to follow user'),
@@ -959,10 +1158,38 @@ class _HomeScreenState extends State<HomeScreen> {
       onSongLike: (data_model.Post post) => _handleLike(post),
       onSongComment: (data_model.Post post) => _handleComment(post),
       onSongPlay: (data_model.Post post) => _handlePlay(post),
-      onThoughtLike: (ThoughtsPost post) {},
-      onThoughtComment: (ThoughtsPost post) {},
+      onThoughtLike: (ThoughtsPost post) {
+        _handleThoughtsLike(post);
+      },
+      onThoughtComment: (ThoughtsPost post) {
+        _handleThoughtsComment(post);
+      },
       onThoughtPlay: (ThoughtsPost post) {
         _handleThoughtsPlay(post);
+      },
+      onThoughtHide: (ThoughtsPost post) async {
+        try {
+          final result = await _thoughtsService.hidePost(post.id);
+          if (result['success'] == true) {
+            setState(() {
+              _feedItems.removeWhere((item) => item.thoughtsPost?.id == post.id);
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Post hidden successfully'),
+                  backgroundColor: Colors.purple),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text(result['message'] ?? 'Failed to hide post')),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error hiding post: $e')),
+          );
+        }
       },
       currentlyPlayingTrackId: _currentlyPlayingTrackId,
       isPlaying: _isPlaying,
@@ -1027,5 +1254,20 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: const BottomBar(),
     );
     // END LEGACY NAVIGATION SUPPORT
+  }
+}
+
+// Adapter class to make ThoughtsService compatible with SongPostService
+class _ThoughtsToSongPostAdapter extends SongPostService {
+  final ThoughtsService _thoughtsService;
+
+  _ThoughtsToSongPostAdapter(this._thoughtsService);
+
+  @override
+  Future<Map<String, dynamic>> likeComment(
+      String postId, String commentId, String userId,
+      [BuildContext? context]) async {
+    return await _thoughtsService.likeComment(
+        postId, commentId, userId, context);
   }
 }

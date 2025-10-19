@@ -362,21 +362,21 @@ class UserDetailWidget extends StatelessWidget {
                       songName: songName,
                       artistName: artists,
                       onSharePost: () {
-                        print('Share post pressed for user: $username');
+                        // print('Share post pressed for user: $username');
                       },
                       onSavePost: onSavePost ??
                           () {
-                            print('Save post pressed for user: $username');
+                            // print('Save post pressed for user: $username');
                           },
                       onUnsavePost: onUnsavePost ??
                           () {
-                            print('Unsave post pressed for user: $username');
+                            // print('Unsave post pressed for user: $username');
                           },
                       onUnfollow: () {
-                        print('Unfollow pressed for user: $username');
+                        // print('Unfollow pressed for user: $username');
                       },
                       onReport: () {
-                        print('Report pressed for user: $username');
+                        //print('Report pressed for user: $username');
                       },
                       onEdit: isOwnPost ? onEdit : null,
                       onDelete: isOwnPost ? onDelete : null,
@@ -773,8 +773,7 @@ class Post extends StatelessWidget {
     // Directly calculate isOwnPost if not provided
     final bool calculatedIsOwnPost = isOwnPost ||
         (userId != null && currentUserId != null && userId == currentUserId);
-    print(
-        '[DEBUG] Post.build: userId=$userId, currentUserId=$currentUserId, calculatedIsOwnPost=$calculatedIsOwnPost');
+    // print'[DEBUG] Post.build: userId=$userId, currentUserId=$currentUserId, calculatedIsOwnPost=$calculatedIsOwnPost');
 
     return Column(
       children: [

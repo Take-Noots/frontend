@@ -351,6 +351,44 @@ class GroupChatService {
     }
   }
 
+  // Leave group (handles both regular members and group creators)
+  Future<Map<String, dynamic>> leaveGroup(
+      String groupChatId, String userId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/group/leaveGroup'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'groupChatId': groupChatId,
+          'userId': userId,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': data,
+          'message': data['message'] ?? 'Left group successfully',
+          'deleted': data['deleted'] ?? false,
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['error'] ?? errorData['message'] ?? 'Failed to leave group',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
   // Upload group icon using base64
   Future<Map<String, dynamic>> uploadGroupIconBase64({
     required String groupChatId,

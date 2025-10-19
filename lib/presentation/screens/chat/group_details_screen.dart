@@ -436,16 +436,21 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
     });
 
     try {
-      final result = await _groupChatService.removeMemberFromGroup(
+      final result = await _groupChatService.leaveGroup(
         groupChat.id,
         widget.currentUserId,
       );
 
       if (result['success']) {
         if (mounted) {
+          final bool wasDeleted = result['deleted'] ?? false;
+          final String message = wasDeleted
+            ? 'Group was deleted as you were the creator'
+            : 'You have left the group successfully';
+
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('You have left the group successfully'),
+            SnackBar(
+              content: Text(message),
               backgroundColor: Colors.green,
             ),
           );

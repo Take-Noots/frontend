@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:palette_generator/palette_generator.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,16 +7,14 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'dart:convert';
 import '../../../data/models/thoughts_model.dart';
 import '../../../data/services/thoughts_service.dart';
-import '../../../data/services/auth_service.dart';
-import '../../../data/services/spotify_service.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../despost/widgets/TMP_des_post_bg_container.dart';
 import '../song_post/comment.dart';
 import '../song_post/post_options_menu.dart';
 import '../../../data/models/post_model.dart' as data_model;
 import '../../../data/services/song_post_service.dart';
-import '../../../data/services/thoughts_service.dart';
 import '../../../core/styles/app_colors.dart';
+import '../../screens/thoughts_posts/update_thoughts.dart';
 
 // ================= ThoughtsFeedCard (Main Widget) =================
 class ThoughtsFeedCard extends StatefulWidget {
@@ -67,6 +64,17 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     _extractColorFromCoverImage();
   }
 
+  @override
+  void didUpdateWidget(ThoughtsFeedCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update local post when parent updates
+    if (widget.post != oldWidget.post) {
+      setState(() {
+        _currentPost = widget.post;
+      });
+    }
+  }
+
   Future<void> _extractColorFromCoverImage() async {
     setState(() {
       _extractedColor = _currentPost.backgroundColor != null
@@ -102,12 +110,15 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
 
     final isOwnPost = _currentUserId == _currentPost.userId;
 
+    print(
+        '[DEBUG] Options menu: isOwnPost=$isOwnPost, isSaved=${_currentPost.isSaved}');
+
     PostOptionsMenu.show(
       context,
       postUserId: _currentPost.userId,
       currentUserId: _currentUserId,
       isOwnPost: isOwnPost,
-      isSaved: false,
+      isSaved: _currentPost.isSaved,
       postId: _currentPost.id,
       onSharePost: () {
         // TODO: Implement copy link functionality
@@ -125,18 +136,18 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         // TODO: Implement report functionality
       },
       onEdit: isOwnPost
-          ? () {
-              // TODO: Implement edit functionality
+          ? () async {
+              await _handleEditPost();
             }
           : null,
       onDelete: isOwnPost
           ? () {
-              // TODO: Implement delete functionality
+              _handleDeletePost();
             }
           : null,
       onHide: isOwnPost
           ? () {
-              // TODO: Implement hide functionality
+              _handleHidePost();
             }
           : null,
     );
@@ -158,131 +169,16 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     );
   }
 
-  Future<void> _handleLike() async {
-    // Get current user ID - try AuthProvider first, then SharedPreferences as fallback
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    String? currentUserId = authProvider.user?.id;
-    // Fallback to SharedPreferences if AuthProvider doesn't have user ID
-    if (currentUserId == null) {
-      final prefs = await SharedPreferences.getInstance();
-      final userDataString = prefs.getString('user_data');
-      final userData = userDataString != null
-          ? jsonDecode(userDataString)
-          : {'id': '685fb750cc084ba7e0ef8533'}; // Fallback for testing
-      currentUserId = userData['id'];
-    }
-
-    if (currentUserId == null || currentUserId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please log in to like posts'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // Store original post for potential rollback
-    final originalPost = _currentPost;
-
-    // Check if already liked
-    final isCurrentlyLiked = _currentPost.likedBy.contains(currentUserId);
-
-    // Optimistic update - update UI immediately
-    setState(() {
-      if (isCurrentlyLiked) {
-        // Unlike - remove from likedBy list
-        final newLikedBy = List<String>.from(_currentPost.likedBy);
-        newLikedBy.remove(currentUserId!);
-        _currentPost = ThoughtsPost(
-          id: _currentPost.id,
-          userId: _currentPost.userId,
-          username: _currentPost.username,
-          userImage: _currentPost.userImage,
-          text: _currentPost.text,
-          createdAt: _currentPost.createdAt,
-          updatedAt: _currentPost.updatedAt,
-          likes: _currentPost.likes - 1,
-          likedBy: newLikedBy,
-          comments: _currentPost.comments,
-          songName: _currentPost.songName,
-          artistName: _currentPost.artistName,
-          coverImage: _currentPost.coverImage,
-          isHidden: _currentPost.isHidden,
-          isDeleted: _currentPost.isDeleted,
-        );
-      } else {
-        // Like - add to likedBy list
-        final newLikedBy = List<String>.from(_currentPost.likedBy);
-        newLikedBy.add(currentUserId!);
-        _currentPost = ThoughtsPost(
-          id: _currentPost.id,
-          userId: _currentPost.userId,
-          username: _currentPost.username,
-          userImage: _currentPost.userImage,
-          text: _currentPost.text,
-          createdAt: _currentPost.createdAt,
-          updatedAt: _currentPost.updatedAt,
-          likes: _currentPost.likes + 1,
-          likedBy: newLikedBy,
-          comments: _currentPost.comments,
-          songName: _currentPost.songName,
-          artistName: _currentPost.artistName,
-          coverImage: _currentPost.coverImage,
-          isHidden: _currentPost.isHidden,
-          isDeleted: _currentPost.isDeleted,
-        );
-      }
-    });
-
-    try {
-      // Call the API
-      final result =
-          await _thoughtsService.likeThoughts(_currentPost.id, context);
-
-      if (result['success'] == true && result['data'] != null) {
-        // Update with server response
-        final updatedPost = ThoughtsPost.fromJson(result['data']);
-        setState(() {
-          _currentPost = updatedPost;
-        });
-
-        // Notify parent widget of the update
-        widget.onPostUpdated?.call(updatedPost);
-      } else {
-        // Revert optimistic update on error
-        setState(() {
-          _currentPost = originalPost;
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'Failed to like post'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      // Revert optimistic update on error
-      setState(() {
-        _currentPost = originalPost;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error liking post: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+  // This method is no longer used - comment handling is done by parent
+  Future<void> _handleComment() async {
+    // Stub method - actual implementation is in parent widget
+    if (widget.onComment != null) {
+      widget.onComment!();
     }
   }
 
-  Future<void> _handleComment() async {
-    // Get current user ID - try AuthProvider first, then SharedPreferences as fallback
+  // Old implementation removed - keeping for reference
+  Future<void> _handleComment_OLD() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     String? currentUserId = authProvider.user?.id;
 
@@ -293,7 +189,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
 
       final userData = userDataString != null
           ? jsonDecode(userDataString)
-          : {'id': '685fb750cc084ba7e0ef8533'}; // Fallback for testing
+          : {'id': '685fb750cc084ba7e0ef8533'};
       currentUserId = userData['id'];
     }
 
@@ -321,7 +217,6 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
       }
     }
 
-    // Convert ThoughtsComment to Comment format
     final convertedComments = latestComments.map((thoughtsComment) {
       return data_model.Comment(
         id: thoughtsComment.id,
@@ -337,10 +232,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) => SizedBox(
         height: MediaQuery.of(context).size.height * 0.75,
         child: CommentSection(
@@ -353,9 +245,9 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 ? jsonDecode(userDataString)
                 : {'id': currentUserId, 'name': 'User'};
 
-            // Create optimistic comment (show immediately)
+            // Create optimistic comment
             final optimisticComment = data_model.Comment(
-              id: 'temp_${DateTime.now().millisecondsSinceEpoch}', // Temporary ID
+              id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
               userId: currentUserId!,
               username: userData['name'] ?? 'User',
               text: text,
@@ -448,14 +340,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 // Notify parent widget
                 widget.onPostUpdated?.call(_currentPost);
 
-                // Show success message
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Comment added successfully!'),
-                    backgroundColor: Colors.green,
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+                // Comment added successfully - no need to show SnackBar
 
                 return convertedUpdatedComments;
               } else {
@@ -470,28 +355,31 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                   }
                 }
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(errorMessage),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(errorMessage),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
 
-                return convertedComments; // Return original comments without optimistic one
+                return convertedComments;
               }
             } catch (e) {
               // Network error, remove optimistic comment
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Network error. Please try again.'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Network error. Please try again.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
 
-              return convertedComments; // Return original comments without optimistic one
+              return convertedComments;
             }
 
-            // Return optimistic comments for immediate display
             return optimisticComments;
           },
           postId: _currentPost.id,
@@ -540,8 +428,8 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                   onOptionsTap: widget.onOptionsTap ?? _handleOptionsTap,
                   isPlaying: widget.isPlaying,
                   isCurrentTrack: widget.isCurrentTrack,
-                  onLike: _handleLike,
-                  onComment: _handleComment,
+                  onLike: widget.onLike,
+                  onComment: widget.onComment,
                   currentUserId: _currentUserId,
                   parentWidth: parentWidth,
                   parentHeight: parentHeight,
@@ -571,7 +459,9 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     }
 
     try {
+      print('[DEBUG] Save: userId=$_currentUserId, postId=${post.id}');
       final result = await _thoughtsService.savePost(_currentUserId!, post.id);
+      print('[DEBUG] Save result: $result');
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -586,10 +476,26 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         );
         // Update the post's saved status
         setState(() {
-          _currentPost.isSaved = true;
+          _currentPost = ThoughtsPost(
+            id: _currentPost.id,
+            userId: _currentPost.userId,
+            username: _currentPost.username,
+            userImage: _currentPost.userImage,
+            text: _currentPost.text,
+            createdAt: _currentPost.createdAt,
+            updatedAt: _currentPost.updatedAt,
+            likes: _currentPost.likes,
+            likedBy: _currentPost.likedBy,
+            comments: _currentPost.comments,
+            songName: _currentPost.songName,
+            artistName: _currentPost.artistName,
+            coverImage: _currentPost.coverImage,
+            backgroundColor: _currentPost.backgroundColor,
+            isHidden: _currentPost.isHidden,
+            isDeleted: _currentPost.isDeleted,
+            isSaved: true,
+          );
         });
-        // Notify parent widget if callback is provided
-        widget.onPostUpdated?.call(_currentPost);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -635,8 +541,10 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     }
 
     try {
+      print('[DEBUG] Unsave: userId=$_currentUserId, postId=${post.id}');
       final result =
           await _thoughtsService.unsavePost(_currentUserId!, post.id);
+      print('[DEBUG] Unsave result: $result');
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -651,10 +559,26 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         );
         // Update the post's saved status
         setState(() {
-          _currentPost.isSaved = false;
+          _currentPost = ThoughtsPost(
+            id: _currentPost.id,
+            userId: _currentPost.userId,
+            username: _currentPost.username,
+            userImage: _currentPost.userImage,
+            text: _currentPost.text,
+            createdAt: _currentPost.createdAt,
+            updatedAt: _currentPost.updatedAt,
+            likes: _currentPost.likes,
+            likedBy: _currentPost.likedBy,
+            comments: _currentPost.comments,
+            songName: _currentPost.songName,
+            artistName: _currentPost.artistName,
+            coverImage: _currentPost.coverImage,
+            backgroundColor: _currentPost.backgroundColor,
+            isHidden: _currentPost.isHidden,
+            isDeleted: _currentPost.isDeleted,
+            isSaved: false,
+          );
         });
-        // Notify parent widget if callback is provided
-        widget.onPostUpdated?.call(_currentPost);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -682,6 +606,150 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         ),
       );
     }
+  }
+
+  Future<void> _handleDeletePost() async {
+    if (_currentUserId == null) {
+      _showMessage('Please log in to delete posts', Colors.orange);
+      return;
+    }
+
+    bool? shouldDelete = await _showDeleteDialog();
+    if (shouldDelete != true) return;
+
+    try {
+      final result =
+          await _thoughtsService.deletePost(_currentPost.id, context);
+
+      if (result['success'] == true) {
+        // Success - remove post from screen
+        _showMessage('Post deleted successfully', AppColors.primaryPurple);
+
+        // Debug logging
+        //print('[DEBUG] DeleteThoughts: Post deleted successfully, calling onPostUpdated');
+        //print('[DEBUG] DeleteThoughts: onPostUpdated callback exists: ${widget.onPostUpdated != null}');
+        //print('[DEBUG] DeleteThoughts: Post ID: ${_currentPost.id}');
+
+        widget.onPostUpdated?.call(_currentPost);
+      } else {
+        _showMessage(result['message'] ?? 'Failed to delete post', Colors.red);
+      }
+    } catch (e) {
+      _showMessage('Error: $e', Colors.red);
+    }
+  }
+
+  void _showMessage(String message, Color color) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: color,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<bool?> _showDeleteDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Post'),
+        content: const Text('Are you sure you want to delete this post?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleEditPost() async {
+    if (_currentUserId == null) {
+      _showMessage('Please log in to edit posts', Colors.orange);
+      return;
+    }
+
+    // Navigate to edit screen
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditThoughtsPostScreen(post: _currentPost),
+      ),
+    );
+
+    if (result == true) {
+      try {
+        final updatedPostData =
+            await _thoughtsService.getPostById(_currentPost.id);
+        if (updatedPostData['success'] == true &&
+            updatedPostData['data'] != null) {
+          setState(() {
+            _currentPost = ThoughtsPost.fromJson(updatedPostData['data']);
+          });
+        }
+      } catch (e) {
+        _showMessage('Error refreshing post: $e', Colors.red);
+      }
+    }
+  }
+
+  Future<void> _handleHidePost() async {
+    if (_currentUserId == null) {
+      _showMessage('Please log in to hide posts', Colors.orange);
+      return;
+    }
+
+    bool? shouldHide = await _showHideDialog();
+    if (shouldHide != true) return;
+
+    try {
+      final result = await _thoughtsService.hidePost(_currentPost.id);
+
+      if (result['success'] == true) {
+        _showMessage('Post hidden successfully', AppColors.primaryPurple);
+
+        widget.onPostUpdated?.call(_currentPost);
+      } else {
+        _showMessage(result['message'] ?? 'Failed to hide post', Colors.red);
+      }
+    } catch (e) {
+      _showMessage('Error: $e', Colors.red);
+    }
+  }
+
+  Future<bool?> _showHideDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hide Post'),
+        content: const Text('Are you sure you want to hide this post?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.purple),
+            child: const Text('Hide'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1379,6 +1447,8 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print(
+        '[DEBUG] _ThoughtsSpotifyControl build: onPlayPause is null? ${onPlayPause == null}');
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pillColor = isDark ? Colors.black : Colors.white;
     final iconColor = isDark ? Colors.white : Colors.black;

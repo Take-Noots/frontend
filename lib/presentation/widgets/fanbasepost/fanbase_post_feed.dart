@@ -227,15 +227,27 @@ class _FanbasePostFeedWidgetState extends State<FanbasePostFeedWidget> {
     print('FanbasePostFeed - isOwnPost: $isOwnPost');
 
     // Convert comments to the format expected by PostDetailPage
-    final commentsForPost = post.comments
-        .map((comment) => {
-              'username': comment.userName,
-              'text': comment.comment,
-              'userId': comment.userId,
-              'likeCount': comment.likeCount.toString(),
-              'createdAt': comment.createdAt.toIso8601String(),
-            })
-        .toList();
+    final commentsForPost = post.comments.map((comment) {
+      return <String, dynamic>{
+        'username': comment.userName,
+        'text': comment.comment,
+        'userId': comment.userId,
+        'commentId': comment.commentId,
+        'likeCount': (comment.likeCount).toString(),
+        'createdAt': comment.createdAt.toIso8601String(),
+        'subComments': (comment.subComments).map((subComment) {
+          return <String, dynamic>{
+            // ✅ Explicitly specify the type
+            'username': subComment.userName,
+            'text': subComment.comment,
+            'userId': subComment.userId,
+            'commentId': subComment.commentId,
+            'likeCount': (subComment.likeCount).toString(),
+            'createdAt': subComment.createdAt.toIso8601String(),
+          };
+        }).toList(),
+      };
+    }).toList();
 
     return Container(
       margin:

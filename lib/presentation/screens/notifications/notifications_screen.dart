@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../data/models/notification_model.dart';
 import '../../../data/services/notification_service.dart';
+import '../../../data/services/notification_manager.dart';
 import '../chat/chat_list_screen.dart';
 import '../chat/chat_screen.dart';
 import '../chat/group_chat_screen.dart';
@@ -19,7 +20,7 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final NotificationService _notificationService = NotificationService();
   final ScrollController _scrollController = ScrollController();
-  
+
   List<NotificationModel> notifications = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
@@ -28,12 +29,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool hasMorePages = true;
   String? currentUserId;
   Timer? _autoRefreshTimer;
+  StreamSubscription? _notificationStreamSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadUserId();
     _loadNotifications();
+    _setupRealTimeNotifications();
     _startAutoRefresh();
     _scrollController.addListener(_onScroll);
   }
@@ -43,6 +46,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _autoRefreshTimer?.cancel();
+    _notificationStreamSubscription?.cancel();
     super.dispose();
   }
 
@@ -57,8 +61,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
   }
 
+  void _setupRealTimeNotifications() async {
+    // Initialize notification manager for real-time updates
+    await NotificationManager.instance.initialize();
+
+    // Listen for new notifications and refresh the list
+    _notificationStreamSubscription =
+        NotificationManager.instance.notificationStream.listen((notification) {
+      if (mounted) {
+        _refreshNotifications();
+      }
+    });
+  }
+
   void _startAutoRefresh() {
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    _autoRefreshTimer = Timer.periodic(const Duration(minutes: 3), (timer) {
       if (mounted && !_isLoading) {
         _refreshNotifications();
       }
@@ -113,7 +130,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         });
       } else {
         setState(() {
-          _error = result['message'];
+          _error = result['message'] ?? 'Failed to load notifications';
           _isLoading = false;
         });
       }

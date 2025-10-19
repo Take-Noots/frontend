@@ -11,10 +11,11 @@ class ThoughtsPost {
   List<ThoughtsComment> comments;
   String? songName;
   String? artistName;
+  String? trackId;
   String? coverImage;
   String? backgroundColor;
-  final int isHidden; // 0 = visible, 1 = hidden
-  final int isDeleted; // 0 = not deleted, 1 = deleted
+  final int isHidden;
+  final int isDeleted;
   bool isSaved;
 
   ThoughtsPost({
@@ -30,6 +31,7 @@ class ThoughtsPost {
     required this.comments,
     this.songName,
     this.artistName,
+    this.trackId,
     this.coverImage,
     this.backgroundColor,
     required this.isHidden,
@@ -56,6 +58,7 @@ class ThoughtsPost {
           [],
       songName: json['songName'],
       artistName: json['artistName'],
+      trackId: json['trackId'],
       coverImage: json['coverImage'],
       backgroundColor: json['backgroundColor'],
       isHidden: _parseIsHidden(json['isHidden']),
@@ -104,6 +107,7 @@ class ThoughtsPost {
       'comments': comments.map((c) => c.toJson()).toList(),
       'songName': songName,
       'artistName': artistName,
+      'trackId': trackId,
       'coverImage': coverImage,
       'backgroundColor': backgroundColor,
       'isHidden': isHidden,
