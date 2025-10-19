@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'profile_grid_skeleton.dart';
 
 class ProfileLoadingScreen extends StatefulWidget {
   final String? title;
@@ -344,7 +343,24 @@ class _ProfileLoadingScreenState extends State<ProfileLoadingScreen>
                   ),
                 ),
                 // Content area skeleton (Grid view matching AlbumArtPostsTab)
-                const ProfileGridSkeleton(),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: 9, // 3x3 grid like the actual grid
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 2,
+                    crossAxisSpacing: 2,
+                    childAspectRatio: 1,
+                  ),
+                  itemBuilder: (context, index) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: skeletonColor,
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           );
