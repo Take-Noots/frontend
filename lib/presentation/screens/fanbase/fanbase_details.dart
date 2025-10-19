@@ -375,6 +375,8 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
     print(
         'FanbaseDetails _handlePostOptions - Post User ID: ${post.createdBy['userId']}');
     print('FanbaseDetails _handlePostOptions - Current User ID: $userId');
+    print(
+        'FanbaseDetails _handlePostOptions - Fanbase Owner ID: ${_fanbase?.createdBy.id}');
 
     bool isUsersOwnPost = false;
     if (post.createdBy['userId'] != null && userId != null) {
@@ -386,34 +388,32 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
       context,
       postUserId: post.createdBy['userId'],
       currentUserId: userId,
+      fanbaseOwnerId: _fanbase?.createdBy.id,
       isOwnPost: isUsersOwnPost,
-      onCopyLink: () {
-        print('Copy link pressed for fanbase post: ${post.id}');
-      },
-      onSavePost: () {
-        print('Save post pressed for fanbase post: ${post.id}');
-      },
-      onUnfollow: () {
-        print('Unfollow pressed for fanbase post: ${post.id}');
+      post: post, // Pass the post object
+      fanbaseId: _fanbase?.id, // Pass the fanbase ID
+      onPostDeleted: () {
+        // Callback after successful deletion
+        setState(() {
+          _fanbasePosts.removeWhere((p) => p.id == post.id);
+        });
+        _refreshPosts(); // Refresh the list
       },
       onReport: () {
         print('Report pressed for fanbase post: ${post.id}');
+        _showReportPostDialog(post);
       },
-      onEdit: isUsersOwnPost
-          ? () {
-              print('Edit post pressed for fanbase post: ${post.id}');
-            }
-          : null,
-      onDelete: isUsersOwnPost
-          ? () {
-              print('Delete post pressed for fanbase post: ${post.id}');
-            }
-          : null,
-      onHide: isUsersOwnPost
-          ? () {
-              print('Hide post pressed for fanbase post: ${post.id}');
-            }
-          : null,
+    );
+  }
+
+  /// Shows report post dialog (for viewers)
+  void _showReportPostDialog(FanbasePost post) {
+    // You can implement this similar to the fanbase report
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Report post feature coming soon for post: ${post.id}'),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -825,8 +825,6 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
       );
     }
   }
-
-  // ...rest of existing code...
 
   @override
   Widget build(BuildContext context) {
