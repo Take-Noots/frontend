@@ -59,7 +59,16 @@ class PaymentScreen extends StatelessWidget {
                             onPressed: () async {
                               final dio = Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
                               try {
-                                final resp = await dio.post('/payments/checkout', data: {'amount': amount, 'currency': 'usd'});
+                                // Build a frontend redirect URL so Stripe returns user to app
+                                final origin = Uri.base.origin; // works on web
+                                final successUrl = '$origin/?payment=success';
+                                final cancelUrl = '$origin/?payment=cancel';
+                                final resp = await dio.post('/payments/checkout', data: {
+                                  'amount': amount,
+                                  'currency': 'usd',
+                                  'successUrl': successUrl,
+                                  'cancelUrl': cancelUrl,
+                                });
                                 final url = resp.data['url'] as String?;
                                 if (url != null && url.isNotEmpty) {
                                   final uri = Uri.parse(url);
