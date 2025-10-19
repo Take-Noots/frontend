@@ -93,7 +93,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             'lastSeen': 'Recently',
             'followers': followersCount,
             'following': followingCount,
-            'posts': profile['posts']?.length ?? 0,
+            'posts': (profile['posts'] is List) ? profile['posts'].length : 0,
           };
           _isLoading = false;
         });
