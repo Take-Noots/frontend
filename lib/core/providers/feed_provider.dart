@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../../data/models/feed_item.dart';
 import '../../data/models/post_model.dart' as data_model;
 import '../../data/models/thoughts_model.dart';
@@ -24,7 +25,8 @@ class FeedProvider extends ChangeNotifier {
   bool get hasData => _feedItems.isNotEmpty;
 
   /// Load feed data - uses cache if already loaded
-  Future<void> loadFeed(String userId, {bool forceRefresh = false}) async {
+  Future<void> loadFeed(String userId,
+      {BuildContext? context, bool forceRefresh = false}) async {
     // If we've already loaded and not forcing refresh, use cached data
     if (_hasLoadedOnce && !forceRefresh && _userId == userId && hasData) {
       debugPrint('🔄 Using cached feed data (no API call)');
@@ -38,15 +40,14 @@ class FeedProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Fetch data in parallel
+      // Fetch data in parallel, always pass context for authenticated requests
       final results = await Future.wait([
-        _songPostService.getFollowerPosts(userId, null),
-        _thoughtsService.getFollowerThoughts(userId, null),
+        _songPostService.getFollowerPosts(userId, context),
+        _thoughtsService.getFollowerThoughts(userId, context),
       ]);
 
       final songResult = results[0];
       final thoughtsResult = results[1];
-
       List<FeedItem> feedItems = [];
 
       // Process song posts
@@ -64,6 +65,8 @@ class FeedProvider extends ChangeNotifier {
 
       // Process thoughts
       if (thoughtsResult['success'] == true && thoughtsResult['data'] != null) {
+        debugPrint(
+            '🧠 Fetched thoughts data: ' + thoughtsResult['data'].toString());
         final thoughts = (thoughtsResult['data'] as List).map((json) {
           return FeedItem.thought(ThoughtsPost.fromJson(json));
         }).where((item) =>
@@ -92,10 +95,10 @@ class FeedProvider extends ChangeNotifier {
   }
 
   /// Force refresh the feed
-  Future<void> refreshFeed() async {
+  Future<void> refreshFeed({BuildContext? context}) async {
     if (_userId != null) {
       debugPrint('🔄 Manual refresh requested');
-      await loadFeed(_userId!, forceRefresh: true);
+      await loadFeed(_userId!, context: context, forceRefresh: true);
     }
   }
 

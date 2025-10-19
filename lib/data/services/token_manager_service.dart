@@ -61,9 +61,11 @@ class TokenManagerService {
       }
       return handler.next(options);
     }, onError: (DioException error, handler) async {
-      // Handle 401 errors
-      if (error.response?.statusCode == 401) {
-        // Try to refresh the token
+      // Only handle 401 errors for non-Spotify API calls
+      // Spotify API 401s should not trigger JWT token refresh
+      if (error.response?.statusCode == 401 &&
+          !error.requestOptions.path.contains('/spotify/')) {
+        // Try to refresh the JWT token
         final refreshed = await refreshToken();
 
         if (refreshed) {
@@ -223,6 +225,8 @@ class TokenManagerService {
           await _unauthenticatedDio.post(_refreshEndpoint, options: Options(
               // Ensure cookies are sent with the request
               extra: {'withCredentials': true}));
+
+      print('[At Token.Manager.Service] Refresh response: ${response.data}');
 
       print(
           '[At Token.Manager.Service] Refresh response status: ${response.statusCode}');

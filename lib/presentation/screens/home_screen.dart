@@ -14,6 +14,8 @@ import 'package:provider/provider.dart';
 import '../../data/services/auth_service.dart';
 import '../../core/providers/feed_provider.dart';
 import 'package:dio/dio.dart';
+import 'package:go_router/go_router.dart';
+import '../../core/router/route_names.dart';
 import '../widgets/song_post/comment.dart';
 import './profile/user_profiles.dart';
 import '../widgets/song_post/post_options_menu.dart';
@@ -55,6 +57,26 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     // 🔑 Load feed through FeedProvider (handles caching automatically)
     _loadUserIdAndInitializeFeed();
+
+    // Check for Stripe redirect query params (e.g. ?payment=success)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final paymentStatus = Uri.base.queryParameters['payment'];
+      if (paymentStatus != null) {
+        if (paymentStatus == 'success') {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Payment succeeded'),
+              backgroundColor: Colors.green));
+        } else if (paymentStatus == 'cancel') {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Payment cancelled'),
+              backgroundColor: Colors.orange));
+        }
+        // Clear query by navigating to home without params
+        try {
+          context.go(AppRoutes.home);
+        } catch (_) {}
+      }
+    });
   }
 
   // 🔑 Initialize user ID and load feed through provider
@@ -70,15 +92,15 @@ class _HomeScreenState extends State<HomeScreen> {
       this.userId = userId;
     });
 
-    // 🔑 Load feed through FeedProvider (uses cache if available)
+    // 🔑 Load feed through FeedProvider (uses cache if available) - pass context for auth
     final feedProvider = Provider.of<FeedProvider>(context, listen: false);
-    await feedProvider.loadFeed(userId);
+    await feedProvider.loadFeed(userId, context: context);
   }
 
   // 🔑 Manual refresh - uses FeedProvider
   Future<void> _refreshFeed() async {
     final feedProvider = Provider.of<FeedProvider>(context, listen: false);
-    await feedProvider.refreshFeed();
+    await feedProvider.refreshFeed(context: context);
   }
 
   // 🔑 Invalidate cache - uses FeedProvider
@@ -660,7 +682,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 textColor: Colors.white,
                 onPressed: () {
                   // Navigate to settings/options page where Spotify linking is available
-                  Navigator.of(context).pushNamed('/profile/settings/options');
+                  context.go(AppRoutes.options);
                 },
               ),
             ),

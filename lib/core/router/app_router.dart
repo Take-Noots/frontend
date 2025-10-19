@@ -24,6 +24,7 @@ import '../../presentation/screens/profile/settings/hiddenPosts/hidden_posts.dar
 import '../../presentation/screens/request/request.dart';
 import '../../presentation/screens/advertisement/create_advertisement_screen.dart';
 import '../../presentation/screens/advertisement/set_audience_screen.dart';
+import '../../presentation/screens/advertisement/payment_screen.dart';
 import '../../presentation/screens/shell_screen_v2.dart';
 import '../../presentation/screens/create_noots/search_song.dart';
 import '../../presentation/screens/create_noots/create_description_noot.dart';
@@ -52,7 +53,9 @@ class AppRouter {
 
       final isGoingToAuth = state.matchedLocation.startsWith('/login') ||
           state.matchedLocation.startsWith('/signup') ||
-          state.matchedLocation.startsWith('/username') ||
+          state.matchedLocation.startsWith('/username');
+
+      final isGoingToLinkSpotify =
           state.matchedLocation.startsWith('/link-spotify');
 
       // If not authenticated and not going to auth pages, redirect to login
@@ -61,11 +64,14 @@ class AppRouter {
         return AppRoutes.login;
       }
 
-      // If authenticated and trying to access auth pages, redirect to home
+      // If authenticated and trying to access auth pages (but NOT Spotify linking), redirect to home
       if (isAuthenticated && isGoingToAuth) {
         print('[DEBUG] Redirecting to home (already authenticated)');
         return AppRoutes.home;
       }
+
+      // Allow authenticated users to access Spotify linking page
+      // This is needed when users want to link Spotify after signup
 
       print('[DEBUG] No redirect needed');
       return null; // No redirect needed
@@ -232,7 +238,8 @@ class AppRouter {
             path: '/group-chat/:groupChatId',
             builder: (context, state) {
               final groupChatId = state.pathParameters['groupChatId']!;
-              final currentUserId = state.uri.queryParameters['currentUserId'] ?? '';
+              final currentUserId =
+                  state.uri.queryParameters['currentUserId'] ?? '';
               return GroupChatScreen(
                 groupChatId: groupChatId,
                 currentUserId: currentUserId,
@@ -275,6 +282,15 @@ class AppRouter {
               GoRoute(
                 path: 'set-audience',
                 builder: (context, state) => SetAudienceScreen(),
+              ),
+              GoRoute(
+                name: 'payment',
+                path: 'set-audience/payment',
+                builder: (context, state) {
+                  final extra = state.extra as Map<String, dynamic>?;
+                  final amount = extra?['amount'] as double? ?? 0.0;
+                  return PaymentScreen(amount: amount);
+                },
               ),
             ],
           ),
