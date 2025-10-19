@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../screens/chat/chat_list_screen.dart';
 import '../../screens/notifications/notifications_screen.dart';
 import '../../../data/services/notification_service.dart';
+import '../../../core/router/route_names.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class NootAppBar extends StatefulWidget implements PreferredSizeWidget {
@@ -74,12 +76,7 @@ class _NootAppBarState extends State<NootAppBar> {
             icon: Icon(LucideIcons.messagesSquare,
                 color: Theme.of(context).colorScheme.onPrimary, size: 22),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ChatListScreen(),
-                ),
-              );
+              context.push(AppRoutes.chat);
             },
           ),
           const SizedBox(width: 10),
