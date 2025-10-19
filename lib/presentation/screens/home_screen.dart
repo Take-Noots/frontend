@@ -195,8 +195,8 @@ class _HomeScreenState extends State<HomeScreen> {
             final post = item.thoughtsPost!;
             final wasSaved = post.isSaved;
             post.isSaved = savedThoughtsIds.contains(post.id);
-            print(
-                '[DEBUG] Thoughts ${post.id}: wasSaved=$wasSaved, isSaved=${post.isSaved}');
+            // print(
+            //     '[DEBUG] Thoughts ${post.id}: wasSaved=$wasSaved, isSaved=${post.isSaved}');
           }
         }
       }

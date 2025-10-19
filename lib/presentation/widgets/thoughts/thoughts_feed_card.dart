@@ -62,11 +62,11 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
   void initState() {
     super.initState();
     _currentPost = widget.post;
-    print('[DEBUG] ThoughtsFeedCard.initState: post id: ${widget.post.id}');
-    print('[DEBUG] ThoughtsFeedCard.initState: songName: ${widget.post.songName}');
-    print('[DEBUG] ThoughtsFeedCard.initState: artistName: ${widget.post.artistName}');
-    print('[DEBUG] ThoughtsFeedCard.initState: onPlayPause is null? ${widget.onPlayPause == null}');
-    print('[DEBUG] ThoughtsFeedCard.initState: isPlaying: ${widget.isPlaying}, isCurrentTrack: ${widget.isCurrentTrack}');
+    // print('[DEBUG] ThoughtsFeedCard.initState: post id: ${widget.post.id}');
+    // print('[DEBUG] ThoughtsFeedCard.initState: songName: ${widget.post.songName}');
+    // print('[DEBUG] ThoughtsFeedCard.initState: artistName: ${widget.post.artistName}');
+    // print('[DEBUG] ThoughtsFeedCard.initState: onPlayPause is null? ${widget.onPlayPause == null}');
+    // print('[DEBUG] ThoughtsFeedCard.initState: isPlaying: ${widget.isPlaying}, isCurrentTrack: ${widget.isCurrentTrack}');
     _loadCurrentUserId();
     _extractColorFromCoverImage();
   }
@@ -118,7 +118,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
 
     final isOwnPost = _currentUserId == _currentPost.userId;
 
-    print('[DEBUG] Options menu: isOwnPost=$isOwnPost, isSaved=${_currentPost.isSaved}');
+    // print('[DEBUG] Options menu: isOwnPost=$isOwnPost, isSaved=${_currentPost.isSaved}');
 
     PostOptionsMenu.show(
       context,
@@ -128,7 +128,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
       isSaved: _currentPost.isSaved, 
       postId: _currentPost.id,
       onSharePost: () {
-        print('Copy link pressed for thoughts post: ${_currentPost.id}');
+        // print('Copy link pressed for thoughts post: ${_currentPost.id}');
         // TODO: Implement copy link functionality
       },
       onSavePost: () async {
@@ -138,11 +138,11 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         await _handleUnsavePost(_currentPost);
       },
       onUnfollow: () {
-        print('Unfollow pressed for user: ${_currentPost.username}');
+        // print('Unfollow pressed for user: ${_currentPost.username}');
         // TODO: Implement unfollow functionality
       },
       onReport: () {
-        print('Report pressed for thoughts post: ${_currentPost.id}');
+        // print('Report pressed for thoughts post: ${_currentPost.id}');
         // TODO: Implement report functionality
       },
       onEdit: isOwnPost ? () async {
@@ -519,9 +519,9 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     }
 
     try {
-      print('[DEBUG] Save: userId=$_currentUserId, postId=${post.id}');
+      // print('[DEBUG] Save: userId=$_currentUserId, postId=${post.id}');
       final result = await _thoughtsService.savePost(_currentUserId!, post.id);
-      print('[DEBUG] Save result: $result');
+      // print('[DEBUG] Save result: $result');
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -597,9 +597,9 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     }
 
     try {
-      print('[DEBUG] Unsave: userId=$_currentUserId, postId=${post.id}');
+      // print('[DEBUG] Unsave: userId=$_currentUserId, postId=${post.id}');
       final result = await _thoughtsService.unsavePost(_currentUserId!, post.id);
-      print('[DEBUG] Unsave result: $result');
+      // print('[DEBUG] Unsave result: $result');
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -837,7 +837,7 @@ class _ThoughtsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('[DEBUG] _ThoughtsContent: onPlayPause is null? ${onPlayPause == null}');
+    // print('[DEBUG] _ThoughtsContent: onPlayPause is null? ${onPlayPause == null}');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1346,7 +1346,7 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('[DEBUG] _ThoughtsSpotifyControl build: onPlayPause is null? ${onPlayPause == null}');
+    // print('[DEBUG] _ThoughtsSpotifyControl build: onPlayPause is null? ${onPlayPause == null}');
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pillColor = isDark ? Colors.black : Colors.white;
     final iconColor = isDark ? Colors.white : Colors.black;
@@ -1376,15 +1376,15 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
             const SizedBox(width: 20),
             GestureDetector(
               onTap: () {
-                print('[DEBUG] _ThoughtsSpotifyControl: Play button tapped');
-                print('[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null? ${onPlayPause == null}');
-                print('[DEBUG] _ThoughtsSpotifyControl: isPlaying: $isPlaying, isCurrentTrack: $isCurrentTrack');
-                print('[DEBUG] _ThoughtsSpotifyControl: post.songName: ${post.songName}');
+                // print('[DEBUG] _ThoughtsSpotifyControl: Play button tapped');
+                // print('[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null? ${onPlayPause == null}');
+                // print('[DEBUG] _ThoughtsSpotifyControl: isPlaying: $isPlaying, isCurrentTrack: $isCurrentTrack');
+                // print('[DEBUG] _ThoughtsSpotifyControl: post.songName: ${post.songName}');
                 if (onPlayPause != null) {
-                  print('[DEBUG] _ThoughtsSpotifyControl: Calling onPlayPause!');
+                  // print('[DEBUG] _ThoughtsSpotifyControl: Calling onPlayPause!');
                   onPlayPause!();
                 } else {
-                  print('[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null!');
+                  // print('[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null!');
                 }
               },
               child: Icon(
