@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'fanbase_post_feed.dart';
 
 class GeneralFanbaseFeedWidget extends StatefulWidget {
   const GeneralFanbaseFeedWidget({Key? key}) : super(key: key);

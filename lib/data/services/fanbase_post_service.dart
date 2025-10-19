@@ -325,13 +325,19 @@ class FanbasePostService {
   // Get a specific fanbase post
   static Future<FanbasePost> getFanbasePost(
     String postId,
-    BuildContext context,
-  ) async {
+    BuildContext context, {
+    required String fanbaseId, // Make fanbaseId required instead of optional
+  }) async {
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
 
-      final response = await dio.get('/fanbase/posts/$postId');
+      // Always use the fanbase-specific endpoint
+      final endpoint = '/fanbase/$fanbaseId/posts/$postId';
+
+      print('[DEBUG] Fetching post from: $endpoint');
+
+      final response = await dio.get(endpoint);
 
       if (response.statusCode == 200) {
         return FanbasePost.fromJson(response.data);
@@ -339,9 +345,93 @@ class FanbasePostService {
         throw Exception('Failed to fetch post');
       }
     } on DioException catch (e) {
+      print('[ERROR] DioException in getFanbasePost: ${e.message}');
+      print('[ERROR] Response: ${e.response?.data}');
       throw Exception('Failed to fetch post: ${e.message}');
     } catch (e) {
+      print('[ERROR] Exception in getFanbasePost: $e');
       throw Exception('Failed to fetch post: $e');
+    }
+  }
+
+  // Like/Unlike a comment
+  static Future<FanbasePost> likeComment(
+    String postId,
+    String commentId,
+    BuildContext context, {
+    String? fanbaseId,
+  }) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      String actualFanbaseId = fanbaseId ?? '';
+
+      if (actualFanbaseId.isEmpty) {
+        throw Exception('FanbaseId is required to like a comment');
+      }
+
+      print('[DEBUG] Liking comment');
+      print('[DEBUG] PostId: $postId');
+      print('[DEBUG] CommentId: $commentId');
+      print('[DEBUG] FanbaseId: $actualFanbaseId');
+
+      final response = await dio.post(
+        '/fanbase/$actualFanbaseId/posts/$postId/comment/$commentId/like',
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return FanbasePost.fromJson(response.data);
+      } else {
+        throw Exception('Failed to like comment: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data?['message'] ?? e.message;
+      throw Exception('Failed to like comment: $errorMessage');
+    } catch (e) {
+      throw Exception('Failed to like comment: $e');
+    }
+  }
+
+  // Like/Unlike a sub-comment (reply)
+  static Future<FanbasePost> likeSubComment(
+    String postId,
+    String commentId,
+    String subCommentId,
+    BuildContext context, {
+    String? fanbaseId,
+  }) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      String actualFanbaseId = fanbaseId ?? '';
+
+      if (actualFanbaseId.isEmpty) {
+        throw Exception('FanbaseId is required to like a sub-comment');
+      }
+
+      print('[DEBUG] Liking sub-comment');
+      print('[DEBUG] PostId: $postId');
+      print('[DEBUG] CommentId: $commentId');
+      print('[DEBUG] SubCommentId: $subCommentId');
+      print('[DEBUG] FanbaseId: $actualFanbaseId');
+
+      final response = await dio.post(
+        '/fanbase/$actualFanbaseId/posts/$postId/comment/$commentId/subcomment/$subCommentId/like',
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return FanbasePost.fromJson(response.data);
+      } else {
+        throw Exception(
+            'Failed to like sub-comment: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data?['message'] ?? e.message;
+      throw Exception('Failed to like sub-comment: $errorMessage');
+    } catch (e) {
+      throw Exception('Failed to like sub-comment: $e');
     }
   }
 }

@@ -62,25 +62,10 @@ class PostOptionsMenu {
               ),
 
               // Options list
-              ListTile(
-                leading: Icon(LucideIcons.link, color: textColor),
-                title: Text('Copy link', style: TextStyle(color: textColor)),
-                onTap: () {
-                  Navigator.pop(context);
-                  if (onCopyLink != null) onCopyLink();
-                },
-              ),
+              
 
               if (isCurrentUserPost) ...[
-                // Show edit option for own posts
-                ListTile(
-                  leading: Icon(LucideIcons.pencil, color: textColor),
-                  title: Text('Edit post', style: TextStyle(color: textColor)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (onEdit != null) onEdit();
-                  },
-                ),
+                
                 // Show delete option for own posts
                 ListTile(
                   leading: Icon(LucideIcons.trash2, color: Colors.red),
@@ -91,33 +76,9 @@ class PostOptionsMenu {
                     if (onDelete != null) onDelete();
                   },
                 ),
-                // Show hide option for own posts
-                ListTile(
-                  leading: Icon(LucideIcons.eyeOff, color: textColor),
-                  title: Text('Hide post', style: TextStyle(color: textColor)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (onHide != null) onHide();
-                  },
-                ),
+                
               ] else ...[
-                // Show save and unfollow options for other users' posts
-                ListTile(
-                  leading: Icon(LucideIcons.bookmark, color: textColor),
-                  title: Text('Save post', style: TextStyle(color: textColor)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (onSavePost != null) onSavePost();
-                  },
-                ),
-                ListTile(
-                  leading: Icon(LucideIcons.userMinus, color: textColor),
-                  title: Text('Unfollow', style: TextStyle(color: textColor)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (onUnfollow != null) onUnfollow();
-                  },
-                ),
+                
                 // Show report option only for other users' posts
                 ListTile(
                   leading: Icon(LucideIcons.flag, color: Colors.red),

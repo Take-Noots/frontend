@@ -202,6 +202,7 @@ class _FanbasePostFeedWidgetState extends State<FanbasePostFeedWidget> {
   }
 
   Widget _buildPostItem(FanbasePost post) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final albumImageUrl = post.albumArt ?? '';
     final backgroundColor = _extractedColors[albumImageUrl] ?? _defaultColor;
     const double postAspectRatio = 490 / 250;
@@ -267,7 +268,8 @@ class _FanbasePostFeedWidgetState extends State<FanbasePostFeedWidget> {
                     Expanded(
                       child: CustomPaint(
                         painter: PostShape(
-                          backgroundColor: backgroundColor,
+                          // backgroundColor: backgroundColor,
+                          backgroundColor: isDark ? Color(0xFF212121) : Colors.grey[600]!,
                           margin: painterMargin,
                         ),
                         child: Container(),
