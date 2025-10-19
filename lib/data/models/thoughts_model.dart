@@ -15,7 +15,7 @@ class ThoughtsPost {
   String? backgroundColor;
   final int isHidden; // 0 = visible, 1 = hidden
   final int isDeleted; // 0 = not deleted, 1 = deleted
-  bool isSaved; 
+  bool isSaved;
 
   ThoughtsPost({
     required this.id,
@@ -42,6 +42,7 @@ class ThoughtsPost {
       id: json['_id'] ?? '',
       userId: json['userId'] ?? '',
       username: json['username'],
+      userImage: json['userImage'],
       text: json['text'] ?? json['thoughtsText'] ?? '',
       createdAt:
           DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
