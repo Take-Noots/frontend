@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'dart:ui';
-import 'package:share_plus/share_plus.dart';
 import '../../../data/services/post_report_service.dart';
 import '../../../core/styles/app_colors.dart';
 
@@ -121,13 +119,11 @@ class PostOptionsMenu extends StatefulWidget {
 
 class _PostOptionsMenuState extends State<PostOptionsMenu> {
   late bool _isSaved;
-  late bool _isFollowing;
 
   @override
   void initState() {
     super.initState();
     _isSaved = widget.isSaved ?? false;
-    _isFollowing = widget.isFollowing ?? false;
   }
 
   @override
@@ -170,45 +166,7 @@ class _PostOptionsMenuState extends State<PostOptionsMenu> {
           ),
 
           // Options list
-          ListTile(
-            leading: Icon(LucideIcons.share, color: textColor),
-            title: Text('Share post', style: TextStyle(color: textColor)),
-            onTap: () {
-              Navigator.pop(context);
-              if (widget.postId != null && widget.postUserId != null) {
-                // Create a user-friendly share message
-                String shareText = 'Check out this post';
-                if (widget.username != null) {
-                  shareText += ' by @${widget.username}';
-                }
-                if (widget.songName != null) {
-                  shareText += '\n🎵 ${widget.songName}';
-                  if (widget.artistName != null) {
-                    shareText += ' - ${widget.artistName}';
-                  }
-                }
-                // Use deep link scheme for mobile apps
-                shareText +=
-                    '$baseUrl/profile/${widget.postUserId}/post/${widget.postId}';
-
-                Share.share(shareText, subject: 'Check out this post on Noot');
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text(
-                        'Unable to share post: Post information not available'),
-                    backgroundColor: Colors.red,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    margin: const EdgeInsets.all(10),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              }
-              if (widget.onSharePost != null) widget.onSharePost!();
-            },
-          ),
+          // Share post option removed
 
           if (isCurrentUserPost) ...[
             // Show edit option for own posts
@@ -284,45 +242,7 @@ class _PostOptionsMenuState extends State<PostOptionsMenu> {
                 }
               },
             ),
-            ListTile(
-              leading: Icon(
-                _isFollowing ? LucideIcons.userMinus : LucideIcons.userPlus,
-                color: textColor,
-              ),
-              title: Text(
-                _isFollowing ? 'Unfollow' : 'Follow',
-                style: TextStyle(color: textColor),
-              ),
-              onTap: () async {
-                if (widget.currentUserId == null || widget.postUserId == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text(
-                          'Error: User or post information not available'),
-                      backgroundColor: Colors.red,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      margin: const EdgeInsets.all(10),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                  return;
-                }
-                final wasFollowing = _isFollowing;
-                Navigator.pop(context);
-                // Call the provided callbacks
-                if (wasFollowing) {
-                  if (widget.onUnfollow != null) {
-                    widget.onUnfollow!();
-                  }
-                } else {
-                  if (widget.onFollow != null) {
-                    widget.onFollow!();
-                  }
-                }
-              },
-            ),
+            // Follow/Unfollow option removed
             // Show report option only for other users' posts
             ListTile(
               leading: Icon(LucideIcons.flag, color: Colors.red),
@@ -340,9 +260,6 @@ class _PostOptionsMenuState extends State<PostOptionsMenu> {
       ),
     );
   }
-
-  static const String baseUrl =
-      'noot://app'; // Custom deep link scheme for mobile
 
   static void _showReportOptions(
       BuildContext context, String? reportedUserId, String? postId) {

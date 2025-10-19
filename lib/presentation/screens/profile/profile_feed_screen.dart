@@ -8,6 +8,7 @@ import '../../../data/models/feed_item.dart';
 import '../../../data/services/profile_service.dart';
 import '../../../data/models/profile_model.dart';
 import '../../../data/services/song_post_service.dart';
+import '../../../data/services/auth_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/song_post/comment.dart';
@@ -253,18 +254,23 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
   }
 
   Future<void> _handlePlay(data_model.Post post) async {
+    //print('[DEBUG] HandlePlay: trackId=${post.trackId}, currentlyPlaying=$_currentlyPlayingTrackId, isPlaying=$_isPlaying');
+    
     if (_currentlyPlayingTrackId == post.trackId && _isPlaying) {
+      //print('[DEBUG] HandlePlay: Pausing current track');
       setState(() {
         _isPlaying = false;
       });
       try {
         await _pausePlayback();
       } catch (e) {
+        print('[DEBUG] HandlePlay: Error pausing - $e');
         setState(() {
           _isPlaying = true;
         });
       }
     } else {
+      //print('[DEBUG] HandlePlay: Playing new track');
       setState(() {
         _currentlyPlayingTrackId = post.trackId;
         _isPlaying = true;
@@ -272,8 +278,10 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
       try {
         await _playTrack(post);
       } catch (e) {
+        //print('[DEBUG] HandlePlay: Error playing - $e');
         setState(() {
           _isPlaying = false;
+          _currentlyPlayingTrackId = null;
         });
       }
     }
@@ -281,7 +289,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
 
   Future<void> _playTrack(data_model.Post post) async {
     try {
-      final authService = Provider.of<dynamic>(context, listen: false);
+      final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
       final response = await dio.post(
         '/spotify/player/post/play',
@@ -294,24 +302,35 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
           _currentlyPlayingTrackId = post.trackId;
           _isPlaying = true;
         });
+      } else {
+        print('[DEBUG] PlayTrack: Unexpected status code: ${response.statusCode}');
       }
     } catch (e) {
-      // ignore errors for now
+      print('[DEBUG] PlayTrack Error: $e');
+      setState(() {
+        _isPlaying = false;
+        _currentlyPlayingTrackId = null;
+      });
     }
   }
 
   Future<void> _pausePlayback() async {
     try {
-      final authService = Provider.of<dynamic>(context, listen: false);
+      final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
       final response = await dio.put('/spotify/player/post/pause');
       if (response.statusCode == 200 || response.statusCode == 204) {
         setState(() {
           _isPlaying = false;
         });
+      } else {
+        print('[DEBUG] PausePlayback: Unexpected status code: ${response.statusCode}');
       }
     } catch (e) {
-      // ignore
+      print('[DEBUG] PausePlayback Error: $e');
+      setState(() {
+        _isPlaying = false;
+      });
     }
   }
 
@@ -360,7 +379,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
         isFollowing = _followingStatus[post.userId]!;
       } else {
         try {
-          final authService = Provider.of<dynamic>(context, listen: false);
+          final authService = Provider.of<AuthService>(context, listen: false);
           final profileService = ProfileService(authService: authService);
           final followingList =
               await profileService.getFollowingListWithDetails(_currentUserId!);
@@ -686,7 +705,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
     }
 
     try {
-      final authService = Provider.of<dynamic>(context, listen: false);
+      final authService = Provider.of<AuthService>(context, listen: false);
       final profileService = ProfileService(authService: authService);
       final result =
           await profileService.followUser(_currentUserId!, targetUserId);
@@ -751,7 +770,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
     }
 
     try {
-      final authService = Provider.of<dynamic>(context, listen: false);
+      final authService = Provider.of<AuthService>(context, listen: false);
       final profileService = ProfileService(authService: authService);
       final result =
           await profileService.unfollowUser(_currentUserId!, targetUserId);
