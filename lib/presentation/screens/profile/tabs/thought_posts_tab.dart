@@ -34,37 +34,22 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
     if (widget.postsList != null) {
       print(
           'ThoughtPostsTab: inspecting provided postsList sample: ${widget.postsList!.isNotEmpty ? widget.postsList![0].toString() : 'empty list'}');
-      // Detect whether the provided postsList contains thought posts
-      final containsThoughtLike = widget.postsList!.any((p) {
-        if (p is ThoughtsPost) return true;
-        if (p is Map<String, dynamic>) {
-          return p.containsKey('text') ||
-              p.containsKey('thoughtsText') ||
-              p.containsKey('comments');
-        }
-        return false;
-      });
-
-      print('ThoughtPostsTab: containsThoughtLike = $containsThoughtLike');
-      if (containsThoughtLike) {
-        _posts = widget.postsList!
-            .map<ThoughtsPost>((p) {
-              if (p is ThoughtsPost) return p;
-              if (p is Map<String, dynamic>) return ThoughtsPost.fromJson(p);
-              return ThoughtsPost.fromJson({});
-            })
-            .where((p) => p.isHidden == 0 && p.isDeleted == 0)
-            .toList();
-        print(
-            'ThoughtPostsTab: loaded ${_posts.length} thought posts from provided list');
-        _isLoading = false;
-      } else {
-         
-          // print(
-          //     'ThoughtPostsTab: provided postsList does not contain thought posts; will fetch by userId');
-        _fetchPosts();
-      }
+      
+      // ✅ Trust provided postsList - it's from cache
+      // Even if empty, it means user has no thought posts (don't fetch again)
+      _posts = widget.postsList!
+          .map<ThoughtsPost>((p) {
+            if (p is ThoughtsPost) return p;
+            if (p is Map<String, dynamic>) return ThoughtsPost.fromJson(p);
+            return ThoughtsPost.fromJson({});
+          })
+          .where((p) => p.isHidden == 0 && p.isDeleted == 0)
+          .toList();
+      print(
+          'ThoughtPostsTab: loaded ${_posts.length} thought posts from provided list');
+      _isLoading = false;
     } else {
+      // Only fetch if postsList not provided
       _fetchPosts();
     }
   }

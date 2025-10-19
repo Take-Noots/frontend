@@ -16,6 +16,7 @@ class AlbumArtPostsTab extends StatefulWidget {
   final bool showGrid;
   final String? profileImage;
   final List<dynamic> postsList;
+  final List<dynamic>? cachedPostStats; // Add cached post stats
   final VoidCallback? onFollowersTap;
   final VoidCallback? onFollowingTap;
   final void Function(String postId)? onPostTap;
@@ -34,6 +35,7 @@ class AlbumArtPostsTab extends StatefulWidget {
     this.showGrid = true,
     this.profileImage,
     required this.postsList,
+    this.cachedPostStats,
     this.onFollowersTap,
     this.onFollowingTap,
     this.onPostTap,
@@ -51,7 +53,10 @@ class _AlbumArtPostsTabState extends State<AlbumArtPostsTab> {
   @override
   void initState() {
     super.initState();
-    _loadPostStats();
+    // Only fetch stats if not provided from cache
+    if (widget.cachedPostStats == null) {
+      _loadPostStats();
+    }
     widget.refreshNotifier?.addListener(_onRefresh);
   }
 
@@ -85,15 +90,26 @@ class _AlbumArtPostsTabState extends State<AlbumArtPostsTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Use cached stats if available, otherwise use future builder
+    if (widget.cachedPostStats != null) {
+      return _buildContent(widget.cachedPostStats!);
+    }
+    
     return FutureBuilder<List<dynamic>>(
       future: _postStatsFuture,
       builder: (context, snapshot) {
         final postStats = snapshot.data ?? [];
-        // Make sure the grid is in a scrollable container
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            children: [
+        return _buildContent(postStats);
+      },
+    );
+  }
+
+  Widget _buildContent(List<dynamic> postStats) {
+    // Make sure the grid is in a scrollable container
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Column(
+        children: [
               if (!widget.showGrid) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(
@@ -207,7 +223,8 @@ class _AlbumArtPostsTabState extends State<AlbumArtPostsTab> {
                         ),
                         itemBuilder: (context, index) {
                           final post = widget.postsList[index];
-                          final postId = post is Map ? post['id'] : post.id;
+                          // Check both 'id' and '_id' fields for compatibility
+                          final postId = post is Map ? (post['id'] ?? post['_id']) : post.id;
                           final userId =
                               post is Map ? post['userId'] : post.userId;
                           final stat = postStats.firstWhere(
@@ -298,7 +315,5 @@ class _AlbumArtPostsTabState extends State<AlbumArtPostsTab> {
             ],
           ),
         );
-      },
-    );
   }
 }

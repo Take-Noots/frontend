@@ -8,6 +8,7 @@ import 'data/services/auth_service.dart';
 import 'core/providers/theme_provider.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/providers/feed_provider.dart';
+import 'core/providers/profile_provider.dart';
 
 void main() async {
   // Ensure Flutter bindings are initialized before accessing plugins
@@ -23,6 +24,7 @@ void main() async {
   final authProvider = AuthProvider();
   final themeProvider = ThemeProvider();
   final feedProvider = FeedProvider();
+  final profileProvider = ProfileProvider();
 
   // Load user data and theme preferences from shared preferences
   await authProvider.loadUserDataFromSharedPreferences();
@@ -44,6 +46,7 @@ void main() async {
       ChangeNotifierProvider.value(value: themeProvider),
       ChangeNotifierProvider.value(value: authProvider),
       ChangeNotifierProvider.value(value: feedProvider),
+      ChangeNotifierProvider.value(value: profileProvider),
       Provider.value(value: authService),
     ],
     child: MyApp(appRouter: appRouter),

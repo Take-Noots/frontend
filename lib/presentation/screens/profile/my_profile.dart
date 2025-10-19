@@ -22,10 +22,9 @@ import 'tabs/business/ads_tab.dart'; // Create this for business features
 import 'tabs/business/ad_insights_tab.dart'; // Create this for business features
 import '../../widgets/loading_screens/profile_loading_screen.dart';
 
-import '../../../data/services/profile_service.dart';
 import '../../../data/models/profile_model.dart';
 import '../../../core/providers/auth_provider.dart';
-import '../../../data/models/post_model.dart';
+import '../../../core/providers/profile_provider.dart';
 import '../../../core/router/route_names.dart';
 
 class NormalUserProfilePage extends StatefulWidget {
@@ -51,6 +50,8 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
 
   bool profileNotFound = false;
   int postCount = 0;
+  List<dynamic> postStats = []; // Add post stats storage
+  List<dynamic> thoughtPosts = []; // Add thought posts storage
   final ValueNotifier<bool> refreshTabNotifier = ValueNotifier(false);
 
   @override
@@ -121,37 +122,42 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
       }
       return;
     }
+    
     if (mounted) {
       setState(() {
         isLoading = true;
       });
     }
-    final profileService = ProfileService();
-    final profileResult = await profileService.getUserProfile(userId!);
-    final postsResult = await profileService.getUserPosts(userId!);
-    // Convert each map to a Post object
-    final postObjects = postsResult.map((json) => Post.fromJson(json)).toList();
-    final albumImagesResult = await profileService.getUserAlbumImages(userId!);
-
-    // --- Fetch post count from backend ---
-    final postCountResult = await profileService.getUserPostCount(userId!);
-    int fetchedPostCount = 0;
-    if (postCountResult != null && postCountResult['postCount'] != null) {
-      fetchedPostCount = postCountResult['postCount'];
-    }
-
-    if (profileResult['success'] == true && profileResult['data'] != null) {
+    
+    // 🔑 Use ProfileProvider for caching
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    
+    // ⚡ Two-stage loading for better UX:
+    // Stage 1: Check if we have cached data - show header immediately
+    final existingCache = profileProvider.getCachedProfile(userId!);
+    if (existingCache != null && existingCache.hasProfile && existingCache.isValid) {
+      // Show cached header data immediately (instant!)
       if (mounted) {
         setState(() {
-          profile = ProfileModel.fromJson(profileResult['data']);
-          posts = postObjects;
-          albumImages = albumImagesResult;
-          postCount = fetchedPostCount;
-
-          profileNotFound = false;
-          isLoading = false;
-
-          // --- Only recreate TabController here after profile is loaded ---
+          profile = existingCache.profile;
+          postCount = existingCache.postCount;
+          isLoading = false; // Show header immediately
+        });
+      }
+      
+      // Then load full data (posts, stats, etc.) in background
+      await profileProvider.loadProfile(userId!, context: context);
+      final cachedProfile = profileProvider.getCachedProfile(userId!);
+      
+      if (cachedProfile != null && mounted) {
+        setState(() {
+          posts = cachedProfile.posts;
+          albumImages = cachedProfile.albumImages;
+          postCount = cachedProfile.postCount;
+          postStats = cachedProfile.postStats;
+          thoughtPosts = cachedProfile.thoughtPosts;
+          
+          // Recreate TabController if needed
           final tabCount = getProfileTabs().length;
           if (_tabController == null || _tabController!.length != tabCount) {
             _tabController?.dispose();
@@ -159,25 +165,84 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           }
         });
       }
-    } else if (profileResult['message'] == 'Profile not found') {
+      return;
+    }
+    
+    // Stage 2: No cache - fetch everything
+    await profileProvider.loadProfile(userId!, context: context);
+    
+    // Get cached profile data
+    final cachedProfile = profileProvider.getCachedProfile(userId!);
+    
+    if (cachedProfile == null) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+      return;
+    }
+    
+    if (cachedProfile.isLoading) {
+      // Still loading, wait
+      return;
+    }
+    
+    if (cachedProfile.hasError && cachedProfile.isProfileNotFound) {
       if (mounted) {
         setState(() {
           profile = null;
           profileNotFound = true;
-
           isLoading = false;
         });
       }
-    } else {
+      return;
+    }
+    
+    if (cachedProfile.hasError) {
       if (mounted) {
         setState(() {
           profile = null;
           profileNotFound = false;
-
           isLoading = false;
         });
       }
+      return;
     }
+    
+    // ⚡ Performance optimization: Don't convert posts to Post objects
+    // AlbumArtPostsTab can handle raw JSON, so skip expensive fromJson conversion
+
+    if (mounted) {
+      setState(() {
+        profile = cachedProfile.profile;
+        posts = cachedProfile.posts; // Use raw JSON directly
+        albumImages = cachedProfile.albumImages;
+        postCount = cachedProfile.postCount;
+        postStats = cachedProfile.postStats; // Store cached post stats
+        thoughtPosts = cachedProfile.thoughtPosts; // Store cached thought posts
+        profileNotFound = false;
+        isLoading = false;
+
+        // --- Only recreate TabController here after profile is loaded ---
+        final tabCount = getProfileTabs().length;
+        if (_tabController == null || _tabController!.length != tabCount) {
+          _tabController?.dispose();
+          _tabController = TabController(length: tabCount, vsync: this);
+        }
+      });
+    }
+  }
+  
+  // 🔄 Manual refresh method (for pull-to-refresh)
+  Future<void> _handleRefresh() async {
+    if (userId == null) return;
+    
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    await profileProvider.refreshProfile(userId!, context: context);
+    
+    // Update UI with refreshed data
+    await _fetchProfileData();
   }
 
   // Helper to get user type (normal, artist, business)
@@ -226,6 +291,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           showGrid: true,
           profileImage: profile!.profileImage,
           postsList: posts,
+          cachedPostStats: postStats, // Pass cached post stats
           onPostTap: (postId) async {
             await Navigator.push(
               context,
@@ -241,7 +307,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           refreshNotifier: refreshTabNotifier,
         ),
         ArtistNewReleasesTab(userId: userId!), // Implement this tab
-        ThoughtPostsTab(postsList: posts, userId: userId),
+        ThoughtPostsTab(postsList: thoughtPosts, userId: userId),
         ArtistConcertsTab(userId: userId!), // Implement this tab
         ArtistUpcomingTab(userId: userId!), // Implement this tab
         // ArtistInsightsTab(userId: userId!),
@@ -260,6 +326,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           showGrid: true,
           profileImage: profile!.profileImage,
           postsList: posts,
+          cachedPostStats: postStats, // Pass cached post stats
           onPostTap: (postId) async {
             await Navigator.push(
               context,
@@ -276,7 +343,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
         ),
         BusinessAdsTab(userId: userId!), // Implement this tab
         BusinessAdInsightsTab(userId: userId!), // Implement this tab
-        ThoughtPostsTab(postsList: posts, userId: userId),
+        ThoughtPostsTab(postsList: thoughtPosts, userId: userId),
         const TaggedPostsTab(),
       ];
     } else {
@@ -292,6 +359,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           showGrid: true,
           profileImage: profile!.profileImage,
           postsList: posts,
+          cachedPostStats: postStats, // Pass cached post stats
           onPostTap: (postId) async {
             await Navigator.push(
               context,
@@ -306,7 +374,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           },
           refreshNotifier: refreshTabNotifier,
         ),
-        ThoughtPostsTab(postsList: posts, userId: userId),
+        ThoughtPostsTab(postsList: thoughtPosts, userId: userId),
         const TaggedPostsTab(),
       ];
     }
@@ -321,7 +389,9 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
+    // ⚡ Show loading screen only if we have NO profile data at all
+    // If we have profile data (even if loading posts), show the profile with header
+    if (isLoading && profile == null) {
       return ProfileLoadingScreen(
         title: username ?? 'My Profile',
         showSkeleton: true,
@@ -411,10 +481,14 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Profile details (header, stats, description)
-          AlbumArtPostsTab(
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh, // 🔄 Pull-to-refresh support
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              // Profile details (header, stats, description)
+              AlbumArtPostsTab(
             username: profile?.username ?? '',
             fullName: profile?.fullName ?? '',
             posts: postCount,
@@ -425,6 +499,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
             showGrid: false,
             profileImage: profile?.profileImage ?? '',
             postsList: posts,
+            cachedPostStats: postStats, // Pass cached post stats
 
             // --- Add gesture detectors for followers/following ---
             onFollowersTap: () {
@@ -594,7 +669,8 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
             ),
           ),
           // TabBarView for posts - Make sure each tab view is scrollable
-          Expanded(
+          SizedBox(
+            height: 400, // Fixed height for TabBarView inside ScrollView
             child: profile != null && _tabController != null
                 ? TabBarView(
                     physics:
@@ -610,7 +686,9 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                     ),
                   ),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     );

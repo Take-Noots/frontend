@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/providers/theme_provider.dart';
 // import '../../widgets/home/header_bar.dart';
 import '../../widgets/home/feed_widget.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
@@ -880,15 +879,8 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
               color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.brightness_6,
-                color: Theme.of(context).colorScheme.onSurface),
-            onPressed: () {
-              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
-            },
-          ),
-        ],
+        // Removed theme toggle button from actions
+        actions: [],
       ),
       body: FeedWidget(
         feedItems: _posts.map((p) => FeedItem.song(p)).toList(),
