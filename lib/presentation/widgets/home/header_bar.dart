@@ -5,6 +5,7 @@ import '../../screens/notifications/notifications_screen.dart';
 import '../../../data/services/notification_service.dart';
 import '../../../core/router/route_names.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../core/router/route_names.dart';
 
 class NootAppBar extends StatefulWidget implements PreferredSizeWidget {
   const NootAppBar({super.key});
@@ -68,7 +69,7 @@ class _NootAppBarState extends State<NootAppBar> {
             icon: Icon(LucideIcons.heart,
                 color: Theme.of(context).colorScheme.onPrimary, size: 22),
             onPressed: () {
-              Navigator.pushNamed(context, '/request');
+              context.push(AppRoutes.requests);
             },
           ),
           // Message Icon - Updated this section
