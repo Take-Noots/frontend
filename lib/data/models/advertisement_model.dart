@@ -13,6 +13,9 @@ class Advertisement {
   final int status;
   final int likesCount;
   final int commentsCount;
+  final int payedViewsCount;
+  final int remainViews;
+  final int reqViews;
   final List<String> likedBy;
   final List<String> comments;
   final DateTime createdAt;
@@ -32,6 +35,9 @@ class Advertisement {
     required this.userId,
     required this.status,
     required this.likesCount,
+    required this.payedViewsCount,
+    required this.remainViews,
+    required this.reqViews,
     required this.commentsCount,
     required this.likedBy,
     required this.comments,
@@ -54,6 +60,9 @@ class Advertisement {
       userId: json['userId'],
       status: json['status'] ?? 0,
       likesCount: json['likesCount'] ?? 0,
+      payedViewsCount: json['payedViewsCount'] ?? 0,
+      remainViews: json['remainViews'] ?? 0,
+      reqViews: json['reqViews'] ?? 0,
       commentsCount: json['commentsCount'] ?? 0,
       likedBy: List<String>.from(json['likedBy'] ?? []),
       comments: List<String>.from(json['comments'] ?? []),
@@ -78,6 +87,9 @@ class Advertisement {
       'status': status,
       'likesCount': likesCount,
       'commentsCount': commentsCount,
+      'payedViewsCount': payedViewsCount,
+      'remainViews': remainViews,
+      'reqViews': reqViews,
       'likedBy': likedBy,
       'comments': comments,
       'createdAt': createdAt.toIso8601String(),
