@@ -24,6 +24,7 @@ import '../../presentation/screens/profile/settings/hiddenPosts/hidden_posts.dar
 import '../../presentation/screens/request/request.dart';
 import '../../presentation/screens/advertisement/create_advertisement_screen.dart';
 import '../../presentation/screens/advertisement/set_audience_screen.dart';
+import '../../presentation/screens/advertisement/payment_screen.dart';
 import '../../presentation/screens/shell_screen_v2.dart';
 import '../../presentation/screens/create_noots/search_song.dart';
 import '../../presentation/screens/create_noots/create_description_noot.dart';
@@ -275,6 +276,15 @@ class AppRouter {
               GoRoute(
                 path: 'set-audience',
                 builder: (context, state) => SetAudienceScreen(),
+              ),
+              GoRoute(
+                name: 'payment',
+                path: 'set-audience/payment',
+                builder: (context, state) {
+                  final extra = state.extra as Map<String, dynamic>?;
+                  final amount = extra?['amount'] as double? ?? 0.0;
+                  return PaymentScreen(amount: amount);
+                },
               ),
             ],
           ),

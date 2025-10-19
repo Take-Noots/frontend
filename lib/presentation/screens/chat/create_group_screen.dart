@@ -5,6 +5,8 @@ import '../../../data/services/group_chat_service.dart';
 import 'group_chat_screen.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class CreateGroupScreen extends StatefulWidget {
   const CreateGroupScreen({super.key});
@@ -15,19 +17,23 @@ class CreateGroupScreen extends StatefulWidget {
 
 class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final TextEditingController _groupNameController = TextEditingController();
-  final TextEditingController _groupDescriptionController = TextEditingController();
+  final TextEditingController _groupDescriptionController =
+      TextEditingController();
   final TextEditingController _groupIconController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
-  
+
   final ChatService _chatService = ChatService();
   final GroupChatService _groupChatService = GroupChatService();
-  
+
   List<SearchUser> searchResults = [];
   List<SearchUser> selectedUsers = [];
   bool _isSearching = false;
   bool _isCreating = false;
   bool _showSearchResults = false;
   String? currentUserId;
+
+  File? _selectedGroupIcon;
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -57,6 +63,69 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     });
   }
 
+  Future<void> _pickGroupIcon(ImageSource source) async {
+    try {
+      final pickedFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedGroupIcon = File(pickedFile.path);
+          _groupIconController.clear(); // Clear URL input when file is selected
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error picking image: $e')),
+      );
+    }
+  }
+
+  void _showImagePicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                leading: Icon(Icons.photo_library,
+                    color: Theme.of(context).colorScheme.secondary),
+                title: Text('Photo from Gallery',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).textTheme.bodyLarge?.color)),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickGroupIcon(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_camera,
+                    color: Theme.of(context).colorScheme.secondary),
+                title: Text('Photo from Camera',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).textTheme.bodyLarge?.color)),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickGroupIcon(ImageSource.camera);
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _onSearchChanged() {
     if (_searchController.text.isEmpty) {
       setState(() {
@@ -77,14 +146,14 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
     try {
       final result = await _chatService.searchUsers(query.trim());
-      
+
       if (result['success']) {
         final List<dynamic> usersData = result['data'];
         final userList = usersData
             .where((user) => user['_id'] != currentUserId)
             .map((json) => SearchUser.fromJson(json))
             .toList();
-        
+
         setState(() {
           searchResults = userList;
           _showSearchResults = true;
@@ -143,15 +212,13 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
     try {
       final memberIds = selectedUsers.map((user) => user.id).toList();
-      
-      final result = await _groupChatService.createGroupChat(
+
+      final result = await _groupChatService.createGroupChatWithFile(
         name: _groupNameController.text.trim(),
-        description: _groupDescriptionController.text.trim().isNotEmpty 
-            ? _groupDescriptionController.text.trim() 
+        description: _groupDescriptionController.text.trim().isNotEmpty
+            ? _groupDescriptionController.text.trim()
             : null,
-        groupIcon: _groupIconController.text.trim().isNotEmpty 
-            ? _groupIconController.text.trim() 
-            : null,
+        groupIconFile: _selectedGroupIcon,
         memberIds: memberIds,
       );
 
@@ -163,7 +230,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          
+
           // Navigate to group chat screen
           final groupChatData = result['data'];
           Navigator.pushReplacement(
@@ -255,38 +322,96 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // Group Icon URL Input
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: TextField(
-                      controller: _groupIconController,
-                      decoration: InputDecoration(
-                        hintText: 'Group icon URL (optional)',
-                        hintStyle: TextStyle(
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
-                        prefixIcon: Icon(
-                          Icons.image,
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.all(16),
-                      ),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                      ),
+                  // Group Icon Upload
+                  Text(
+                    'Group Icon',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
-                  
+                  const SizedBox(height: 8),
+                  Text(
+                    'Optional',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.secondary,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
                   const SizedBox(height: 12),
-                  
+                  GestureDetector(
+                    onTap: _showImagePicker,
+                    child: Container(
+                      height: 120,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .secondary
+                            .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _selectedGroupIcon != null
+                              ? Theme.of(context).colorScheme.secondary
+                              : Colors.transparent,
+                          width: _selectedGroupIcon != null ? 2 : 1,
+                        ),
+                      ),
+                      child: _selectedGroupIcon != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.file(
+                                _selectedGroupIcon!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                              ),
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .secondary
+                                        .withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.add_a_photo,
+                                    size: 24,
+                                    color:
+                                        Theme.of(context).colorScheme.secondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Tap to select group icon',
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.secondary,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
                   // Group Name Input
                   Container(
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .secondary
+                          .withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: TextField(
@@ -308,13 +433,16 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 12),
-                  
+
                   // Group Description Input
                   Container(
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .secondary
+                          .withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: TextField(
@@ -372,11 +500,16 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                                   children: [
                                     CircleAvatar(
                                       radius: 25,
-                                      backgroundImage: user.profileImage != null && user.profileImage!.isNotEmpty
-                                          ? (user.profileImage!.startsWith('http')
-                                              ? NetworkImage(user.profileImage!) as ImageProvider
+                                      backgroundImage: user.profileImage !=
+                                                  null &&
+                                              user.profileImage!.isNotEmpty
+                                          ? (user.profileImage!
+                                                  .startsWith('http')
+                                              ? NetworkImage(user.profileImage!)
+                                                  as ImageProvider
                                               : AssetImage(user.profileImage!))
-                                          : const AssetImage('assets/images/hehe.png'),
+                                          : const AssetImage(
+                                              'assets/images/hehe.png'),
                                     ),
                                     Positioned(
                                       top: -5,
@@ -405,7 +538,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                                   child: Text(
                                     user.username,
                                     style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onPrimary,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary,
                                       fontSize: 12,
                                     ),
                                     textAlign: TextAlign.center,
@@ -427,7 +562,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                  color:
+                      Theme.of(context).colorScheme.secondary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(25),
                 ),
                 child: TextField(
@@ -514,10 +650,16 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person_search, color: Theme.of(context).colorScheme.onPrimary, size: 48),
+            Icon(Icons.person_search,
+                color: Theme.of(context).colorScheme.onPrimary, size: 48),
             const SizedBox(height: 16),
-            Text('No users found', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontSize: 18)),
-            Text('Try a different username', style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
+            Text('No users found',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimary,
+                    fontSize: 18)),
+            Text('Try a different username',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.secondary)),
           ],
         ),
       );
@@ -528,7 +670,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       itemBuilder: (context, index) {
         final user = searchResults[index];
         final isSelected = selectedUsers.any((u) => u.id == user.id);
-        
+
         return SearchUserItemForGroup(
           user: user,
           isSelected: isSelected,
@@ -558,23 +700,21 @@ class SearchUserItemForGroup extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected 
-              ? Colors.green.withOpacity(0.1) 
-              : Colors.transparent,
+          color:
+              isSelected ? Colors.green.withOpacity(0.1) : Colors.transparent,
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundImage: user.profileImage != null && user.profileImage!.isNotEmpty
-                  ? (user.profileImage!.startsWith('http')
-                      ? NetworkImage(user.profileImage!) as ImageProvider
-                      : AssetImage(user.profileImage!))
-                  : const AssetImage('assets/images/hehe.png'),
+              backgroundImage:
+                  user.profileImage != null && user.profileImage!.isNotEmpty
+                      ? (user.profileImage!.startsWith('http')
+                          ? NetworkImage(user.profileImage!) as ImageProvider
+                          : AssetImage(user.profileImage!))
+                      : const AssetImage('assets/images/hehe.png'),
             ),
-            
             const SizedBox(width: 16),
-            
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -598,14 +738,15 @@ class SearchUserItemForGroup extends StatelessWidget {
                 ],
               ),
             ),
-            
             Container(
               width: 24,
               height: 24,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? Colors.green : Theme.of(context).colorScheme.secondary,
+                  color: isSelected
+                      ? Colors.green
+                      : Theme.of(context).colorScheme.secondary,
                   width: 2,
                 ),
                 color: isSelected ? Colors.green : Colors.transparent,
