@@ -42,6 +42,8 @@ class _UserProfilePageState extends State<UserProfilePage>
   int postCount = 0;
   bool isPrivateProfile = false;
   bool isFollowingUser = false;
+  bool isLoadingFollow = false;
+  final ValueNotifier<bool> refreshTabNotifier = ValueNotifier(false);
 
   @override
   void initState() {
@@ -154,6 +156,10 @@ class _UserProfilePageState extends State<UserProfilePage>
     // Prevent following yourself
     if (loggedUserId == profile!.userId) return;
 
+    setState(() {
+      isLoadingFollow = true;
+    });
+
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       final profileService = ProfileService(authService: authService);
@@ -162,15 +168,22 @@ class _UserProfilePageState extends State<UserProfilePage>
           : await profileService.followUser(loggedUserId!, profile!.userId);
 
       if (result['success'] == true) {
+        // Update local state directly instead of refreshing the whole page
         setState(() {
-          isFollowingUser = !isFollowingUser;
           if (isFollowingUser) {
-            profile!.followers.add(loggedUserId!);
+            // Unfollowing: remove from followers list
+            profile!.followers.remove(loggedUserId);
           } else {
-            profile!.followers.remove(loggedUserId!);
+            // Following: add to followers list
+            profile!.followers.add(loggedUserId!);
           }
+          isFollowingUser = !isFollowingUser;
+          isLoadingFollow = false;
         });
       } else {
+        setState(() {
+          isLoadingFollow = false;
+        });
         // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -181,6 +194,9 @@ class _UserProfilePageState extends State<UserProfilePage>
         );
       }
     } catch (e) {
+      setState(() {
+        isLoadingFollow = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -237,7 +253,9 @@ class _UserProfilePageState extends State<UserProfilePage>
         Navigator.of(context).pop(); // Remove loading screen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Failed to start chat'),
+            content: Text(result['message'] ?? 'Failed to start chat',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -247,7 +265,8 @@ class _UserProfilePageState extends State<UserProfilePage>
       Navigator.of(context).pop(); // Remove loading screen
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error starting chat: $e'),
+          content: Text('Error starting chat: $e',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -376,7 +395,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                   width: 140,
                   height: 44,
                   child: ElevatedButton(
-                    onPressed: _handleFollow,
+                    onPressed: isLoadingFollow ? null : _handleFollow,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isFollowingUser
                           ? Theme.of(context).colorScheme.surface
@@ -393,13 +412,26 @@ class _UserProfilePageState extends State<UserProfilePage>
                             : BorderSide.none,
                       ),
                     ),
-                    child: Text(
-                      isFollowingUser ? 'Following' : 'Follow',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: isLoadingFollow
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                isFollowingUser
+                                    ? Theme.of(context).colorScheme.onSurface
+                                    : Colors.white,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            isFollowingUser ? 'Following' : 'Follow',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -461,7 +493,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                     showGrid: true,
                     profileImage: profile!.profileImage,
                     postsList: posts,
-                    onPostTap: (postId) {
+                    onPostTap: (postId) async {
                       // Add debug print
                       print("Tapped post ID: $postId");
 
@@ -493,7 +525,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                         final String validPostId = postId.toString();
                         print("Navigating to post ID: $validPostId");
 
-                        Navigator.push(
+                        await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => ProfileFeedScreen(
@@ -502,8 +534,10 @@ class _UserProfilePageState extends State<UserProfilePage>
                             ),
                           ),
                         );
+                        refreshTabNotifier.value = true;
                       }
                     },
+                    refreshNotifier: refreshTabNotifier,
                   ),
                   ThoughtPostsTab(userId: widget.userId),
                   const TaggedPostsTab(),

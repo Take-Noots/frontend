@@ -75,9 +75,13 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
     try {
       final profileService = ProfileService();
       final postsResult = await profileService.getUserPosts(widget.userId);
-      final posts = postsResult
-          .map<data_model.Post>((json) => data_model.Post.fromJson(json))
-          .toList();
+      final posts = postsResult.map<data_model.Post>((json) {
+        final post = data_model.Post.fromJson(json);
+        post.likedByMe =
+            (json['likedBy'] as List<dynamic>?)?.contains(_currentUserId) ??
+                false;
+        return post;
+      }).toList();
 
       // Fetch username for the profile
       String? username;
