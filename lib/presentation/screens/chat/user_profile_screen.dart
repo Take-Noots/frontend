@@ -20,6 +20,7 @@ class UserProfileScreen extends StatefulWidget {
 class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _isLoading = true;
   bool _isFollowLoading = false;
+  String? _error;
   Map<String, dynamic>? userProfile;
   String? currentUserId;
   bool isFollowing = false;
@@ -53,11 +54,32 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _loadUserProfile() async {
-    try {
-      final result = await _userService.getUserProfile(widget.userId);
+    setState(() {
+      _error = null;
+    });
 
-      if (result['success']) {
-        final profile = result['data'];
+    try {
+      print('Loading profile for userId: ${widget.userId}');
+      // Fetch basic profile data and followers/following counts in parallel
+      final results = await Future.wait([
+        _userService.getUserProfile(widget.userId),
+        _userService.getFollowersCount(widget.userId),
+        _userService.getFollowingCount(widget.userId),
+      ]);
+
+      final profileResult = results[0] as Map<String, dynamic>;
+      final followersResult = results[1] as Map<String, dynamic>;
+      final followingResult = results[2] as Map<String, dynamic>;
+
+      print('Profile result: $profileResult');
+      print('Followers result: $followersResult');
+      print('Following result: $followingResult');
+
+      if (profileResult['success']) {
+        final profile = profileResult['data'];
+        final followersCount = followersResult['success'] ? followersResult['count'] : 0;
+        final followingCount = followingResult['success'] ? followingResult['count'] : 0;
+
         setState(() {
           userProfile = {
             'id': profile['_id'] ?? profile['userId'],
@@ -69,9 +91,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             'joinDate': DateTime.now().subtract(const Duration(days: 30)), // Default
             'isOnline': false, // We don't have online status yet
             'lastSeen': 'Recently',
-            'followers': profile['followers']?.length ?? 0,
-            'following': profile['following']?.length ?? 0,
-            'posts': profile['posts'] ?? 0,
+            'followers': followersCount,
+            'following': followingCount,
+            'posts': profile['posts']?.length ?? 0,
           };
           _isLoading = false;
         });
@@ -97,6 +119,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       }
     } catch (e) {
       setState(() {
+        _error = 'Failed to load profile: $e';
         _isLoading = false;
       });
     }
@@ -130,13 +153,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       }
 
       if (result['success']) {
+        // Refresh followers count from server
+        final followersResult = await _userService.getFollowersCount(widget.userId);
+        final newFollowersCount = followersResult['success'] ? followersResult['count'] : 0;
+
         setState(() {
           isFollowing = !isFollowing;
-          // Update follower count
+          // Update follower count with actual count from server
           if (userProfile != null) {
-            userProfile!['followers'] = isFollowing
-                ? userProfile!['followers'] + 1
-                : userProfile!['followers'] - 1;
+            userProfile!['followers'] = newFollowersCount;
           }
         });
 
@@ -209,7 +234,29 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ? const Center(
               child: CircularProgressIndicator(color: Colors.white),
             )
-          : SingleChildScrollView(
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline,
+                          color: Theme.of(context).colorScheme.onPrimary, size: 48),
+                      const SizedBox(height: 16),
+                      Text(_error!,
+                          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => _loadUserProfile(),
+                        child: const Text('Try Again'),
+                      ),
+                    ],
+                  ),
+                )
+              : userProfile == null
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    )
+                  : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [

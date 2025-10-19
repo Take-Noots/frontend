@@ -28,6 +28,10 @@ import '../../presentation/screens/advertisement/payment_screen.dart';
 import '../../presentation/screens/shell_screen_v2.dart';
 import '../../presentation/screens/create_noots/search_song.dart';
 import '../../presentation/screens/create_noots/create_description_noot.dart';
+import '../../presentation/screens/notifications/notifications_screen.dart';
+import '../../presentation/screens/chat/chat_list_screen.dart';
+import '../../presentation/screens/chat/chat_screen.dart';
+import '../../presentation/screens/chat/group_chat_screen.dart';
 import 'route_names.dart';
 
 /// Main application router configuration using GoRouter
@@ -195,6 +199,73 @@ class AppRouter {
           GoRoute(
             path: AppRoutes.requests,
             builder: (context, state) => const RequestScreen(),
+          ),
+
+          // Notifications
+          GoRoute(
+            path: AppRoutes.notifications,
+            builder: (context, state) => const NotificationsScreen(),
+          ),
+
+          // Chat routes
+          GoRoute(
+            path: AppRoutes.chat,
+            builder: (context, state) => const ChatListScreen(),
+          ),
+          GoRoute(
+            path: '/chat/:chatId',
+            builder: (context, state) {
+              final chatId = state.pathParameters['chatId']!;
+              final chatData = state.extra as Map<String, dynamic>?;
+
+              if (chatData != null && chatData['isGroup'] == true) {
+                return GroupChatScreen(
+                  groupChatId: chatId,
+                  currentUserId: chatData['currentUserId'] ?? '',
+                );
+              } else {
+                // You might need to create a regular chat screen with chatId
+                return const ChatListScreen(); // Fallback for now
+              }
+            },
+          ),
+          GoRoute(
+            path: '/group-chat/:groupChatId',
+            builder: (context, state) {
+              final groupChatId = state.pathParameters['groupChatId']!;
+              final currentUserId = state.uri.queryParameters['currentUserId'] ?? '';
+              return GroupChatScreen(
+                groupChatId: groupChatId,
+                currentUserId: currentUserId,
+              );
+            },
+          ),
+
+          // Post routes for notifications
+          GoRoute(
+            path: '/post/:postId',
+            builder: (context, state) {
+              final postId = state.pathParameters['postId']!;
+              // You might need to create a PostDetailsScreen or redirect to appropriate screen
+              // For now, redirect to home
+              return HomeScreen(inShell: true);
+            },
+          ),
+          GoRoute(
+            path: '/fanbase-post/:fanbasePostId',
+            builder: (context, state) {
+              final fanbasePostId = state.pathParameters['fanbasePostId']!;
+              final fanbaseId = state.uri.queryParameters['fanbaseId'] ?? '';
+              // You might need to create a FanbasePostDetailsScreen or redirect appropriately
+              // For now, redirect to fanbase details if fanbaseId is available
+              if (fanbaseId.isNotEmpty) {
+                return FanbaseDetailScreen(
+                  fanbaseId: fanbaseId,
+                  userId: '',
+                );
+              }
+              return HomeScreen(inShell: true);
+            },
           ),
 
           // Advertisement
