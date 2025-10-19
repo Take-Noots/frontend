@@ -236,11 +236,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
       // Upload to backend
       final file = File(pickedFile.path);
       final formData = FormData.fromMap({
-        'profileImage': await MultipartFile.fromFile(file.path, filename: 'profile_image.jpg'),
+        'profileImage': await MultipartFile.fromFile(file.path,
+            filename: 'profile_image.jpg'),
       });
 
       final dio = Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
-      final response = await dio.post('/profile/$userId/upload-profile-picture', data: formData);
+      final response = await dio.post('/profile/$userId/upload-profile-picture',
+          data: formData);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data;

@@ -10,8 +10,6 @@ import 'package:Noot/presentation/widgets/fanbases/fanbase_card.dart';
 import 'package:Noot/presentation/widgets/home/header_bar.dart';
 import 'package:Noot/core/providers/auth_provider.dart';
 
-
-
 /// Main fanbase page with Feed and Owned tabs
 /// Feed tab shows non-owned fanbases, Owned tab shows user's created fanbases
 class FanbasePage extends StatefulWidget {
@@ -555,57 +553,55 @@ class _FanbasePageState extends State<FanbasePage>
                             const SizedBox(width: 10),
                             FloatingActionButton(
                               onPressed: () async {
-                                      final name = nameController.text.trim();
-                                      // Check if the name is unique
-                                      final isNameUnique = !_allFanbases.any(
-                                          (fanbase) =>
-                                              fanbase.fanbaseName
-                                                  .trim()
-                                                  .toLowerCase() ==
-                                              name.toLowerCase());
-                                      if (!isNameUnique) {
-                                        setModalState(() {
-                                          nameErrorText =
-                                              'Fanbase name already exists. Please choose a different name.';
-                                        });
-                                        return;
-                                      }
-                                      final topic = topicController.text.trim();
-                                      if (name.isNotEmpty && topic.isNotEmpty) {
-                                        try {
-                                          await FanbaseService.createFanbase(
-                                            name,
-                                            topic,
-                                            context,
-                                            imageFile: selectedImage,
-                                          );
-                                          if (!context.mounted) return;
-                                          Navigator.pop(context);
+                                final name = nameController.text.trim();
+                                // Check if the name is unique
+                                final isNameUnique = !_allFanbases.any(
+                                    (fanbase) =>
+                                        fanbase.fanbaseName
+                                            .trim()
+                                            .toLowerCase() ==
+                                        name.toLowerCase());
+                                if (!isNameUnique) {
+                                  setModalState(() {
+                                    nameErrorText =
+                                        'Fanbase name already exists. Please choose a different name.';
+                                  });
+                                  return;
+                                }
+                                final topic = topicController.text.trim();
+                                if (name.isNotEmpty && topic.isNotEmpty) {
+                                  try {
+                                    await FanbaseService.createFanbase(
+                                      name,
+                                      topic,
+                                      context,
+                                      imageFile: selectedImage,
+                                    );
+                                    if (!context.mounted) return;
+                                    Navigator.pop(context);
 
-                                          setState(() {
-                                            _selectedTabIndex = 2;
-                                          });
-                                          _tabController.animateTo(2);
-                                          _loadFanbases();
+                                    setState(() {
+                                      _selectedTabIndex = 2;
+                                    });
+                                    _tabController.animateTo(2);
+                                    _loadFanbases();
 
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            const SnackBar(
-                                                content: Text(
-                                                    'Fanbase created successfully!')),
-                                          );
-                                        } catch (e) {
-                                          if (context.mounted) {
-                                            Navigator.pop(context);
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                  content: Text('Error: $e')),
-                                            );
-                                          }
-                                        }
-                                      }
-                                    },
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Fanbase created successfully!')),
+                                    );
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(content: Text('Error: $e')),
+                                      );
+                                    }
+                                  }
+                                }
+                              },
                               backgroundColor: const Color(0xFFDB0DF9),
                               foregroundColor: Colors.white,
                               heroTag: 'create_fanbase_fab',
