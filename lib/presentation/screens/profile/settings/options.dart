@@ -106,7 +106,8 @@ class OptionsPage extends StatelessWidget {
           Divider(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.54)),
           Provider.of<AuthProvider>(context, listen: false).isSpotifyLinked
-              ? ListTile(
+              ? const SizedBox.shrink()
+              : ListTile(
                   leading: Icon(Icons.account_circle,
                       color: Theme.of(context).colorScheme.onSurface),
                   title: Text('Link Account to Spotify',
@@ -115,8 +116,7 @@ class OptionsPage extends StatelessWidget {
                   onTap: () {
                     context.go(AppRoutes.linkSpotify);
                   },
-                )
-              : const SizedBox.shrink(),
+                ),
           ListTile(
             leading:
                 Icon(Icons.logout, color: Theme.of(context).colorScheme.error),

@@ -12,11 +12,11 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../data/services/auth_service.dart';
+import '../../core/providers/feed_provider.dart';
 import 'package:dio/dio.dart';
 import '../widgets/song_post/comment.dart';
 import './profile/user_profiles.dart';
 import '../widgets/song_post/post_options_menu.dart';
-import './song_posts/update.dart';
 import '../../core/styles/app_colors.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -38,9 +38,12 @@ class _HomeScreenState extends State<HomeScreen> {
   final SongPostService _songPostService = SongPostService();
   final ThoughtsService _thoughtsService = ThoughtsService();
 
-  List<FeedItem> _feedItems = [];
-  bool _isLoading = true;
-  String? _error;
+  // 🔑 REMOVED: Local feed state - now managed by FeedProvider
+  // List<FeedItem> _feedItems = [];
+  // bool _isLoading = true;
+  // bool _hasLoadedOnce = false; // Cache flag - prevents re-fetching on navigation
+  // String? _error;
+
   String? _currentlyPlayingTrackId;
   bool _isPlaying = false;
   String? userId;
@@ -50,160 +53,48 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserIdAndPosts();
+    // 🔑 Load feed through FeedProvider (handles caching automatically)
+    _loadUserIdAndInitializeFeed();
   }
 
-  Future<void> _loadUserIdAndPosts() async {
+  // 🔑 Initialize user ID and load feed through provider
+  Future<void> _loadUserIdAndInitializeFeed() async {
     final prefs = await SharedPreferences.getInstance();
     final userDataString = prefs.getString('user_data');
     final userData = userDataString != null
         ? jsonDecode(userDataString)
-        : {'id': '685fb750cc084ba7e0ef8533'}; // Fallback for testing
+        : {'id': '685fb750cc084ba7e0ef8533'};
+
+    final userId = userData['id'];
     setState(() {
-      userId = userData['id'];
+      this.userId = userId;
     });
-    await _loadPosts();
+
+    // 🔑 Load feed through FeedProvider (uses cache if available)
+    final feedProvider = Provider.of<FeedProvider>(context, listen: false);
+    await feedProvider.loadFeed(userId);
+  }
+
+  // 🔑 Manual refresh - uses FeedProvider
+  Future<void> _refreshFeed() async {
+    final feedProvider = Provider.of<FeedProvider>(context, listen: false);
+    await feedProvider.refreshFeed();
+  }
+
+  // 🔑 Invalidate cache - uses FeedProvider
+  void _invalidateCache() {
+    final feedProvider = Provider.of<FeedProvider>(context, listen: false);
+    feedProvider.invalidateCache();
   }
 
   // Refresh posts after creating a new post
   Future<void> refreshPostsAfterCreation() async {
-    await _loadPosts();
+    await _refreshFeed(); // Use the refresh method to reload
   }
 
-  // Load posts from the backend
-  Future<void> _loadPosts() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
+  // 🔑 REMOVED: _loadPosts() - now handled by FeedProvider
 
-      if (userId == null) {
-        setState(() {
-          _error = 'User ID not found. Please log in again.';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      final songResult =
-          await _songPostService.getFollowerPosts(userId!, context);
-      final thoughtsResult =
-          await _thoughtsService.getFollowerThoughts(userId!, context);
-      //print('Fetched thoughtsResult: ' + thoughtsResult.toString());
-
-      List<FeedItem> feedItems = [];
-
-      // Check if songResult is valid and has success field
-      if (songResult['success'] == true && songResult['data'] != null) {
-        final List<dynamic> postsData = songResult['data'];
-
-        final posts = postsData.map((json) {
-          final post = data_model.Post.fromJson(json);
-          post.likedByMe =
-              (json['likedBy'] as List<dynamic>?)?.contains(userId) ?? false;
-          return FeedItem.song(post);
-        }).where((item) =>
-            item.songPost == null ||
-            (item.songPost!.isHidden == 0 && item.songPost!.isDeleted == 0));
-
-        feedItems.addAll(posts);
-      }
-
-      // Check saved status for all posts if user is logged in
-      if (userId != null) {
-        await _checkSavedStatusForPosts(feedItems);
-      }
-
-      // Check if thoughtsResult is valid and has success field
-      if (thoughtsResult['success'] == true && thoughtsResult['data'] != null) {
-        final List<dynamic> thoughtsData = thoughtsResult['data'];
-
-        final thoughtsPosts = thoughtsData.map((json) {
-          final post = ThoughtsPost.fromJson(json);
-          return FeedItem.thought(post);
-        }).where((item) =>
-            item.thoughtsPost == null ||
-            (item.thoughtsPost!.isHidden == 0 &&
-                item.thoughtsPost!.isDeleted == 0));
-
-        feedItems.addAll(thoughtsPosts);
-      }
-
-      // Sort all by createdAt, newest first
-      feedItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      if (mounted) {
-        setState(() {
-          _feedItems = feedItems;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      String errorMessage = 'Error loading posts: $e';
-
-      // Check if it's an authentication error
-      if (e.toString().contains('401') ||
-          e.toString().contains('Unauthorized')) {
-        errorMessage = 'Authentication failed. Please log in again.';
-      }
-
-      if (mounted) {
-        setState(() {
-          _error = errorMessage;
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _checkSavedStatusForPosts(List<FeedItem> feedItems) async {
-    if (userId == null) {
-      return;
-    }
-
-    try {
-      final savedPostsResult =
-          await _songPostService.getSavedPosts(userId!, context);
-
-      if (savedPostsResult['success'] == true &&
-          savedPostsResult['savedPosts'] != null) {
-        final List<String> savedPostsIds =
-            List<String>.from(savedPostsResult['savedPosts']);
-
-        for (var item in feedItems) {
-          if (item.type == FeedItemType.song && item.songPost != null) {
-            final post = item.songPost!;
-            post.isSaved = savedPostsIds.contains(post.id);
-          }
-        }
-      }
-
-      final savedThoughtsResult =
-          await _thoughtsService.getSavedThoughtsPosts(userId!, context);
-      // print('[DEBUG] Saved thoughts result: $savedThoughtsResult');
-
-      if (savedThoughtsResult != null &&
-          savedThoughtsResult['success'] == true &&
-          savedThoughtsResult['savedPosts'] != null) {
-        final List<String> savedThoughtsIds =
-            List<String>.from(savedThoughtsResult['savedPosts']);
-        // print('[DEBUG] Saved thoughts IDs: $savedThoughtsIds');
-
-        for (var item in feedItems) {
-          if (item.type == FeedItemType.thought && item.thoughtsPost != null) {
-            final post = item.thoughtsPost!;
-            final wasSaved = post.isSaved;
-            post.isSaved = savedThoughtsIds.contains(post.id);
-            print(
-                '[DEBUG] Thoughts ${post.id}: wasSaved=$wasSaved, isSaved=${post.isSaved}');
-          }
-        }
-      }
-    } catch (e) {
-     
-    }
-  }
+  // 🔑 REMOVED: _checkSavedStatusForPosts - not needed with FeedProvider
 
   void _handleLike(data_model.Post post) async {
     String? currentUserId = userId;
@@ -394,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Create a unique identifier for thoughts posts
     final thoughtsTrackId = '${post.songName}_${post.artistName}';
-    
+
     if (_currentlyPlayingTrackId == thoughtsTrackId && _isPlaying) {
       setState(() {
         _isPlaying = false;
@@ -418,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _currentlyPlayingTrackId = thoughtsTrackId;
         _isPlaying = true;
       });
-      
+
       try {
         await _playThoughtsTrack(post);
       } catch (e) {
@@ -427,11 +318,11 @@ class _HomeScreenState extends State<HomeScreen> {
           _currentlyPlayingTrackId = null;
           _isPlaying = false;
         });
-        
+
         // Show a more user-friendly error message
         String errorMessage = 'Failed to play track';
         String detailedError = e.toString();
-        
+
         if (detailedError.contains('No Spotify token')) {
           errorMessage = 'Please connect your Spotify account to play music';
         } else if (detailedError.contains('Track not found')) {
@@ -445,7 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
           errorMessage =
               'Failed to play: ${detailedError.length > 100 ? detailedError.substring(0, 100) : detailedError}';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -470,48 +361,51 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final result = await _thoughtsService.likeThoughts(post.id, context);
-      
+
       if (result['success'] == true) {
-        // Update the post in the feed
-        setState(() {
-          final itemIndex = _feedItems.indexWhere((item) => item.thoughtsPost?.id == post.id);
-          if (itemIndex != -1) {
-            final item = _feedItems[itemIndex];
-            if (item.thoughtsPost != null) {
-              // Toggle like status
-              final isCurrentlyLiked = item.thoughtsPost!.likedBy.contains(userId!);
-              final newLikedBy = List<String>.from(item.thoughtsPost!.likedBy);
-              
-              if (isCurrentlyLiked) {
-                newLikedBy.remove(userId!);
-              } else {
-                newLikedBy.add(userId!);
-              }
-              
-              final updatedPost = ThoughtsPost(
-                id: item.thoughtsPost!.id,
-                userId: item.thoughtsPost!.userId,
-                username: item.thoughtsPost!.username,
-                userImage: item.thoughtsPost!.userImage,
-                text: item.thoughtsPost!.text,
-                createdAt: item.thoughtsPost!.createdAt,
-                updatedAt: item.thoughtsPost!.updatedAt,
-                likes: isCurrentlyLiked ? item.thoughtsPost!.likes - 1 : item.thoughtsPost!.likes + 1,
-                likedBy: newLikedBy,
-                comments: item.thoughtsPost!.comments,
-                songName: item.thoughtsPost!.songName,
-                artistName: item.thoughtsPost!.artistName,
-                coverImage: item.thoughtsPost!.coverImage,
-                backgroundColor: item.thoughtsPost!.backgroundColor,
-                isHidden: item.thoughtsPost!.isHidden,
-                isDeleted: item.thoughtsPost!.isDeleted,
-                isSaved: item.thoughtsPost!.isSaved,
-              );
-              
-              _feedItems[itemIndex] = FeedItem.thought(updatedPost);
+        // 🔑 Update the post in FeedProvider
+        final feedProvider = Provider.of<FeedProvider>(context, listen: false);
+        final itemIndex = feedProvider.feedItems
+            .indexWhere((item) => item.thoughtsPost?.id == post.id);
+        if (itemIndex != -1) {
+          final item = feedProvider.feedItems[itemIndex];
+          if (item.thoughtsPost != null) {
+            // Toggle like status
+            final isCurrentlyLiked =
+                item.thoughtsPost!.likedBy.contains(userId!);
+            final newLikedBy = List<String>.from(item.thoughtsPost!.likedBy);
+
+            if (isCurrentlyLiked) {
+              newLikedBy.remove(userId!);
+            } else {
+              newLikedBy.add(userId!);
             }
+
+            final updatedPost = ThoughtsPost(
+              id: item.thoughtsPost!.id,
+              userId: item.thoughtsPost!.userId,
+              username: item.thoughtsPost!.username,
+              userImage: item.thoughtsPost!.userImage,
+              text: item.thoughtsPost!.text,
+              createdAt: item.thoughtsPost!.createdAt,
+              updatedAt: item.thoughtsPost!.updatedAt,
+              likes: isCurrentlyLiked
+                  ? item.thoughtsPost!.likes - 1
+                  : item.thoughtsPost!.likes + 1,
+              likedBy: newLikedBy,
+              comments: item.thoughtsPost!.comments,
+              songName: item.thoughtsPost!.songName,
+              artistName: item.thoughtsPost!.artistName,
+              coverImage: item.thoughtsPost!.coverImage,
+              backgroundColor: item.thoughtsPost!.backgroundColor,
+              isHidden: item.thoughtsPost!.isHidden,
+              isDeleted: item.thoughtsPost!.isDeleted,
+              isSaved: item.thoughtsPost!.isSaved,
+            );
+
+            feedProvider.updatePost(post.id, FeedItem.thought(updatedPost));
           }
-        });
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -579,78 +473,80 @@ class _HomeScreenState extends State<HomeScreen> {
             comments: convertedComments,
             currentUserId: userId!,
             songPostService: _ThoughtsToSongPostAdapter(_thoughtsService),
-          onAddComment: (text) async {
-            try {
-              final result = await _thoughtsService.addComment(
-                post.id,
-                userId!,
-                text,
-                context,
-              );
+            onAddComment: (text) async {
+              try {
+                final result = await _thoughtsService.addComment(
+                  post.id,
+                  userId!,
+                  text,
+                  context,
+                );
 
-              // Check if success - handle different response formats
-              bool isSuccess = false;
-              if (result['success'] is bool) {
-                isSuccess = result['success'];
-              } else if (result['success'] is int) {
-                isSuccess = result['success'] == 1;
-              } else if (result['success'] is String) {
-                isSuccess = result['success'].toString().toLowerCase() == 'true';
-              }
-
-              if (isSuccess && result['data'] != null) {
-                List<dynamic>? commentsData;
-
-                // Handle different response structures
-                if (result['data']['comments'] != null) {
-                  commentsData = result['data']['comments'] as List<dynamic>;
-                } else if (result['data'] is List) {
-                  commentsData = result['data'] as List<dynamic>;
-                } else if (result['comments'] != null) {
-                  commentsData = result['comments'] as List<dynamic>;
+                // Check if success - handle different response formats
+                bool isSuccess = false;
+                if (result['success'] is bool) {
+                  isSuccess = result['success'];
+                } else if (result['success'] is int) {
+                  isSuccess = result['success'] == 1;
+                } else if (result['success'] is String) {
+                  isSuccess =
+                      result['success'].toString().toLowerCase() == 'true';
                 }
 
-                if (commentsData != null) {
-                  final updatedComments = commentsData
-                      .map((c) => ThoughtsComment.fromJson(c))
-                      .toList();
+                if (isSuccess && result['data'] != null) {
+                  List<dynamic>? commentsData;
 
-                  // Convert to Comment format
-                  final convertedUpdatedComments = updatedComments.map((thoughtsComment) {
-                    return data_model.Comment(
-                      id: thoughtsComment.id,
-                      userId: thoughtsComment.userId,
-                      username: thoughtsComment.username,
-                      text: thoughtsComment.text,
-                      createdAt: thoughtsComment.createdAt,
-                      likes: thoughtsComment.likes,
-                      likedBy: thoughtsComment.likedBy,
-                    );
-                  }).toList();
+                  // Handle different response structures
+                  if (result['data']['comments'] != null) {
+                    commentsData = result['data']['comments'] as List<dynamic>;
+                  } else if (result['data'] is List) {
+                    commentsData = result['data'] as List<dynamic>;
+                  } else if (result['comments'] != null) {
+                    commentsData = result['comments'] as List<dynamic>;
+                  }
 
-                  return convertedUpdatedComments;
+                  if (commentsData != null) {
+                    final updatedComments = commentsData
+                        .map((c) => ThoughtsComment.fromJson(c))
+                        .toList();
+
+                    // Convert to Comment format
+                    final convertedUpdatedComments =
+                        updatedComments.map((thoughtsComment) {
+                      return data_model.Comment(
+                        id: thoughtsComment.id,
+                        userId: thoughtsComment.userId,
+                        username: thoughtsComment.username,
+                        text: thoughtsComment.text,
+                        createdAt: thoughtsComment.createdAt,
+                        likes: thoughtsComment.likes,
+                        likedBy: thoughtsComment.likedBy,
+                      );
+                    }).toList();
+
+                    return convertedUpdatedComments;
+                  }
                 }
+
+                // If we get here, something went wrong
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(result['message'] ?? 'Failed to add comment'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+
+                return convertedComments;
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error adding comment: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return convertedComments;
               }
-
-              // If we get here, something went wrong
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(result['message'] ?? 'Failed to add comment'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-
-              return convertedComments;
-            } catch (e) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error adding comment: $e'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              return convertedComments;
-            }
-          },
+            },
           ),
         ),
       );
@@ -661,79 +557,79 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
-      
+
       // Search for the track first - try with both song name and artist name
       final searchQuery = '${post.songName} ${post.artistName}';
       final searchResponse = await dio.get(
         '/spotify/search/track',
         queryParameters: {'track_name': searchQuery},
       );
-      
+
       // Check if response has the expected structure
       if (searchResponse.data == null) {
         throw Exception('Search returned null data');
       }
-      
+
       if (searchResponse.data['tracks'] == null) {
         throw Exception(
             'Search response missing tracks field. Data: ${searchResponse.data}');
       }
-      
+
       if (searchResponse.data['tracks']['items'] == null) {
         throw Exception(
             'Search response missing items field. Data: ${searchResponse.data}');
       }
-      
+
       if (searchResponse.statusCode == 200 &&
           searchResponse.data['tracks']['items'].isNotEmpty) {
         // Find the track that matches both song name and artist name
         final tracks = searchResponse.data['tracks']['items'] as List;
-        
+
         String? trackId;
-        
+
         for (var track in tracks) {
           final trackName = track['name']?.toString().toLowerCase() ?? '';
-          
+
           // Handle artists - could be a list of strings or list of objects
           String trackArtists = '';
           try {
             final artistsList = track['artists'] as List;
             trackArtists = artistsList
                 .map((a) {
-              // If artist is a string, use it directly
-              if (a is String) return a.toLowerCase();
-              // If artist is a map/object, get the name field
+                  // If artist is a string, use it directly
+                  if (a is String) return a.toLowerCase();
+                  // If artist is a map/object, get the name field
                   if (a is Map && a['name'] != null)
                     return a['name'].toString().toLowerCase();
-              return '';
+                  return '';
                 })
                 .where((name) => name.isNotEmpty)
                 .join(' ');
           } catch (e) {
             trackArtists = '';
           }
-          
+
           final postSongName = post.songName?.toLowerCase() ?? '';
           final postArtistName = post.artistName?.toLowerCase() ?? '';
-          
+
           if (trackName.contains(postSongName) &&
               trackArtists.contains(postArtistName)) {
             trackId = track['id'];
             break;
           }
         }
-        
+
         // If no exact match found, use the first result
         if (trackId == null) {
           trackId = tracks.first['id'];
         }
-        
+
         // Play the track
         final playResponse = await dio.post(
           '/spotify/player/post/play',
           data: {'track_id': trackId},
         );
-        
+
         // Accept any 2xx status code as success
         if (playResponse.statusCode != null &&
             playResponse.statusCode! >= 200 &&
@@ -750,6 +646,28 @@ class _HomeScreenState extends State<HomeScreen> {
     } on DioException catch (e) {
       if (e.response?.data != null) {
         final errorData = e.response!.data;
+
+        // Check for Spotify not linked error
+        if (errorData is Map && errorData['requiresSpotifyLink'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                  'Please connect your Spotify account to play music'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 4),
+              action: SnackBarAction(
+                label: 'Connect',
+                textColor: Colors.white,
+                onPressed: () {
+                  // Navigate to settings/options page where Spotify linking is available
+                  Navigator.of(context).pushNamed('/profile/settings/options');
+                },
+              ),
+            ),
+          );
+          return;
+        }
+
         if (errorData is Map && errorData['message'] != null) {
           throw Exception('Spotify error: ${errorData['message']}');
         } else if (errorData is String) {
@@ -825,9 +743,10 @@ class _HomeScreenState extends State<HomeScreen> {
         try {
           final result = await _songPostService.deletePost(post.id);
           if (result['success'] == true) {
-            setState(() {
-              _feedItems.removeWhere((item) => item.songPost?.id == post.id);
-            });
+            // 🔑 Use FeedProvider to remove post
+            final feedProvider =
+                Provider.of<FeedProvider>(context, listen: false);
+            feedProvider.removePost(post.id);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('Post deleted successfully'),
@@ -911,17 +830,7 @@ class _HomeScreenState extends State<HomeScreen> {
             duration: const Duration(seconds: 2),
           ),
         );
-        // Update the post's saved status in the feed
-        setState(() {
-          final feedItem = _feedItems.firstWhere(
-            (item) => item.songPost?.id == post.id,
-            orElse: () => FeedItem.song(post),
-          );
-          if (feedItem.songPost != null) {
-            // Note: We would need to add an isSaved field to the Post model
-            // For now, we'll just show the success message
-          }
-        });
+        // 🔑 REMOVED: Feed update not needed for save status (handled by individual posts)
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -981,17 +890,7 @@ class _HomeScreenState extends State<HomeScreen> {
             duration: const Duration(seconds: 2),
           ),
         );
-        // Update the post's saved status in the feed
-        setState(() {
-          final feedItem = _feedItems.firstWhere(
-            (item) => item.songPost?.id == post.id,
-            orElse: () => FeedItem.song(post),
-          );
-          if (feedItem.songPost != null) {
-            // Note: We would need to add an isSaved field to the Post model
-            // For now, we'll just show the success message
-          }
-        });
+        // 🔑 REMOVED: Feed update not needed for save status (handled by individual posts)
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1056,7 +955,7 @@ class _HomeScreenState extends State<HomeScreen> {
             duration: const Duration(seconds: 2),
           ),
         );
-    } else {
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Failed to follow user'),
@@ -1150,11 +1049,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 🔑 Get FeedProvider data
+    final feedProvider = Provider.of<FeedProvider>(context);
+
     Widget content = FeedWidget(
-      feedItems: _feedItems,
-      isLoading: _isLoading,
-      error: _error,
-      onRefresh: _loadPosts,
+      feedItems: feedProvider.feedItems, // 🔑 Use provider data
+      isLoading: feedProvider.isLoading,
+      error: feedProvider.error,
+      onRefresh: _refreshFeed, // 🔑 Use refresh method for pull-to-refresh
       onSongLike: (data_model.Post post) => _handleLike(post),
       onSongComment: (data_model.Post post) => _handleComment(post),
       onSongPlay: (data_model.Post post) => _handlePlay(post),
@@ -1171,9 +1073,10 @@ class _HomeScreenState extends State<HomeScreen> {
         try {
           final result = await _thoughtsService.hidePost(post.id);
           if (result['success'] == true) {
-            setState(() {
-              _feedItems.removeWhere((item) => item.thoughtsPost?.id == post.id);
-            });
+            // 🔑 Use FeedProvider to remove post
+            final feedProvider =
+                Provider.of<FeedProvider>(context, listen: false);
+            feedProvider.removePost(post.id);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                   content: Text('Post hidden successfully'),
@@ -1208,9 +1111,10 @@ class _HomeScreenState extends State<HomeScreen> {
         try {
           final result = await _songPostService.hidePost(post.id);
           if (result['success'] == true || result['hidden'] == true) {
-            setState(() {
-              _feedItems.removeWhere((item) => item.songPost?.id == post.id);
-            });
+            // 🔑 Use FeedProvider to remove post
+            final feedProvider =
+                Provider.of<FeedProvider>(context, listen: false);
+            feedProvider.removePost(post.id);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                   content: Text('Post hidden successfully'),

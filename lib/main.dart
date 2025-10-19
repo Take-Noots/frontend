@@ -7,6 +7,7 @@ import 'core/styles/theme.dart';
 import 'data/services/auth_service.dart';
 import 'core/providers/theme_provider.dart';
 import 'core/providers/auth_provider.dart';
+import 'core/providers/feed_provider.dart';
 
 void main() async {
   // Ensure Flutter bindings are initialized before accessing plugins
@@ -21,6 +22,7 @@ void main() async {
   // Create providers
   final authProvider = AuthProvider();
   final themeProvider = ThemeProvider();
+  final feedProvider = FeedProvider();
 
   // Load user data and theme preferences from shared preferences
   await authProvider.loadUserDataFromSharedPreferences();
@@ -37,16 +39,15 @@ void main() async {
     debugPrint('Error initializing auth service: $e');
   });
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: themeProvider),
-        ChangeNotifierProvider.value(value: authProvider),
-        Provider.value(value: authService),
-      ],
-      child: MyApp(appRouter: appRouter),
-    ),
-  );
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider.value(value: themeProvider),
+      ChangeNotifierProvider.value(value: authProvider),
+      ChangeNotifierProvider.value(value: feedProvider),
+      Provider.value(value: authService),
+    ],
+    child: MyApp(appRouter: appRouter),
+  ));
 }
 
 class MyApp extends StatelessWidget {
