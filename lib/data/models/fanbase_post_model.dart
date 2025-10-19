@@ -2,9 +2,10 @@ class FanbasePostSubComment {
   final String userId;
   final String userName;
   final String comment;
-  final String commentId; // ✅ Changed from commentIndex
+  final String commentId;
   final int likeCount;
   final List<String> likeUserIds;
+  final bool isLiked; // ✅ Add isLiked field
   final DateTime createdAt;
 
   FanbasePostSubComment({
@@ -14,6 +15,7 @@ class FanbasePostSubComment {
     required this.commentId,
     required this.likeCount,
     required this.likeUserIds,
+    required this.isLiked, // ✅ Add to constructor
     required this.createdAt,
   });
 
@@ -22,9 +24,10 @@ class FanbasePostSubComment {
       userId: json['userId'] ?? '',
       userName: json['userName'] ?? '',
       comment: json['comment'] ?? '',
-      commentId: json['commentId'] ?? '', // ✅ Changed
+      commentId: json['commentId'] ?? '',
       likeCount: json['likeCount'] ?? 0,
       likeUserIds: List<String>.from(json['likeUserIds'] ?? []),
+      isLiked: json['isLiked'] ?? false, // ✅ Parse isLiked from JSON
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
     );
   }
@@ -34,9 +37,10 @@ class FanbasePostSubComment {
       'userId': userId,
       'userName': userName,
       'comment': comment,
-      'commentId': commentId, // ✅ Changed
+      'commentId': commentId,
       'likeCount': likeCount,
       'likeUserIds': likeUserIds,
+      'isLiked': isLiked, // ✅ Include in JSON
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -46,9 +50,10 @@ class FanbasePostComment {
   final String userId;
   final String userName;
   final String comment;
-  final String commentId; // ✅ Changed from commentIndex
+  final String commentId;
   final int likeCount;
   final List<String> likeUserIds;
+  final bool isLiked; // ✅ Add isLiked field
   final DateTime createdAt;
   final List<FanbasePostSubComment> subComments;
 
@@ -59,6 +64,7 @@ class FanbasePostComment {
     required this.commentId,
     required this.likeCount,
     required this.likeUserIds,
+    required this.isLiked, // ✅ Add to constructor
     required this.createdAt,
     this.subComments = const [],
   });
@@ -68,9 +74,10 @@ class FanbasePostComment {
       userId: json['userId'] ?? '',
       userName: json['userName'] ?? '',
       comment: json['comment'] ?? '',
-      commentId: json['commentId'] ?? '', // ✅ Changed
+      commentId: json['commentId'] ?? '',
       likeCount: json['likeCount'] ?? 0,
       likeUserIds: List<String>.from(json['likeUserIds'] ?? []),
+      isLiked: json['isLiked'] ?? false, // ✅ Parse isLiked from JSON
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
       subComments: (json['subComments'] as List<dynamic>?)
               ?.map((sc) =>
@@ -85,9 +92,10 @@ class FanbasePostComment {
       'userId': userId,
       'userName': userName,
       'comment': comment,
-      'commentId': commentId, // ✅ Changed
+      'commentId': commentId,
       'likeCount': likeCount,
       'likeUserIds': likeUserIds,
+      'isLiked': isLiked, // ✅ Include in JSON
       'createdAt': createdAt.toIso8601String(),
       'subComments': subComments.map((sc) => sc.toJson()).toList(),
     };
