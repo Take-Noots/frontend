@@ -7,13 +7,45 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
 import 'package:Noot/main.dart';
+import 'package:Noot/core/providers/auth_provider.dart';
+import 'package:Noot/core/providers/theme_provider.dart';
+import 'package:Noot/data/services/auth_service.dart';
+import 'package:Noot/core/router/app_router.dart';
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    // Create providers
+    final authProvider = AuthProvider();
+    final themeProvider = ThemeProvider();
+
+    // Load user data from shared preferences (mock for test)
+    await authProvider.loadUserDataFromSharedPreferences();
+
+    // Create auth service
+    final authService = AuthService(authProvider);
+
+    // Initialize services (catch errors for test)
+    await authService.initialize().catchError((e) {
+      // Ignore errors in test
+    });
+
+    // Create the router instance
+    final appRouter = AppRouter(authProvider);
+
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: themeProvider),
+          ChangeNotifierProvider.value(value: authProvider),
+          Provider.value(value: authService),
+        ],
+        child: MyApp(appRouter: appRouter),
+      ),
+    );
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);

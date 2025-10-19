@@ -14,6 +14,7 @@ class FollowersListPage extends StatelessWidget {
   final Set<String> currentUserFollowing;
   final Future<void> Function(String targetUserId, bool isFollow)
       onFollowToggle;
+  final Set<String> loadingUserIds;
 
   const FollowersListPage({
     Key? key,
@@ -22,6 +23,7 @@ class FollowersListPage extends StatelessWidget {
     this.isLoading = false,
     required this.currentUserFollowing,
     required this.onFollowToggle,
+    this.loadingUserIds = const {},
   }) : super(key: key);
 
   @override
@@ -107,11 +109,15 @@ class FollowersListPage extends StatelessWidget {
                                     .user
                                     ?.id)
                         ? ElevatedButton(
-                            onPressed: () {
-                              final isFollowing = currentUserFollowing
-                                  .contains(follower['userId']);
-                              onFollowToggle(follower['userId'], !isFollowing);
-                            },
+                            onPressed:
+                                loadingUserIds.contains(follower['userId'])
+                                    ? null
+                                    : () {
+                                        final isFollowing = currentUserFollowing
+                                            .contains(follower['userId']);
+                                        onFollowToggle(
+                                            follower['userId'], !isFollowing);
+                                      },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: currentUserFollowing
                                       .contains(follower['userId'])
@@ -128,10 +134,20 @@ class FollowersListPage extends StatelessWidget {
                                           Theme.of(context).colorScheme.outline)
                                   : null,
                             ),
-                            child: Text(currentUserFollowing
-                                    .contains(follower['userId'])
-                                ? 'Unfollow'
-                                : 'Follow'),
+                            child: loadingUserIds.contains(follower['userId'])
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
+                                    ),
+                                  )
+                                : Text(currentUserFollowing
+                                        .contains(follower['userId'])
+                                    ? 'Unfollow'
+                                    : 'Follow'),
                           )
                         : null,
                   );
