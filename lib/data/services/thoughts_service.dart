@@ -720,6 +720,99 @@ class ThoughtsService {
   }
 
   // Hide thoughts post
+  // Get post by ID
+  Future<Map<String, dynamic>> getPostById(String postId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/thoughts/$postId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to fetch post',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  // Update thoughts post
+  Future<Map<String, dynamic>> updatePost(
+    String postId,
+    String thoughtsText,
+    BuildContext? context,
+  ) async {
+    try {
+      if (context != null) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        final dio = authService.dio;
+
+        final response = await dio.patch(
+          '/thoughts/$postId',
+          data: {
+            'thoughtsText': thoughtsText,
+          },
+        );
+
+        if (response.statusCode == 200) {
+          return {
+            'success': true,
+            'data': response.data,
+            'message': 'Post updated successfully',
+          };
+        } else {
+          return {
+            'success': false,
+            'message': response.data['message'] ?? 'Failed to update post',
+          };
+        }
+      } else {
+        // Fallback to http
+        final response = await http.patch(
+          Uri.parse('$baseUrl/thoughts/$postId'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'thoughtsText': thoughtsText,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return {
+            'success': true,
+            'data': data,
+            'message': 'Post updated successfully',
+          };
+        } else {
+          final errorData = jsonDecode(response.body);
+          return {
+            'success': false,
+            'message': errorData['error'] ??
+                errorData['message'] ??
+                'Failed to update post',
+          };
+        }
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
   Future<Map<String, dynamic>> hidePost(String postId) async {
     // print('[DEBUG] hidePost called with postId: $postId');
     // print('[DEBUG] Making API call to: $baseUrl/thoughts/$postId/hide');

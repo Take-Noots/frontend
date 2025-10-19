@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../toggle_button.dart';
+import '../../screens/chat/chat_list_screen.dart';
+import '../../screens/notifications/notifications_screen.dart';
 import '../../../data/services/notification_service.dart';
 import '../../../core/router/route_names.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -55,9 +56,7 @@ class _NootAppBarState extends State<NootAppBar> {
             child: Row(
               children: [
                 Image.asset(
-                  isDark
-                      ? 'assets/images/logo.png'
-                      : 'assets/images/logo.png',
+                  isDark ? 'assets/images/logo.png' : 'assets/images/logo.png',
                   width: 100,
                   height: 40,
                 ),
@@ -65,45 +64,12 @@ class _NootAppBarState extends State<NootAppBar> {
             ),
           ),
           const Spacer(),
-          // temparary toggle button
-          const ToggleButton(),
-          // Notification Icon with badge
-          Stack(
-            children: [
-              IconButton(
-                icon: Icon(LucideIcons.heart,
-                    color: Theme.of(context).colorScheme.onPrimary, size: 22),
-                onPressed: () async {
-                  await context.push(AppRoutes.notifications);
-                  // Refresh unread count when returning from notifications
-                  _loadUnreadCount();
-                },
-              ),
-              if (_unreadCount > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 14,
-                      minHeight: 14,
-                    ),
-                    child: Text(
-                      '$_unreadCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
+          IconButton(
+            icon: Icon(LucideIcons.heart,
+                color: Theme.of(context).colorScheme.onPrimary, size: 22),
+            onPressed: () {
+              Navigator.pushNamed(context, '/request');
+            },
           ),
           // Message Icon - Updated this section
           IconButton(
