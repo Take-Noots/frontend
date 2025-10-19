@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../data/models/notification_model.dart';
 import '../../../data/services/notification_service.dart';
-import '../chat/chat_list_screen.dart';
-import '../chat/chat_screen.dart';
-import '../chat/group_chat_screen.dart';
+import '../../../data/services/notification_manager.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
@@ -18,7 +17,7 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final NotificationService _notificationService = NotificationService();
   final ScrollController _scrollController = ScrollController();
-  
+
   List<NotificationModel> notifications = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
@@ -27,12 +26,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool hasMorePages = true;
   String? currentUserId;
   Timer? _autoRefreshTimer;
+  StreamSubscription? _notificationStreamSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadUserId();
     _loadNotifications();
+    _setupRealTimeNotifications();
     _startAutoRefresh();
     _scrollController.addListener(_onScroll);
   }
@@ -42,6 +43,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _autoRefreshTimer?.cancel();
+    _notificationStreamSubscription?.cancel();
     super.dispose();
   }
 
@@ -56,8 +58,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
   }
 
+  void _setupRealTimeNotifications() async {
+    // Initialize notification manager for real-time updates
+    await NotificationManager.instance.initialize();
+
+    // Listen for new notifications and refresh the list
+    _notificationStreamSubscription =
+        NotificationManager.instance.notificationStream.listen((notification) {
+      if (mounted) {
+        _refreshNotifications();
+      }
+    });
+  }
+
   void _startAutoRefresh() {
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    _autoRefreshTimer = Timer.periodic(const Duration(minutes: 3), (timer) {
       if (mounted && !_isLoading) {
         _refreshNotifications();
       }
@@ -94,25 +109,33 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         page: 1,
         limit: 20,
       );
-      
+
       if (result['success']) {
         final responseData = result['data'];
-        final List<dynamic> notificationsData = responseData['notifications'];
-        final pagination = responseData['pagination'];
-        
+        if (responseData == null) {
+          setState(() {
+            _error = 'No data received from server';
+            _isLoading = false;
+          });
+          return;
+        }
+
+        final List<dynamic> notificationsData = responseData['notifications'] ?? [];
+        final pagination = responseData['pagination'] ?? {};
+
         final notificationList = notificationsData
             .map((json) => NotificationModel.fromJson(json))
             .toList();
-        
+
         setState(() {
           notifications = notificationList;
           currentPage = 1;
-          hasMorePages = pagination['currentPage'] < pagination['totalPages'];
+          hasMorePages = (pagination['currentPage'] ?? 1) < (pagination['totalPages'] ?? 1);
           _isLoading = false;
         });
       } else {
         setState(() {
-          _error = result['message'];
+          _error = result['message'] ?? 'Failed to load notifications';
           _isLoading = false;
         });
       }
@@ -136,20 +159,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         page: currentPage + 1,
         limit: 20,
       );
-      
+
       if (result['success']) {
         final responseData = result['data'];
-        final List<dynamic> notificationsData = responseData['notifications'];
-        final pagination = responseData['pagination'];
-        
+        if (responseData == null) {
+          setState(() {
+            _isLoadingMore = false;
+          });
+          return;
+        }
+
+        final List<dynamic> notificationsData = responseData['notifications'] ?? [];
+        final pagination = responseData['pagination'] ?? {};
+
         final newNotifications = notificationsData
             .map((json) => NotificationModel.fromJson(json))
             .toList();
-        
+
         setState(() {
           notifications.addAll(newNotifications);
-          currentPage = pagination['currentPage'];
-          hasMorePages = pagination['currentPage'] < pagination['totalPages'];
+          currentPage = pagination['currentPage'] ?? currentPage;
+          hasMorePages = (pagination['currentPage'] ?? currentPage) < (pagination['totalPages'] ?? 1);
           _isLoadingMore = false;
         });
       } else {
@@ -231,43 +261,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       });
     }
 
-    // Navigate based on notification type
+    // Navigate based on notification type using go_router
     switch (notification.type) {
       case NotificationType.message:
         if (notification.data.chatId != null) {
-          Navigator.pushNamed(context, '/chat', arguments: {
-            'chatId': notification.data.chatId,
-          });
+          context.push('/chat/${notification.data.chatId}');
         }
         break;
       case NotificationType.groupMessage:
         if (notification.data.groupChatId != null && currentUserId != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => GroupChatScreen(
-                groupChatId: notification.data.groupChatId!,
-                currentUserId: currentUserId!,
-              ),
-            ),
-          );
+          context.push(
+              '/group-chat/${notification.data.groupChatId}?currentUserId=$currentUserId');
         }
         break;
       case NotificationType.postLike:
       case NotificationType.postComment:
         if (notification.data.postId != null) {
-          Navigator.pushNamed(context, '/post', arguments: {
-            'postId': notification.data.postId,
-          });
+          context.push('/post/${notification.data.postId}');
         }
         break;
       case NotificationType.fanbasePostLike:
       case NotificationType.fanbasePostComment:
-        if (notification.data.fanbasePostId != null && notification.data.fanbaseId != null) {
-          Navigator.pushNamed(context, '/fanbase-post', arguments: {
-            'fanbasePostId': notification.data.fanbasePostId,
-            'fanbaseId': notification.data.fanbaseId,
-          });
+        if (notification.data.fanbasePostId != null &&
+            notification.data.fanbaseId != null) {
+          context.push(
+              '/fanbase-post/${notification.data.fanbasePostId}?fanbaseId=${notification.data.fanbaseId}');
         }
         break;
     }
@@ -307,7 +325,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     if (confirmed == true) {
       try {
-        final result = await _notificationService.deleteNotification(notification.id);
+        final result =
+            await _notificationService.deleteNotification(notification.id);
         if (result['success']) {
           setState(() {
             notifications.removeWhere((n) => n.id == notification.id);
@@ -392,11 +411,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, 
+            Icon(Icons.error_outline,
                 color: Theme.of(context).colorScheme.onPrimary, size: 48),
             const SizedBox(height: 16),
-            Text(_error!, 
-                style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+            Text(_error!,
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => _loadNotifications(),
@@ -412,15 +432,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.notifications_none, 
+            Icon(Icons.notifications_none,
                 color: Theme.of(context).colorScheme.onPrimary, size: 48),
             const SizedBox(height: 16),
-            Text('No notifications yet', 
+            Text('No notifications yet',
                 style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary, 
+                    color: Theme.of(context).colorScheme.onPrimary,
                     fontSize: 18)),
-            Text('We\'ll notify you when something happens!', 
-                style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
+            Text('We\'ll notify you when something happens!',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.secondary)),
           ],
         ),
       );
@@ -470,11 +491,11 @@ class NotificationItem extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: notification.isRead 
+        color: notification.isRead
             ? Colors.transparent
             : Theme.of(context).colorScheme.secondary.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: notification.isRead 
+        border: notification.isRead
             ? null
             : Border.all(color: Colors.green.withOpacity(0.3)),
       ),
@@ -499,9 +520,7 @@ class NotificationItem extends StatelessWidget {
                   size: 20,
                 ),
               ),
-              
               const SizedBox(width: 12),
-              
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -514,8 +533,8 @@ class NotificationItem extends StatelessWidget {
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.onPrimary,
                               fontSize: 16,
-                              fontWeight: notification.isRead 
-                                  ? FontWeight.w500 
+                              fontWeight: notification.isRead
+                                  ? FontWeight.w500
                                   : FontWeight.bold,
                             ),
                           ),
@@ -531,9 +550,7 @@ class NotificationItem extends StatelessWidget {
                           ),
                       ],
                     ),
-                    
                     const SizedBox(height: 4),
-                    
                     Text(
                       notification.message,
                       style: TextStyle(
@@ -543,9 +560,7 @@ class NotificationItem extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    
                     const SizedBox(height: 8),
-                    
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -556,7 +571,6 @@ class NotificationItem extends StatelessWidget {
                             fontSize: 12,
                           ),
                         ),
-                        
                         GestureDetector(
                           onTap: onDelete,
                           child: Icon(

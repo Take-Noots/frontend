@@ -2,15 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:async';
-import 'dart:html' as html;
+import 'package:universal_html/html.dart' as html;
 
 // Only import these if not on web
-import 'package:flutter_local_notifications/flutter_local_notifications.dart' 
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'
     if (dart.library.html) 'notification_helper_web_stub.dart';
-import 'package:permission_handler/permission_handler.dart' 
+import 'package:permission_handler/permission_handler.dart'
     if (dart.library.html) 'notification_helper_web_stub.dart';
-import 'dart:io' 
-    if (dart.library.html) 'notification_helper_web_stub.dart';
+import 'dart:io' if (dart.library.html) 'notification_helper_web_stub.dart';
 
 class NotificationHelper {
   static FlutterLocalNotificationsPlugin? _notificationsPlugin;
@@ -35,14 +34,16 @@ class NotificationHelper {
       if (html.Notification.supported) {
         final permission = await html.Notification.requestPermission();
         _webNotificationsEnabled = permission == 'granted';
-        
+
         if (_webNotificationsEnabled) {
           print('✅ Web notifications enabled');
         } else {
-          print('⚠️ Web notifications permission denied, falling back to console logs');
+          print(
+              '⚠️ Web notifications permission denied, falling back to console logs');
         }
       } else {
-        print('⚠️ Web notifications not supported, falling back to console logs');
+        print(
+            '⚠️ Web notifications not supported, falling back to console logs');
       }
     } catch (e) {
       print('❌ Error initializing web notifications: $e');
@@ -52,7 +53,7 @@ class NotificationHelper {
   static Future<void> _initMobileNotifications() async {
     try {
       _notificationsPlugin = FlutterLocalNotificationsPlugin();
-      
+
       // Request permissions
       await _requestPermissions();
 
@@ -86,14 +87,14 @@ class NotificationHelper {
 
   static Future<void> _requestPermissions() async {
     if (kIsWeb) return;
-    
+
     try {
       if (!kIsWeb) {
         // Check if we're on Android
         if (defaultTargetPlatform == TargetPlatform.android) {
           await Permission.notification.request();
         }
-        
+
         // Check if we're on iOS
         if (defaultTargetPlatform == TargetPlatform.iOS) {
           await _notificationsPlugin
@@ -118,13 +119,11 @@ class NotificationHelper {
     bool isGroupMessage = false,
     String? groupName,
   }) async {
-    final title = isGroupMessage 
+    final title = isGroupMessage
         ? (groupName ?? 'Group Message')
         : 'Message from $senderName';
-    
-    final body = isGroupMessage 
-        ? '$senderName: $message'
-        : message;
+
+    final body = isGroupMessage ? '$senderName: $message' : message;
 
     if (kIsWeb) {
       await _showWebNotification(
@@ -169,7 +168,8 @@ class NotificationHelper {
         title: title,
         body: body,
         icon: '❤️',
-        onClick: () => _handleNotificationClick('post_like', {'postId': postId}),
+        onClick: () =>
+            _handleNotificationClick('post_like', {'postId': postId}),
       );
       return;
     }
@@ -208,7 +208,8 @@ class NotificationHelper {
         title: title,
         body: body,
         icon: '💬',
-        onClick: () => _handleNotificationClick('post_comment', {'postId': postId}),
+        onClick: () =>
+            _handleNotificationClick('post_comment', {'postId': postId}),
       );
       return;
     }
@@ -252,9 +253,8 @@ class NotificationHelper {
         body: body,
         icon: isLike ? '❤️' : '💬',
         onClick: () => _handleNotificationClick(
-          isLike ? 'fanbase_post_like' : 'fanbase_post_comment',
-          {'fanbasePostId': fanbasePostId}
-        ),
+            isLike ? 'fanbase_post_like' : 'fanbase_post_comment',
+            {'fanbasePostId': fanbasePostId}),
       );
       return;
     }
@@ -290,7 +290,7 @@ class NotificationHelper {
     print('🌐 [$timestamp] ${icon ?? '🔔'} $title');
     print('   └─ $body');
     print('   └─ Click to navigate (simulated)');
-    
+
     if (onClick != null) {
       print('   └─ Navigation action would be triggered');
     }
@@ -298,8 +298,9 @@ class NotificationHelper {
     // If browser notifications are available and permitted
     if (kIsWeb && _webNotificationsEnabled) {
       try {
-        final notification = html.Notification(title, body: body, icon: '/icons/noot-icon-192.png');
-        
+        final notification = html.Notification(title,
+            body: body, icon: '/icons/noot-icon-192.png');
+
         notification.onClick.listen((event) {
           notification.close();
           onClick?.call();
@@ -368,7 +369,7 @@ class NotificationHelper {
   static void _handleNotificationClick(String type, Map<String, dynamic> data) {
     print('🔔 Notification clicked: $type');
     print('   Data: $data');
-    
+
     // Here you could emit events or call navigation methods
     // For example, you could use a global navigation service
   }
@@ -378,7 +379,8 @@ class NotificationHelper {
     if (payload != null) {
       try {
         final data = jsonDecode(payload);
-        print('🔔 Mobile notification tapped: ${data['type']} from ${data['senderId']}');
+        print(
+            '🔔 Mobile notification tapped: ${data['type']} from ${data['senderId']}');
         _handleNotificationClick(data['type'], data);
       } catch (e) {
         print('❌ Error parsing notification payload: $e');

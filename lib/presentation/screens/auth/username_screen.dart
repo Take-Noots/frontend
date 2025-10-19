@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../data/services/auth_service.dart';
 import '../../widgets/auth/custom_text_form_field.dart';
 import '../../widgets/auth/custom_button.dart';
@@ -84,7 +85,7 @@ class _UsernameScreenState extends State<UsernameScreen> {
     });
 
     // Navigate to terms and service screen
-    Navigator.pushNamed(context, '/terms');
+    context.push('/terms');
   }
 
   @override

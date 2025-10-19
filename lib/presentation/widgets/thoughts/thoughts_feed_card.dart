@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:palette_generator/palette_generator.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'dart:convert';
 import '../../../data/models/thoughts_model.dart';
 import '../../../data/services/thoughts_service.dart';
-import '../../../data/services/auth_service.dart';
-import '../../../data/services/spotify_service.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../despost/widgets/TMP_des_post_bg_container.dart';
 import '../song_post/comment.dart';
 import '../song_post/post_options_menu.dart';
 import '../../../data/models/post_model.dart' as data_model;
 import '../../../data/services/song_post_service.dart';
-import '../../../data/services/thoughts_service.dart';
 import '../../../core/styles/app_colors.dart';
+import '../../screens/thoughts_posts/update_thoughts.dart';
 
+// ================= ThoughtsFeedCard (Main Widget) =================
 class ThoughtsFeedCard extends StatefulWidget {
   final ThoughtsPost post;
   final VoidCallback? onLike;
@@ -61,24 +60,26 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
   void initState() {
     super.initState();
     _currentPost = widget.post;
-    print('[DEBUG] ThoughtsFeedCard.initState: post id: ${widget.post.id}');
-    print(
-        '[DEBUG] ThoughtsFeedCard.initState: songName: ${widget.post.songName}');
-    print(
-        '[DEBUG] ThoughtsFeedCard.initState: artistName: ${widget.post.artistName}');
-    print(
-        '[DEBUG] ThoughtsFeedCard.initState: onPlayPause is null? ${widget.onPlayPause == null}');
-    print(
-        '[DEBUG] ThoughtsFeedCard.initState: isPlaying: ${widget.isPlaying}, isCurrentTrack: ${widget.isCurrentTrack}');
     _loadCurrentUserId();
     _extractColorFromCoverImage();
   }
 
-  Future<void> _extractColorFromCoverImage() async {
+  @override
+  void didUpdateWidget(ThoughtsFeedCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update local post when parent updates
+    if (widget.post != oldWidget.post) {
+      setState(() {
+        _currentPost = widget.post;
+      });
+    }
+  }
 
+  Future<void> _extractColorFromCoverImage() async {
     setState(() {
       _extractedColor = _currentPost.backgroundColor != null
-          ? Color(int.parse(_currentPost.backgroundColor!.replaceFirst('#', '0xFF')))
+          ? Color(int.parse(
+              _currentPost.backgroundColor!.replaceFirst('#', '0xFF')))
           : null; // Will use default color
     });
   }
@@ -92,9 +93,8 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     if (currentUserId == null) {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      final userData = userDataString != null
-          ? jsonDecode(userDataString)
-          : {'id': ''}; 
+      final userData =
+          userDataString != null ? jsonDecode(userDataString) : {'id': ''};
       currentUserId = userData['id'];
     }
 
@@ -110,15 +110,17 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
 
     final isOwnPost = _currentUserId == _currentPost.userId;
 
+    print(
+        '[DEBUG] Options menu: isOwnPost=$isOwnPost, isSaved=${_currentPost.isSaved}');
+
     PostOptionsMenu.show(
       context,
       postUserId: _currentPost.userId,
       currentUserId: _currentUserId,
       isOwnPost: isOwnPost,
-      isSaved: false, 
+      isSaved: _currentPost.isSaved,
       postId: _currentPost.id,
       onSharePost: () {
-        print('Copy link pressed for thoughts post: ${_currentPost.id}');
         // TODO: Implement copy link functionality
       },
       onSavePost: () async {
@@ -128,25 +130,26 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         await _handleUnsavePost(_currentPost);
       },
       onUnfollow: () {
-        print('Unfollow pressed for user: ${_currentPost.username}');
         // TODO: Implement unfollow functionality
       },
       onReport: () {
-        print('Report pressed for thoughts post: ${_currentPost.id}');
         // TODO: Implement report functionality
       },
-      onEdit: isOwnPost ? () {
-        print('Edit pressed for thoughts post: ${_currentPost.id}');
-        // TODO: Implement edit functionality
-      } : null,
-      onDelete: isOwnPost ? () {
-        print('Delete pressed for thoughts post: ${_currentPost.id}');
-        // TODO: Implement delete functionality
-      } : null,
-      onHide: isOwnPost ? () {
-        print('Hide pressed for thoughts post: ${_currentPost.id}');
-        // TODO: Implement hide functionality
-      } : null,
+      onEdit: isOwnPost
+          ? () async {
+              await _handleEditPost();
+            }
+          : null,
+      onDelete: isOwnPost
+          ? () {
+              _handleDeletePost();
+            }
+          : null,
+      onHide: isOwnPost
+          ? () {
+              _handleHidePost();
+            }
+          : null,
     );
   }
 
@@ -166,167 +169,28 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     );
   }
 
-  Future<void> _handleLike() async {
-    // Get current user ID - try AuthProvider first, then SharedPreferences as fallback
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    String? currentUserId = authProvider.user?.id;
-
-    print(
-        '[DEBUG] ThoughtsFeedCard._handleLike: AuthProvider currentUserId = $currentUserId');
-    print(
-        '[DEBUG] ThoughtsFeedCard._handleLike: authProvider.user = ${authProvider.user}');
-    print(
-        '[DEBUG] ThoughtsFeedCard._handleLike: authProvider.isAuthenticated = ${authProvider.isAuthenticated}');
-
-    // Fallback to SharedPreferences if AuthProvider doesn't have user ID
-    if (currentUserId == null) {
-      print(
-          '[DEBUG] ThoughtsFeedCard._handleLike: AuthProvider user ID is null, trying SharedPreferences');
-      final prefs = await SharedPreferences.getInstance();
-      final userDataString = prefs.getString('user_data');
-      final userData = userDataString != null
-          ? jsonDecode(userDataString)
-          : {'id': '685fb750cc084ba7e0ef8533'}; // Fallback for testing
-      currentUserId = userData['id'];
-      print(
-          '[DEBUG] ThoughtsFeedCard._handleLike: SharedPreferences currentUserId = $currentUserId');
-    }
-
-    if (currentUserId == null || currentUserId.isEmpty) {
-      print(
-          '[DEBUG] ThoughtsFeedCard._handleLike: User ID is still null, showing login message');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please log in to like posts'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // Store original post for potential rollback
-    final originalPost = _currentPost;
-
-    // Check if already liked
-    final isCurrentlyLiked = _currentPost.likedBy.contains(currentUserId);
-    print(
-        '[DEBUG] ThoughtsFeedCard._handleLike: isCurrentlyLiked = $isCurrentlyLiked');
-    print(
-        '[DEBUG] ThoughtsFeedCard._handleLike: current likedBy = ${_currentPost.likedBy}');
-
-    // Optimistic update - update UI immediately
-    setState(() {
-      if (isCurrentlyLiked) {
-        // Unlike - remove from likedBy list
-        final newLikedBy = List<String>.from(_currentPost.likedBy);
-        newLikedBy.remove(currentUserId!);
-        _currentPost = ThoughtsPost(
-          id: _currentPost.id,
-          userId: _currentPost.userId,
-          username: _currentPost.username,
-          userImage: _currentPost.userImage,
-          text: _currentPost.text,
-          createdAt: _currentPost.createdAt,
-          updatedAt: _currentPost.updatedAt,
-          likes: _currentPost.likes - 1,
-          likedBy: newLikedBy,
-          comments: _currentPost.comments,
-          songName: _currentPost.songName,
-          artistName: _currentPost.artistName,
-          coverImage: _currentPost.coverImage,
-          isHidden: _currentPost.isHidden,
-          isDeleted: _currentPost.isDeleted,
-        );
-      } else {
-        // Like - add to likedBy list
-        final newLikedBy = List<String>.from(_currentPost.likedBy);
-        newLikedBy.add(currentUserId!);
-        _currentPost = ThoughtsPost(
-          id: _currentPost.id,
-          userId: _currentPost.userId,
-          username: _currentPost.username,
-          userImage: _currentPost.userImage,
-          text: _currentPost.text,
-          createdAt: _currentPost.createdAt,
-          updatedAt: _currentPost.updatedAt,
-          likes: _currentPost.likes + 1,
-          likedBy: newLikedBy,
-          comments: _currentPost.comments,
-          songName: _currentPost.songName,
-          artistName: _currentPost.artistName,
-          coverImage: _currentPost.coverImage,
-          isHidden: _currentPost.isHidden,
-          isDeleted: _currentPost.isDeleted,
-        );
-      }
-    });
-
-    try {
-      // Call the API
-      final result =
-          await _thoughtsService.likeThoughts(_currentPost.id, context);
-
-      if (result['success'] == true && result['data'] != null) {
-        // Update with server response
-        final updatedPost = ThoughtsPost.fromJson(result['data']);
-        setState(() {
-          _currentPost = updatedPost;
-        });
-
-        // Notify parent widget of the update
-        widget.onPostUpdated?.call(updatedPost);
-      } else {
-        // Revert optimistic update on error
-        setState(() {
-          _currentPost = originalPost;
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'Failed to like post'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      // Revert optimistic update on error
-      setState(() {
-        _currentPost = originalPost;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error liking post: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+  // This method is no longer used - comment handling is done by parent
+  Future<void> _handleComment() async {
+    // Stub method - actual implementation is in parent widget
+    if (widget.onComment != null) {
+      widget.onComment!();
     }
   }
 
-  Future<void> _handleComment() async {
-    // Get current user ID - try AuthProvider first, then SharedPreferences as fallback
+  // Old implementation removed - keeping for reference
+  Future<void> _handleComment_OLD() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     String? currentUserId = authProvider.user?.id;
-
-    print('[DEBUG] _handleComment: AuthProvider user ID: $currentUserId');
-    print('[DEBUG] _handleComment: AuthProvider user: ${authProvider.user}');
 
     // Fallback to SharedPreferences if AuthProvider doesn't have user ID
     if (currentUserId == null) {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      print(
-          '[DEBUG] _handleComment: SharedPreferences user_data: $userDataString');
 
       final userData = userDataString != null
           ? jsonDecode(userDataString)
-          : {'id': '685fb750cc084ba7e0ef8533'}; // Fallback for testing
+          : {'id': '685fb750cc084ba7e0ef8533'};
       currentUserId = userData['id'];
-      print('[DEBUG] _handleComment: Fallback user ID: $currentUserId');
     }
 
     if (currentUserId == null || currentUserId.isEmpty) {
@@ -350,11 +214,9 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         latestComments = (postData['comments'] as List<dynamic>)
             .map((c) => ThoughtsComment.fromJson(c))
             .toList();
-        print('[DEBUG] Fetched latest comments: ${latestComments.length}');
       }
     }
 
-    // Convert ThoughtsComment to Comment format
     final convertedComments = latestComments.map((thoughtsComment) {
       return data_model.Comment(
         id: thoughtsComment.id,
@@ -370,20 +232,12 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) => SizedBox(
         height: MediaQuery.of(context).size.height * 0.75,
         child: CommentSection(
           comments: convertedComments,
           onAddComment: (text) async {
-            print('[DEBUG] Adding comment: $text');
-            print('[DEBUG] Post ID: ${_currentPost.id}');
-            print('[DEBUG] User ID: $currentUserId');
-            print('[DEBUG] Comment text: $text');
-
             // Get current user info for optimistic update
             final prefs = await SharedPreferences.getInstance();
             final userDataString = prefs.getString('user_data');
@@ -391,9 +245,9 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 ? jsonDecode(userDataString)
                 : {'id': currentUserId, 'name': 'User'};
 
-            // Create optimistic comment (show immediately)
+            // Create optimistic comment
             final optimisticComment = data_model.Comment(
-              id: 'temp_${DateTime.now().millisecondsSinceEpoch}', // Temporary ID
+              id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
               userId: currentUserId!,
               username: userData['name'] ?? 'User',
               text: text,
@@ -407,8 +261,6 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 List<data_model.Comment>.from(convertedComments)
                   ..add(optimisticComment);
 
-            print('[DEBUG] Showing optimistic comment immediately');
-
             // Now add to database in background
             try {
               final result = await _thoughtsService.addComment(
@@ -417,12 +269,6 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 text,
                 context,
               );
-
-              print('[DEBUG] Comment add result: $result');
-              print('[DEBUG] Comment add result type: ${result.runtimeType}');
-              print('[DEBUG] Comment add result keys: ${result.keys}');
-              print('[DEBUG] Comment add success value: ${result['success']}');
-              print('[DEBUG] Comment add data value: ${result['data']}');
 
               // Check if success - handle different response formats
               bool isSuccess = false;
@@ -494,22 +340,11 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 // Notify parent widget
                 widget.onPostUpdated?.call(_currentPost);
 
-                print('[DEBUG] Comment successfully added to database');
-
-                // Show success message
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Comment added successfully!'),
-                    backgroundColor: Colors.green,
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+                // Comment added successfully - no need to show SnackBar
 
                 return convertedUpdatedComments;
               } else {
                 // Database failed, remove optimistic comment
-                print('[DEBUG] Database failed, removing optimistic comment');
-
                 // Handle error message - it might be a string or array
                 String errorMessage = 'Failed to add comment';
                 if (result['message'] != null) {
@@ -520,30 +355,31 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                   }
                 }
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(errorMessage),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(errorMessage),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
 
-                return convertedComments; // Return original comments without optimistic one
+                return convertedComments;
               }
             } catch (e) {
               // Network error, remove optimistic comment
-              print('[DEBUG] Network error: $e');
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Network error. Please try again.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Network error. Please try again.'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-
-              return convertedComments; // Return original comments without optimistic one
+              return convertedComments;
             }
 
-            // Return optimistic comments for immediate display
             return optimisticComments;
           },
           postId: _currentPost.id,
@@ -562,67 +398,47 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
   @override
   Widget build(BuildContext context) {
     final Color backgroundColor = _extractedColor ?? _defaultColor;
-    const double postAspectRatio = 490 / 350;
+    // Aspect ratio from TMP_des_post_bg_container.dart
+    const double postAspectRatio = 372 / 228;
 
-    return Stack(
-      children: [
-        // Main card container
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxHeight: 350, // Reduced height constraint
-            ),
-            child: AspectRatio(
-              aspectRatio: postAspectRatio,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Background layer with custom shape
-                  CustomPaint(
-                    painter: PostShape(backgroundColor: backgroundColor),
-                    child: Container(),
-                  ),
-                  // Content layer
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 16.0),
-                    child: _ThoughtsContent(
-                      post: _currentPost,
-                      onUserTap: widget.onUserTap,
-                      backgroundColor: _extractedColor ?? _defaultColor,
-                      onPlayPause: widget.onPlayPause,
-                      onOptionsTap: widget.onOptionsTap ?? _handleOptionsTap,
-                      isPlaying: widget.isPlaying,
-                      isCurrentTrack: widget.isCurrentTrack,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: AspectRatio(
+        aspectRatio: postAspectRatio,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Get parent dimensions for responsive sizing
+            final parentWidth = constraints.maxWidth;
+            final parentHeight = constraints.maxHeight;
 
-        Positioned(
-          bottom: 10,
-          left: 16,
-          right: 16,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Song info on the left
-              Expanded(
-                child: _SongInfoSection(post: _currentPost),
-              ),
-              // Interaction buttons on the right
-              _InteractionButtons(
-                post: _currentPost,
-                onLike: _handleLike,
-                onComment: _handleComment,
-              ),
-            ],
-          ),
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // Background layer with custom shape
+                CustomPaint(
+                  painter: PostShape(backgroundColor: backgroundColor),
+                  child: Container(),
+                ),
+                // Content layer with responsive dimensions
+                _ThoughtsContent(
+                  post: _currentPost,
+                  onUserTap: widget.onUserTap,
+                  backgroundColor: _extractedColor ?? _defaultColor,
+                  onPlayPause: widget.onPlayPause,
+                  onOptionsTap: widget.onOptionsTap ?? _handleOptionsTap,
+                  isPlaying: widget.isPlaying,
+                  isCurrentTrack: widget.isCurrentTrack,
+                  onLike: widget.onLike,
+                  onComment: widget.onComment,
+                  currentUserId: _currentUserId,
+                  parentWidth: parentWidth,
+                  parentHeight: parentHeight,
+                ),
+              ],
+            );
+          },
         ),
-      ],
+      ),
     );
   }
 
@@ -633,7 +449,8 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
           content: const Text('Please log in to save posts'),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
@@ -642,31 +459,51 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     }
 
     try {
+      print('[DEBUG] Save: userId=$_currentUserId, postId=${post.id}');
       final result = await _thoughtsService.savePost(_currentUserId!, post.id);
+      print('[DEBUG] Save result: $result');
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Thoughts post saved successfully'),
             backgroundColor: AppColors.primaryPurple,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
         );
         // Update the post's saved status
         setState(() {
-          _currentPost.isSaved = true;
+          _currentPost = ThoughtsPost(
+            id: _currentPost.id,
+            userId: _currentPost.userId,
+            username: _currentPost.username,
+            userImage: _currentPost.userImage,
+            text: _currentPost.text,
+            createdAt: _currentPost.createdAt,
+            updatedAt: _currentPost.updatedAt,
+            likes: _currentPost.likes,
+            likedBy: _currentPost.likedBy,
+            comments: _currentPost.comments,
+            songName: _currentPost.songName,
+            artistName: _currentPost.artistName,
+            coverImage: _currentPost.coverImage,
+            backgroundColor: _currentPost.backgroundColor,
+            isHidden: _currentPost.isHidden,
+            isDeleted: _currentPost.isDeleted,
+            isSaved: true,
+          );
         });
-        // Notify parent widget if callback is provided
-        widget.onPostUpdated?.call(_currentPost);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Failed to save thoughts post'),
             backgroundColor: AppColors.primaryPurple,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
@@ -678,7 +515,8 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
           content: Text('Error saving thoughts post: $e'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
@@ -693,7 +531,8 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
           content: const Text('Please log in to unsave posts'),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
@@ -702,31 +541,53 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     }
 
     try {
-      final result = await _thoughtsService.unsavePost(_currentUserId!, post.id);
+      print('[DEBUG] Unsave: userId=$_currentUserId, postId=${post.id}');
+      final result =
+          await _thoughtsService.unsavePost(_currentUserId!, post.id);
+      print('[DEBUG] Unsave result: $result');
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Thoughts post unsaved successfully'),
             backgroundColor: AppColors.primaryPurple,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
         );
         // Update the post's saved status
         setState(() {
-          _currentPost.isSaved = false;
+          _currentPost = ThoughtsPost(
+            id: _currentPost.id,
+            userId: _currentPost.userId,
+            username: _currentPost.username,
+            userImage: _currentPost.userImage,
+            text: _currentPost.text,
+            createdAt: _currentPost.createdAt,
+            updatedAt: _currentPost.updatedAt,
+            likes: _currentPost.likes,
+            likedBy: _currentPost.likedBy,
+            comments: _currentPost.comments,
+            songName: _currentPost.songName,
+            artistName: _currentPost.artistName,
+            coverImage: _currentPost.coverImage,
+            backgroundColor: _currentPost.backgroundColor,
+            isHidden: _currentPost.isHidden,
+            isDeleted: _currentPost.isDeleted,
+            isSaved: false,
+          );
         });
-        // Notify parent widget if callback is provided
-        widget.onPostUpdated?.call(_currentPost);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Failed to unsave thoughts post'),
+            content:
+                Text(result['message'] ?? 'Failed to unsave thoughts post'),
             backgroundColor: AppColors.primaryPurple,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
@@ -738,15 +599,161 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
           content: Text('Error unsaving thoughts post: $e'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
       );
     }
   }
+
+  Future<void> _handleDeletePost() async {
+    if (_currentUserId == null) {
+      _showMessage('Please log in to delete posts', Colors.orange);
+      return;
+    }
+
+    bool? shouldDelete = await _showDeleteDialog();
+    if (shouldDelete != true) return;
+
+    try {
+      final result =
+          await _thoughtsService.deletePost(_currentPost.id, context);
+
+      if (result['success'] == true) {
+        // Success - remove post from screen
+        _showMessage('Post deleted successfully', AppColors.primaryPurple);
+
+        // Debug logging
+        //print('[DEBUG] DeleteThoughts: Post deleted successfully, calling onPostUpdated');
+        //print('[DEBUG] DeleteThoughts: onPostUpdated callback exists: ${widget.onPostUpdated != null}');
+        //print('[DEBUG] DeleteThoughts: Post ID: ${_currentPost.id}');
+
+        widget.onPostUpdated?.call(_currentPost);
+      } else {
+        _showMessage(result['message'] ?? 'Failed to delete post', Colors.red);
+      }
+    } catch (e) {
+      _showMessage('Error: $e', Colors.red);
+    }
+  }
+
+  void _showMessage(String message, Color color) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: color,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<bool?> _showDeleteDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Post'),
+        content: const Text('Are you sure you want to delete this post?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleEditPost() async {
+    if (_currentUserId == null) {
+      _showMessage('Please log in to edit posts', Colors.orange);
+      return;
+    }
+
+    // Navigate to edit screen
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditThoughtsPostScreen(post: _currentPost),
+      ),
+    );
+
+    if (result == true) {
+      try {
+        final updatedPostData =
+            await _thoughtsService.getPostById(_currentPost.id);
+        if (updatedPostData['success'] == true &&
+            updatedPostData['data'] != null) {
+          setState(() {
+            _currentPost = ThoughtsPost.fromJson(updatedPostData['data']);
+          });
+        }
+      } catch (e) {
+        _showMessage('Error refreshing post: $e', Colors.red);
+      }
+    }
+  }
+
+  Future<void> _handleHidePost() async {
+    if (_currentUserId == null) {
+      _showMessage('Please log in to hide posts', Colors.orange);
+      return;
+    }
+
+    bool? shouldHide = await _showHideDialog();
+    if (shouldHide != true) return;
+
+    try {
+      final result = await _thoughtsService.hidePost(_currentPost.id);
+
+      if (result['success'] == true) {
+        _showMessage('Post hidden successfully', AppColors.primaryPurple);
+
+        widget.onPostUpdated?.call(_currentPost);
+      } else {
+        _showMessage(result['message'] ?? 'Failed to hide post', Colors.red);
+      }
+    } catch (e) {
+      _showMessage('Error: $e', Colors.red);
+    }
+  }
+
+  Future<bool?> _showHideDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hide Post'),
+        content: const Text('Are you sure you want to hide this post?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.purple),
+            child: const Text('Hide'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
+// ================= _ThoughtsContent =================
 class _ThoughtsContent extends StatelessWidget {
   final ThoughtsPost post;
   final void Function(String userId, String? username)? onUserTap;
@@ -755,6 +762,11 @@ class _ThoughtsContent extends StatelessWidget {
   final VoidCallback? onOptionsTap;
   final bool isPlaying;
   final bool isCurrentTrack;
+  final VoidCallback? onLike;
+  final VoidCallback? onComment;
+  final String? currentUserId;
+  final double parentWidth;
+  final double parentHeight;
 
   const _ThoughtsContent({
     required this.post,
@@ -764,40 +776,77 @@ class _ThoughtsContent extends StatelessWidget {
     this.onOptionsTap,
     this.isPlaying = false,
     this.isCurrentTrack = false,
+    this.onLike,
+    this.onComment,
+    this.currentUserId,
+    required this.parentWidth,
+    required this.parentHeight,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Calculate responsive dimensions based on parent size
+    final headerHeight = parentHeight * 0.18; // 18% of parent height
+    final footerHeight = parentHeight * 0.22; // 22% of parent height
+    final spacingBetween = parentHeight * 0.03; // 2% for spacing
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header section - moved to top with maximized size
-        _ThoughtsHeader(
-          post: post,
-          onUserTap: onUserTap,
-          onPlayPause: onPlayPause,
-          onOptionsTap: onOptionsTap,
-          isPlaying: isPlaying,
-          isCurrentTrack: isCurrentTrack,
+        SizedBox(
+          height: headerHeight,
+          child: _ThoughtsHeader(
+            post: post,
+            onUserTap: onUserTap,
+            onPlayPause: onPlayPause,
+            onOptionsTap: onOptionsTap,
+            isPlaying: isPlaying,
+            isCurrentTrack: isCurrentTrack,
+            currentUserId: currentUserId,
+            parentWidth: parentWidth,
+            parentHeight: parentHeight,
+          ),
         ),
-        const SizedBox(height: 20),
-        // Main content area with left-right layout
+        SizedBox(height: spacingBetween),
         Expanded(
           child: Container(
             width: double.infinity,
-            margin: const EdgeInsets.only(top: 1),
+            margin: EdgeInsets.only(top: parentHeight * 0.004),
             child: _ThoughtsBody(
               post: post,
               backgroundColor: backgroundColor,
+              parentWidth: parentWidth,
+              parentHeight: parentHeight,
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: parentHeight * 0.035),
+        // Footer section matching post.dart structure
+        SizedBox(
+          height: footerHeight,
+          child: Row(
+            children: [
+              _SongInfoSection(
+                post: post,
+                parentWidth: parentWidth,
+                parentHeight: parentHeight,
+              ),
+              _InteractionButtons(
+                post: post,
+                onLike: onLike,
+                onComment: onComment,
+                parentWidth: parentWidth,
+                parentHeight: parentHeight,
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 }
 
+// ================= _ThoughtsHeader =================
 class _ThoughtsHeader extends StatelessWidget {
   final ThoughtsPost post;
   final void Function(String userId, String? username)? onUserTap;
@@ -805,6 +854,9 @@ class _ThoughtsHeader extends StatelessWidget {
   final VoidCallback? onOptionsTap;
   final bool isPlaying;
   final bool isCurrentTrack;
+  final String? currentUserId;
+  final double parentWidth;
+  final double parentHeight;
 
   const _ThoughtsHeader({
     required this.post,
@@ -813,137 +865,187 @@ class _ThoughtsHeader extends StatelessWidget {
     this.onOptionsTap,
     this.isPlaying = false,
     this.isCurrentTrack = false,
+    this.currentUserId,
+    required this.parentWidth,
+    required this.parentHeight,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: () => onUserTap?.call(post.userId, post.username),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(20.0),
-              image: post.userImage != null && post.userImage!.isNotEmpty
-                  ? DecorationImage(
-                      image: post.userImage!.startsWith('http')
-                          ? NetworkImage(post.userImage!) as ImageProvider
-                          : AssetImage(post.userImage!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: post.userImage == null || post.userImage!.isEmpty
-                ? Center(
-                    child: Text(
-                      post.username != null && post.username!.isNotEmpty
-                          ? post.username![0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  )
-                : null,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            post.username ?? 'Unknown',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-        ),
-        // Add 3-dot menu
-        if (onOptionsTap != null)
-          GestureDetector(
-            onTap: onOptionsTap,
-            child: Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: const Icon(
-                Icons.more_vert,
-                color: Colors.white,
-                size: 22,
+    // Calculate responsive dimensions
+    final iconSize = (parentHeight * 0.096).clamp(20.0, 24.0);
+    final spacing = parentWidth * 0.032;
+
+    return Container(
+      margin: const EdgeInsets.only(left: 0, bottom: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // User Image - taking maximum height possible
+          Padding(
+            padding: EdgeInsets.only(bottom: parentHeight * 0.02),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: GestureDetector(
+                onTap: () => onUserTap?.call(post.userId, post.username),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(16.0),
+                    image: post.userImage != null && post.userImage!.isNotEmpty
+                        ? DecorationImage(
+                            image: post.userImage!.startsWith('http')
+                                ? NetworkImage(post.userImage!) as ImageProvider
+                                : AssetImage(post.userImage!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: post.userImage == null || post.userImage!.isEmpty
+                      ? Center(
+                          child: Text(
+                            post.username != null && post.username!.isNotEmpty
+                                ? post.username![0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        )
+                      : null,
+                ),
               ),
             ),
           ),
-        // Add Spotify controls if song information is available
-        if (post.songName != null && post.songName!.isNotEmpty)
-          _ThoughtsSpotifyControl(
-            post: post,
-            onPlayPause: onPlayPause,
-            isPlaying: isPlaying,
-            isCurrentTrack: isCurrentTrack,
+          SizedBox(width: spacing),
+          // Username in AutoSizeText
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: parentHeight * 0.02),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: () => onUserTap?.call(post.userId, post.username),
+                  child: AutoSizeText(
+                    post.username ?? 'Unknown User',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      letterSpacing: 0.2,
+                    ),
+                    minFontSize: 14,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.left,
+                  ),
+                ),
+              ),
+            ),
           ),
-      ],
+          // Push options icon to the far right
+          SizedBox(width: spacing * 0.67),
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: onOptionsTap,
+              child: Container(
+                alignment: Alignment.center,
+                padding: EdgeInsets.symmetric(horizontal: spacing * 0.67),
+                child: Icon(
+                  Icons.more_vert,
+                  color: Colors.white,
+                  size: iconSize * 0.92,
+                ),
+              ),
+            ),
+          ),
+          // Add Spotify controls if song information is available
+          if (post.songName != null && post.songName!.isNotEmpty)
+            _ThoughtsSpotifyControl(
+              post: post,
+              onPlayPause: onPlayPause,
+              isPlaying: isPlaying,
+              isCurrentTrack: isCurrentTrack,
+              parentWidth: parentWidth,
+              parentHeight: parentHeight,
+            ),
+        ],
+      ),
     );
   }
 }
 
+// ================= _ThoughtsBody =================
 class _ThoughtsBody extends StatelessWidget {
   final ThoughtsPost post;
   final Color backgroundColor;
+  final double parentWidth;
+  final double parentHeight;
 
   const _ThoughtsBody({
     required this.post,
     required this.backgroundColor,
+    required this.parentWidth,
+    required this.parentHeight,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Calculate responsive dimensions
+    final coverImageWidth = parentWidth * 0.32; // 32% of parent width
+    final coverImageHeight = parentHeight * 0.35; // 35% of parent height
+    final imageMargin = parentWidth * 0.024;
+    final imageBorderRadius = (parentHeight * 0.035).clamp(6.0, 10.0);
+    final spacing = parentWidth * 0.012;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Left side - Cover image (matching song post style)
         if (post.coverImage != null && post.coverImage!.isNotEmpty) ...[
           Container(
-            margin: const EdgeInsets.only(
-              left: 9.0,
-              right: 9.0,
+            margin: EdgeInsets.only(
+              left: imageMargin,
+              right: imageMargin,
               top: 0.0,
-              bottom: 4.0,
+              bottom: parentHeight * 0.018,
             ),
-            height: 25,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8.0),
+              borderRadius: BorderRadius.circular(imageBorderRadius),
               child: Image.network(
                 post.coverImage!,
-                width: 120,
-                height: 25,
+                width: coverImageWidth,
+                height: coverImageHeight,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
-                  width: 120,
-                  height: 25,
+                  width: coverImageWidth,
+                  height: coverImageHeight,
                   decoration: BoxDecoration(
                     color: const Color(0xFF4A3B8A),
-                    borderRadius: BorderRadius.circular(16.0),
+                    borderRadius: BorderRadius.circular(imageBorderRadius),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.music_note,
                     color: Colors.white,
-                    size: 30,
+                    size: (parentHeight * 0.13).clamp(25.0, 35.0),
                   ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: spacing),
         ],
         // Right side - Text content with overflow handling
         Expanded(
           child: _ThoughtsTextContent(
             post: post,
             backgroundColor: backgroundColor,
+            parentWidth: parentWidth,
+            parentHeight: parentHeight,
           ),
         ),
       ],
@@ -951,6 +1053,7 @@ class _ThoughtsBody extends StatelessWidget {
   }
 }
 
+// ================= _FullContentBottomSheet =================
 class _FullContentBottomSheet extends StatelessWidget {
   final ThoughtsPost post;
   final Color backgroundColor;
@@ -1052,13 +1155,18 @@ class _FullContentBottomSheet extends StatelessWidget {
   }
 }
 
+// ================= _ThoughtsTextContent =================
 class _ThoughtsTextContent extends StatefulWidget {
   final ThoughtsPost post;
   final Color backgroundColor;
+  final double parentWidth;
+  final double parentHeight;
 
   const _ThoughtsTextContent({
     required this.post,
     required this.backgroundColor,
+    required this.parentWidth,
+    required this.parentHeight,
   });
 
   @override
@@ -1082,89 +1190,52 @@ class _ThoughtsTextContentState extends State<_ThoughtsTextContent> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  widget.post.text,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    height: 1.4,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  maxLines: 5,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.justify,
-                ),
-              ),
-              if (widget.post.text.length > 200) ...[
-                const SizedBox(height: 4),
-                GestureDetector(
-                  onTap: _showFullContentBottomSheet,
-                  child: const Text(
-                    'see more',
+    // Calculate responsive font sizes and spacing
+    final textFontSize = (widget.parentHeight * 0.061).clamp(12.0, 16.0);
+    final seeMoreFontSize = (widget.parentHeight * 0.053).clamp(10.0, 13.0);
+    final seeMoreSpacing = widget.parentHeight * 0.018;
+    final topPadding = widget.parentHeight * 0.04;
+    final rightPadding = widget.parentHeight * 0.06;
+
+    return Padding(
+      padding: EdgeInsets.only(top: topPadding, right: rightPadding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.post.text,
                     style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      decoration: TextDecoration.underline,
+                      color: Colors.white,
+                      fontSize: textFontSize,
+                      height: 1.4,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    maxLines: 5,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.left,
+                  ),
+                ),
+                if (widget.post.text.length > 200) ...[
+                  SizedBox(height: seeMoreSpacing),
+                  GestureDetector(
+                    onTap: _showFullContentBottomSheet,
+                    child: Text(
+                      'see more',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: seeMoreFontSize,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SongInfoSection extends StatelessWidget {
-  final ThoughtsPost post;
-
-  const _SongInfoSection({
-    required this.post,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.music_note,
-            color: Colors.deepPurple,
-            size: 14,
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (post.songName != null && post.songName!.isNotEmpty)
-                Text(
-                  post.songName!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              if (post.artistName != null && post.artistName!.isNotEmpty)
-                Text(
-                  post.artistName!,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10,
-                  ),
-                ),
-            ],
+            ),
           ),
         ],
       ),
@@ -1172,15 +1243,92 @@ class _SongInfoSection extends StatelessWidget {
   }
 }
 
+// ================= _SongInfoSection =================
+class _SongInfoSection extends StatelessWidget {
+  final ThoughtsPost post;
+  final double parentWidth;
+  final double parentHeight;
+
+  const _SongInfoSection({
+    required this.post,
+    required this.parentWidth,
+    required this.parentHeight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Always use white for song/artist, white70 for caption
+    final textColor = Colors.white;
+
+    // Calculate responsive padding
+    final horizontalPadding = parentWidth * 0.032;
+    final verticalPadding = parentHeight * 0.026;
+
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: verticalPadding,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (post.songName != null && post.songName!.isNotEmpty)
+              AutoSizeText(
+                post.songName ?? 'Unknown Track',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+                minFontSize: 8,
+                maxFontSize: 14,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.left,
+              ),
+            if (post.artistName != null && post.artistName!.isNotEmpty)
+              AutoSizeText(
+                post.artistName != null
+                    ? (post.artistName!.length > 20
+                        ? '${post.artistName!.substring(0, 20)}...'
+                        : post.artistName!)
+                    : 'Unknown Artist',
+                style: TextStyle(
+                  color: textColor.withOpacity(0.8),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                ),
+                minFontSize: 8,
+                maxFontSize: 13,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.left,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ================= _InteractionButtons =================
 class _InteractionButtons extends StatefulWidget {
   final ThoughtsPost post;
   final VoidCallback? onLike;
   final VoidCallback? onComment;
+  final VoidCallback? onShare;
+  final double parentWidth;
+  final double parentHeight;
 
   const _InteractionButtons({
     required this.post,
     this.onLike,
     this.onComment,
+    this.onShare,
+    required this.parentWidth,
+    required this.parentHeight,
   });
 
   @override
@@ -1221,62 +1369,86 @@ class _InteractionButtonsState extends State<_InteractionButtons> {
   Widget build(BuildContext context) {
     final isLiked =
         currentUserId != null && widget.post.likedBy.contains(currentUserId!);
+    final iconColor = Colors.white;
+    final likedColor = const Color(0xFFd535f9);
 
-    print('[DEBUG] _InteractionButtons.build: currentUserId = $currentUserId');
-    print('[DEBUG] _InteractionButtons.build: isLiked = $isLiked');
-    print(
-        '[DEBUG] _InteractionButtons.build: post.likedBy = ${widget.post.likedBy}');
+    // Match spacing from post.dart InteractionWidget
+    final spacing = (widget.parentWidth * 0.02).clamp(6.0, 20.0);
+    final paddingTop = widget.parentHeight * 0.026;
+    final paddingBottom = widget.parentHeight * 0.0;
+    final paddingLeft = widget.parentWidth * 0.022;
+    final paddingRight = widget.parentWidth * 0.018;
 
-    return Row(
-      children: [
-        // Like button
-        GestureDetector(
-          onTap: widget.onLike,
-          child: Icon(
-            isLiked ? Icons.favorite : Icons.favorite_border,
-            color: isLiked ? Colors.deepPurple : Colors.white,
-            size: 24,
+    return Container(
+      padding: EdgeInsets.only(
+        top: paddingTop,
+        bottom: paddingBottom,
+        left: paddingLeft,
+        right: paddingRight,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Like button
+          GestureDetector(
+            onTap: widget.onLike,
+            child: Icon(
+              isLiked ? Icons.favorite : Icons.favorite_border,
+              color: isLiked ? likedColor : iconColor,
+              size: 24,
+            ),
           ),
-        ),
-        SizedBox(
-            width: (MediaQuery.of(context).size.width * 0.02).clamp(6.0, 20.0)),
-        // Comment button
-        GestureDetector(
-          onTap: widget.onComment,
-          child: Icon(
-            LucideIcons.messageCircle,
-            color: Colors.white,
-            size: 22,
+          SizedBox(width: spacing),
+          // Comment button
+          GestureDetector(
+            onTap: widget.onComment,
+            child: Icon(
+              LucideIcons.messageCircle,
+              color: iconColor,
+              size: 22,
+            ),
           ),
-        ),
-        SizedBox(
-            width: (MediaQuery.of(context).size.width * 0.02).clamp(6.0, 20.0)),
-        // Share button
-        Icon(
-          LucideIcons.share2,
-          color: Colors.white,
-          size: 22,
-        ),
-      ],
+          SizedBox(width: spacing),
+          // Share button
+          GestureDetector(
+            onTap: widget.onShare,
+            child: Icon(
+              LucideIcons.share2,
+              color: iconColor,
+              size: 22,
+            ),
+          ),
+          SizedBox(width: spacing),
+        ],
+      ),
     );
   }
 }
 
+// ================= _ThoughtsSpotifyControl =================
 class _ThoughtsSpotifyControl extends StatelessWidget {
   final ThoughtsPost post;
   final VoidCallback? onPlayPause;
   final bool isPlaying;
   final bool isCurrentTrack;
+  final double parentWidth;
+  final double parentHeight;
 
   const _ThoughtsSpotifyControl({
     required this.post,
     this.onPlayPause,
     this.isPlaying = false,
     this.isCurrentTrack = false,
+    required this.parentWidth,
+    required this.parentHeight,
   });
 
   @override
   Widget build(BuildContext context) {
+    print(
+        '[DEBUG] _ThoughtsSpotifyControl build: onPlayPause is null? ${onPlayPause == null}');
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pillColor = isDark ? Colors.black : Colors.white;
     final iconColor = isDark ? Colors.white : Colors.black;
@@ -1284,38 +1456,46 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
         ? 'assets/icons/icons-spotify-dark.svg'
         : 'assets/icons/icons-spotify-light.svg';
 
+    // Calculate responsive dimensions
+    final pillHeight = (parentHeight * 0.14).clamp(28.0, 36.0);
+    final pillBorderRadius = (parentHeight * 0.061).clamp(12.0, 16.0);
+    final horizontalPadding = parentWidth * 0.032;
+    final verticalPadding = parentHeight * 0.026;
+    final iconSize = (parentHeight * 0.079).clamp(16.0, 20.0);
+    final spotifyIconSize = (parentHeight * 0.079).clamp(16.0, 20.0);
+    final spacing = parentWidth * 0.076;
+
     return Container(
+      margin: EdgeInsets.only(
+        right: parentWidth * 0.018,
+        top: parentHeight * 0.028,
+      ),
       child: Container(
-        height: 32,
+        height: pillHeight,
         decoration: BoxDecoration(
           color: pillColor,
-          borderRadius: BorderRadius.circular(14.0),
+          borderRadius: BorderRadius.circular(pillBorderRadius),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: verticalPadding,
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              width: 18,
-              height: 18,
+              width: spotifyIconSize,
+              height: spotifyIconSize,
               child: SvgPicture.asset(
                 spotifyAsset,
                 fit: BoxFit.contain,
               ),
             ),
-            const SizedBox(width: 20),
+            SizedBox(width: spacing),
             GestureDetector(
               onTap: () {
-                print('[DEBUG] _ThoughtsSpotifyControl: Play button tapped');
-                print(
-                    '[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null? ${onPlayPause == null}');
-                print(
-                    '[DEBUG] _ThoughtsSpotifyControl: isPlaying: $isPlaying, isCurrentTrack: $isCurrentTrack');
                 if (onPlayPause != null) {
                   onPlayPause!();
-                } else {
-                  print(
-                      '[DEBUG] _ThoughtsSpotifyControl: onPlayPause is null!');
                 }
               },
               child: Icon(
@@ -1323,7 +1503,7 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
                     ? LucideIcons.pause
                     : LucideIcons.play,
                 color: iconColor,
-                size: 18,
+                size: iconSize,
               ),
             ),
           ],

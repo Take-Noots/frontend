@@ -339,7 +339,7 @@ class _ShowAllPostsScreenState extends State<ShowAllPostsScreen> {
             final prefs = await SharedPreferences.getInstance();
             final userDataString = prefs.getString('user_data');
             final userData = userDataString != null ? jsonDecode(userDataString) : {'_id': '685fb750cc084ba7e0ef8533', 'username': 'owl'};
-            final result = await _songPostService.addComment(post.id, userData['_id'], userData['username'], text);
+            final result = await _songPostService.addComment(post.id, userData['_id'], userData['username'], text, context);
             if (result['success']) {
               setState(() {
                 post.comments = (result['data']['comments'] as List<dynamic>).map((c) => Comment.fromJson(c)).toList();

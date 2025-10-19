@@ -224,6 +224,8 @@ class TokenManagerService {
               // Ensure cookies are sent with the request
               extra: {'withCredentials': true}));
 
+      print('[At Token.Manager.Service] Refresh response: ${response.data}');
+
       print(
           '[At Token.Manager.Service] Refresh response status: ${response.statusCode}');
 

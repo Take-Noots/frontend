@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_constants.dart';
 
@@ -53,6 +54,78 @@ class GroupChatService {
         return {
           'success': false,
           'message': errorData['error'] ?? 'Failed to create group chat',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  // Create a new group chat with file upload
+  Future<Map<String, dynamic>> createGroupChatWithFile({
+    required String name,
+    String? description,
+    File? groupIconFile,
+    required List<String> memberIds,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+
+      if (userDataString == null) {
+        return {
+          'success': false,
+          'message': 'User not logged in. Please log in to create group chat.',
+        };
+      }
+
+      final userData = jsonDecode(userDataString);
+
+      // Create Dio instance for multipart upload
+      final dio = Dio(BaseOptions(
+        baseUrl: AppConstants.baseUrl,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      ));
+
+      // Prepare form data
+      final formData = FormData.fromMap({
+        'name': name,
+        'description': description ?? '',
+        'createdBy': userData['id'],
+        'memberIds': jsonEncode(memberIds),
+      });
+
+      // Add group icon file if provided
+      if (groupIconFile != null) {
+        formData.files.add(MapEntry(
+          'groupIcon',
+          await MultipartFile.fromFile(
+            groupIconFile.path,
+            filename: 'group_icon.jpg',
+          ),
+        ));
+      }
+
+      final response = await dio.post(
+        '/chat/group/create',
+        data: formData,
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': response.data,
+          'message': 'Group chat created successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': response.data['message'] ?? 'Failed to create group chat',
         };
       }
     } catch (e) {
@@ -341,6 +414,44 @@ class GroupChatService {
         return {
           'success': false,
           'message': errorData['error'] ?? 'Failed to remove member',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  // Leave group (handles both regular members and group creators)
+  Future<Map<String, dynamic>> leaveGroup(
+      String groupChatId, String userId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/group/leaveGroup'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'groupChatId': groupChatId,
+          'userId': userId,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': data,
+          'message': data['message'] ?? 'Left group successfully',
+          'deleted': data['deleted'] ?? false,
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['error'] ?? errorData['message'] ?? 'Failed to leave group',
         };
       }
     } catch (e) {
