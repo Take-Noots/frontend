@@ -62,11 +62,19 @@ class PostDetailPage extends StatefulWidget {
 class _PostDetailPageState extends State<PostDetailPage> {
   bool _hasAddedComment = false;
   List<Map<String, dynamic>> _comments = [];
+  final GlobalKey<FanbasePostCommentsSectionState> _commentsSectionKey =
+      GlobalKey<FanbasePostCommentsSectionState>();
 
   @override
   void initState() {
     super.initState();
     _comments = List.from(widget.comments);
+    // Trigger a rebuild after the first frame to ensure the key is attached
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   /// Refreshes the page by fetching updated post data
@@ -75,6 +83,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
       final updatedPost = await FanbasePostService.getFanbasePost(
         widget.postId,
         context,
+        fanbaseId: widget.fanbaseId, // ✅ Add this parameter
       );
 
       if (mounted) {
@@ -118,35 +127,60 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Get the bottom padding to account for navigation bar
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: Theme.of(context).primaryColor,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(
-          left: 10,
-          right: 10,
-          top: 16,
-          bottom: 20,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 10),
-            _buildSongCard(),
-            const SizedBox(height: 20),
-            _buildPostContent(),
-            const SizedBox(height: 20),
-            // Refactored comments section
-            FanbasePostCommentsSection(
-              postId: widget.postId,
-              fanbaseId: widget.fanbaseId,
-              comments: _comments,
-              onCommentAdded: _refreshPost,
+      body: Stack(
+        children: [
+          // Main scrollable content
+          SingleChildScrollView(
+            padding: EdgeInsets.only(
+              left: 10,
+              right: 10,
+              top: 16,
+              bottom: 170 +
+                  bottomPadding, // Add enough padding for input bar + nav bar
             ),
-          ],
-        ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 10),
+                _buildSongCard(),
+                const SizedBox(height: 20),
+                _buildPostContent(),
+                const SizedBox(height: 20),
+                // Refactored comments section
+                FanbasePostCommentsSection(
+                  key: _commentsSectionKey,
+                  postId: widget.postId,
+                  fanbaseId: widget.fanbaseId,
+                  comments: _comments,
+                  onCommentAdded: _refreshPost,
+                ),
+              ],
+            ),
+          ),
+          _buildFloatingInputBar(),
+        ],
       ),
     );
+  }
+
+  // Create a separate method for the floating input bar
+  Widget _buildFloatingInputBar() {
+    // Check if the key's current state is available
+    final state = _commentsSectionKey.currentState;
+    if (state != null) {
+      return Align(
+        alignment: Alignment.bottomCenter,
+        child: state.buildCommentInputBar(),
+      );
+    }
+    // Return an empty widget
+    return const SizedBox.shrink();
   }
 
   Widget _buildHeader() {

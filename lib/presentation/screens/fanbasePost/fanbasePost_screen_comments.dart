@@ -9,7 +9,8 @@ class FanbasePostCommentsSection extends StatefulWidget {
   final String postId;
   final String fanbaseId;
   final List<Map<String, dynamic>> comments;
-  final VoidCallback onCommentAdded;
+  final Future<void> Function()
+      onCommentAdded; // Change from VoidCallback to async function
 
   const FanbasePostCommentsSection({
     super.key,
@@ -21,10 +22,10 @@ class FanbasePostCommentsSection extends StatefulWidget {
 
   @override
   State<FanbasePostCommentsSection> createState() =>
-      _FanbasePostCommentsSectionState();
+      FanbasePostCommentsSectionState();
 }
 
-class _FanbasePostCommentsSectionState
+class FanbasePostCommentsSectionState
     extends State<FanbasePostCommentsSection> {
   // ==================== CONTROLLERS & STATE ====================
 
@@ -100,7 +101,15 @@ class _FanbasePostCommentsSectionState
         _commentController.clear();
         _commentFocusNode.unfocus();
         _showSuccessMessage('Comment added successfully!');
-        widget.onCommentAdded();
+
+        // Call parent to refresh all comments from backend
+        await widget
+            .onCommentAdded(); // Now this works because it's a Future function
+
+        // Reset loading state after refresh
+        if (mounted) {
+          setState(() => _isSubmittingComment = false);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -130,7 +139,15 @@ class _FanbasePostCommentsSectionState
         _subCommentFocusNode.unfocus();
         setState(() => _replyToCommentId = null);
         _showSuccessMessage('Reply added successfully!');
-        widget.onCommentAdded();
+
+        // Call parent to refresh all comments from backend
+        await widget
+            .onCommentAdded(); // Now this works because it's a Future function
+
+        // Reset loading state after refresh
+        if (mounted) {
+          setState(() => _isSubmittingSubComment = false);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -150,7 +167,7 @@ class _FanbasePostCommentsSectionState
       );
 
       if (mounted) {
-        widget.onCommentAdded();
+        await widget.onCommentAdded(); // Use await here too
       }
     } catch (e) {
       if (mounted) {
@@ -170,7 +187,7 @@ class _FanbasePostCommentsSectionState
       );
 
       if (mounted) {
-        widget.onCommentAdded();
+        await widget.onCommentAdded(); // Use await here too
       }
     } catch (e) {
       if (mounted) {
@@ -220,12 +237,8 @@ class _FanbasePostCommentsSectionState
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildCommentsSection(),
-        _buildCommentInputBar(),
-      ],
-    );
+    // Return only the comments section - input bar will be handled by parent
+    return _buildCommentsSection();
   }
 
   Widget _buildCommentsSection() {
@@ -245,6 +258,8 @@ class _FanbasePostCommentsSectionState
           _buildEmptyCommentsPlaceholder()
         else
           ..._comments.map((comment) => _buildCommentCard(comment)).toList(),
+        // Add spacing at the bottom for the floating input bar
+        const SizedBox(height: 80),
       ],
     );
   }
@@ -554,9 +569,9 @@ class _FanbasePostCommentsSectionState
     );
   }
 
-  Widget _buildCommentInputBar() {
+  // Make this method public so it can be called from parent
+  Widget buildCommentInputBar() {
     return Container(
-      margin: const EdgeInsets.only(top: 20),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -570,65 +585,66 @@ class _FanbasePostCommentsSectionState
             offset: const Offset(0, -2),
           ),
         ],
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _commentController,
-              focusNode: _commentFocusNode,
-              enabled: !_isSubmittingComment,
-              decoration: InputDecoration(
-                hintText: 'Add a comment',
-                hintStyle: TextStyle(
-                  color: Colors.grey.shade500,
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _commentController,
+                focusNode: _commentFocusNode,
+                enabled: !_isSubmittingComment,
+                decoration: InputDecoration(
+                  hintText: 'Add a comment',
+                  hintStyle: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 14,
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade800
+                      : Colors.grey.shade100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 14,
                 ),
-                filled: true,
-                fillColor: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.grey.shade800
-                    : Colors.grey.shade100,
-                border: OutlineInputBorder(
+                maxLines: null,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _submitComment(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: _isSubmittingComment ? null : _submitComment,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _isSubmittingComment ? Colors.grey : Colors.purple,
                   borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                child: _isSubmittingComment
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.send, color: Colors.white, size: 20),
               ),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 14,
-              ),
-              maxLines: null,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _submitComment(),
             ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _isSubmittingComment ? null : _submitComment,
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _isSubmittingComment ? Colors.grey : Colors.purple,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: _isSubmittingComment
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Icon(Icons.send, color: Colors.white, size: 20),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

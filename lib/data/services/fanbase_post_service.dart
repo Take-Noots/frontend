@@ -325,13 +325,19 @@ class FanbasePostService {
   // Get a specific fanbase post
   static Future<FanbasePost> getFanbasePost(
     String postId,
-    BuildContext context,
-  ) async {
+    BuildContext context, {
+    required String fanbaseId, // Make fanbaseId required instead of optional
+  }) async {
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
 
-      final response = await dio.get('/fanbase/posts/$postId');
+      // Always use the fanbase-specific endpoint
+      final endpoint = '/fanbase/$fanbaseId/posts/$postId';
+
+      print('[DEBUG] Fetching post from: $endpoint');
+
+      final response = await dio.get(endpoint);
 
       if (response.statusCode == 200) {
         return FanbasePost.fromJson(response.data);
@@ -339,8 +345,11 @@ class FanbasePostService {
         throw Exception('Failed to fetch post');
       }
     } on DioException catch (e) {
+      print('[ERROR] DioException in getFanbasePost: ${e.message}');
+      print('[ERROR] Response: ${e.response?.data}');
       throw Exception('Failed to fetch post: ${e.message}');
     } catch (e) {
+      print('[ERROR] Exception in getFanbasePost: $e');
       throw Exception('Failed to fetch post: $e');
     }
   }
@@ -357,16 +366,6 @@ class FanbasePostService {
       final dio = authService.dio;
 
       String actualFanbaseId = fanbaseId ?? '';
-
-      if (actualFanbaseId.isEmpty) {
-        try {
-          final postResponse = await dio.get('/fanbase/posts/$postId');
-          final postData = postResponse.data;
-          actualFanbaseId = postData['fanbaseId'] ?? '';
-        } catch (e) {
-          print('[DEBUG] Could not fetch post to get fanbaseId: $e');
-        }
-      }
 
       if (actualFanbaseId.isEmpty) {
         throw Exception('FanbaseId is required to like a comment');
@@ -407,16 +406,6 @@ class FanbasePostService {
       final dio = authService.dio;
 
       String actualFanbaseId = fanbaseId ?? '';
-
-      if (actualFanbaseId.isEmpty) {
-        try {
-          final postResponse = await dio.get('/fanbase/posts/$postId');
-          final postData = postResponse.data;
-          actualFanbaseId = postData['fanbaseId'] ?? '';
-        } catch (e) {
-          print('[DEBUG] Could not fetch post to get fanbaseId: $e');
-        }
-      }
 
       if (actualFanbaseId.isEmpty) {
         throw Exception('FanbaseId is required to like a sub-comment');
