@@ -36,10 +36,13 @@ void main() async {
   // Create the router instance
   final appRouter = AppRouter(authProvider);
 
-  // Initialize services (but don't wait for completion - splash screen will handle this)
-  authService.initialize().catchError((e) {
+  // Initialize services and WAIT for completion so routing/auth checks don't run
+  // before refresh attempts complete. This prevents premature redirect to /login.
+  try {
+    await authService.initialize();
+  } catch (e) {
     debugPrint('Error initializing auth service: $e');
-  });
+  }
 
   runApp(MultiProvider(
     providers: [
