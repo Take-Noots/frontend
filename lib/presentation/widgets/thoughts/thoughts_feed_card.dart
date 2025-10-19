@@ -718,9 +718,9 @@ class _ThoughtsContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Calculate responsive dimensions based on parent size
-    final headerHeight = parentHeight * 0.16; // 22% of parent height
+    final headerHeight = parentHeight * 0.18; // 18% of parent height
     final footerHeight = parentHeight * 0.22; // 22% of parent height
-    final spacingBetween = parentHeight * 0.05; // 9% for spacing
+    final spacingBetween = parentHeight * 0.03; // 2% for spacing
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -815,59 +815,65 @@ class _ThoughtsHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // User Image - taking maximum height possible
-          AspectRatio(
-            aspectRatio: 1,
-            child: GestureDetector(
-              onTap: () => onUserTap?.call(post.userId, post.username),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(16.0),
-                  image: post.userImage != null && post.userImage!.isNotEmpty
-                      ? DecorationImage(
-                          image: post.userImage!.startsWith('http')
-                              ? NetworkImage(post.userImage!) as ImageProvider
-                              : AssetImage(post.userImage!),
-                          fit: BoxFit.cover,
+          Padding(
+            padding: EdgeInsets.only(bottom: parentHeight * 0.02),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: GestureDetector(
+                onTap: () => onUserTap?.call(post.userId, post.username),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(16.0),
+                    image: post.userImage != null && post.userImage!.isNotEmpty
+                        ? DecorationImage(
+                            image: post.userImage!.startsWith('http')
+                                ? NetworkImage(post.userImage!) as ImageProvider
+                                : AssetImage(post.userImage!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: post.userImage == null || post.userImage!.isEmpty
+                      ? Center(
+                          child: Text(
+                            post.username != null && post.username!.isNotEmpty
+                                ? post.username![0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.black87,
+                            ),
+                          ),
                         )
                       : null,
                 ),
-                child: post.userImage == null || post.userImage!.isEmpty
-                    ? Center(
-                        child: Text(
-                          post.username != null && post.username!.isNotEmpty
-                              ? post.username![0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      )
-                    : null,
               ),
             ),
           ),
           SizedBox(width: spacing),
           // Username in AutoSizeText
           Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: GestureDetector(
-                onTap: () => onUserTap?.call(post.userId, post.username),
-                child: AutoSizeText(
-                  post.username ?? 'Unknown User',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 18,
-                    letterSpacing: 0.2,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: parentHeight * 0.02),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: () => onUserTap?.call(post.userId, post.username),
+                  child: AutoSizeText(
+                    post.username ?? 'Unknown User',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      letterSpacing: 0.2,
+                    ),
+                    minFontSize: 14,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.left,
                   ),
-                  minFontSize: 14,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.left,
                 ),
               ),
             ),
@@ -926,7 +932,7 @@ class _ThoughtsBody extends StatelessWidget {
     final coverImageHeight = parentHeight * 0.35; // 35% of parent height
     final imageMargin = parentWidth * 0.024;
     final imageBorderRadius = (parentHeight * 0.035).clamp(6.0, 10.0);
-    final spacing = parentWidth * 0.043;
+    final spacing = parentWidth * 0.012;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1120,46 +1126,51 @@ class _ThoughtsTextContentState extends State<_ThoughtsTextContent> {
     final textFontSize = (widget.parentHeight * 0.061).clamp(12.0, 16.0);
     final seeMoreFontSize = (widget.parentHeight * 0.053).clamp(10.0, 13.0);
     final seeMoreSpacing = widget.parentHeight * 0.018;
+    final topPadding = widget.parentHeight * 0.04;
+    final rightPadding = widget.parentHeight * 0.06;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  widget.post.text,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: textFontSize,
-                    height: 1.4,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  maxLines: 5,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.justify,
-                ),
-              ),
-              if (widget.post.text.length > 200) ...[
-                SizedBox(height: seeMoreSpacing),
-                GestureDetector(
-                  onTap: _showFullContentBottomSheet,
+    return Padding(
+      padding: EdgeInsets.only(top: topPadding, right: rightPadding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
                   child: Text(
-                    'see more',
+                    widget.post.text,
                     style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: seeMoreFontSize,
-                      decoration: TextDecoration.underline,
+                      color: Colors.white,
+                      fontSize: textFontSize,
+                      height: 1.4,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    maxLines: 5,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.left,
+                  ),
+                ),
+                if (widget.post.text.length > 200) ...[
+                  SizedBox(height: seeMoreSpacing),
+                  GestureDetector(
+                    onTap: _showFullContentBottomSheet,
+                    child: Text(
+                      'see more',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: seeMoreFontSize,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1295,11 +1306,18 @@ class _InteractionButtonsState extends State<_InteractionButtons> {
 
     // Match spacing from post.dart InteractionWidget
     final spacing = (widget.parentWidth * 0.02).clamp(6.0, 20.0);
-    final horizontalPadding = widget.parentWidth * 0.032;
-    final verticalPadding = widget.parentHeight * 0.026;
+    final paddingTop = widget.parentHeight * 0.026;
+    final paddingBottom = widget.parentHeight * 0.0;
+    final paddingLeft = widget.parentWidth * 0.022;
+    final paddingRight = widget.parentWidth * 0.018;
 
     return Container(
-      padding: EdgeInsets.only(top: verticalPadding, left: horizontalPadding),
+      padding: EdgeInsets.only(
+        top: paddingTop,
+        bottom: paddingBottom,
+        left: paddingLeft,
+        right: paddingRight,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -1375,9 +1393,13 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
     final verticalPadding = parentHeight * 0.026;
     final iconSize = (parentHeight * 0.079).clamp(16.0, 20.0);
     final spotifyIconSize = (parentHeight * 0.079).clamp(16.0, 20.0);
-    final spacing = parentWidth * 0.054;
+    final spacing = parentWidth * 0.076;
 
     return Container(
+      margin: EdgeInsets.only(
+        right: parentWidth * 0.018,
+        top: parentHeight * 0.028,
+      ),
       child: Container(
         height: pillHeight,
         decoration: BoxDecoration(
