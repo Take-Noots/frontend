@@ -5,6 +5,7 @@ import '../../../data/services/advertisement_service.dart';
 import '../../../data/services/auth_service.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/auth_provider.dart';
+import 'payment_screen.dart';
 
 class SetAudienceScreen extends StatefulWidget {
   const SetAudienceScreen({Key? key}) : super(key: key);
@@ -271,13 +272,14 @@ class _SetAudienceScreenState extends State<SetAudienceScreen> {
                     });
 
                     debugPrint('Advertisement update result: $result');
-                    if (result['success'] == true) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Audience set to ${_views.toInt()}K views.')),
-                      );
-                      context.go(AppRoutes.home);
-                      return;
-                    } else {
+                  if (result['success'] == true) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Audience set to ${_views.toInt()}K views.')),
+                    );
+                    // Navigate to payment UI (UI only for now)
+                    context.pushNamed('payment', extra: {'amount': _totalCost});
+                    return;
+                  } else {
                       debugPrint('Failed to update advertisement: ${result['message']}');
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(result['message'] ?? 'Failed to update advertisement')),
