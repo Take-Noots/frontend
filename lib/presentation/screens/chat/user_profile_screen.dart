@@ -20,6 +20,7 @@ class UserProfileScreen extends StatefulWidget {
 class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _isLoading = true;
   bool _isFollowLoading = false;
+  String? _error;
   Map<String, dynamic>? userProfile;
   String? currentUserId;
   bool isFollowing = false;
@@ -53,7 +54,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _loadUserProfile() async {
+    setState(() {
+      _error = null;
+    });
+
     try {
+      print('Loading profile for userId: ${widget.userId}');
       // Fetch basic profile data and followers/following counts in parallel
       final results = await Future.wait([
         _userService.getUserProfile(widget.userId),
@@ -64,6 +70,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final profileResult = results[0] as Map<String, dynamic>;
       final followersResult = results[1] as Map<String, dynamic>;
       final followingResult = results[2] as Map<String, dynamic>;
+
+      print('Profile result: $profileResult');
+      print('Followers result: $followersResult');
+      print('Following result: $followingResult');
 
       if (profileResult['success']) {
         final profile = profileResult['data'];
@@ -109,6 +119,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       }
     } catch (e) {
       setState(() {
+        _error = 'Failed to load profile: $e';
         _isLoading = false;
       });
     }
@@ -223,7 +234,29 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ? const Center(
               child: CircularProgressIndicator(color: Colors.white),
             )
-          : SingleChildScrollView(
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline,
+                          color: Theme.of(context).colorScheme.onPrimary, size: 48),
+                      const SizedBox(height: 16),
+                      Text(_error!,
+                          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => _loadUserProfile(),
+                        child: const Text('Try Again'),
+                      ),
+                    ],
+                  ),
+                )
+              : userProfile == null
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    )
+                  : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../data/models/notification_model.dart';
 import '../../../data/services/notification_service.dart';
 import '../../../data/services/notification_manager.dart';
-import '../chat/chat_list_screen.dart';
-import '../chat/chat_screen.dart';
-import '../chat/group_chat_screen.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
@@ -248,43 +246,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       });
     }
 
-    // Navigate based on notification type
+    // Navigate based on notification type using go_router
     switch (notification.type) {
       case NotificationType.message:
         if (notification.data.chatId != null) {
-          Navigator.pushNamed(context, '/chat', arguments: {
-            'chatId': notification.data.chatId,
-          });
+          context.push('/chat/${notification.data.chatId}');
         }
         break;
       case NotificationType.groupMessage:
         if (notification.data.groupChatId != null && currentUserId != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => GroupChatScreen(
-                groupChatId: notification.data.groupChatId!,
-                currentUserId: currentUserId!,
-              ),
-            ),
-          );
+          context.push('/group-chat/${notification.data.groupChatId}?currentUserId=$currentUserId');
         }
         break;
       case NotificationType.postLike:
       case NotificationType.postComment:
         if (notification.data.postId != null) {
-          Navigator.pushNamed(context, '/post', arguments: {
-            'postId': notification.data.postId,
-          });
+          context.push('/post/${notification.data.postId}');
         }
         break;
       case NotificationType.fanbasePostLike:
       case NotificationType.fanbasePostComment:
         if (notification.data.fanbasePostId != null && notification.data.fanbaseId != null) {
-          Navigator.pushNamed(context, '/fanbase-post', arguments: {
-            'fanbasePostId': notification.data.fanbasePostId,
-            'fanbaseId': notification.data.fanbaseId,
-          });
+          context.push('/fanbase-post/${notification.data.fanbasePostId}?fanbaseId=${notification.data.fanbaseId}');
         }
         break;
     }
