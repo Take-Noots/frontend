@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:Noot/data/models/fanbase_model.dart';
 import 'package:Noot/data/services/auth_service.dart';
 import 'package:Noot/data/services/fanbase_service.dart';
+import 'package:Noot/data/services/fanbase_report_service.dart';
 import 'package:Noot/presentation/widgets/fanbasepost/widgets/post_options_menu.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:Noot/presentation/screens/fanbasePost/fanbasePost_creation_screen.dart';
@@ -420,8 +421,7 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
   Future<void> _handleDeleteFanbase() async {
     final confirm = await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black
-          .withOpacity(0.7),
+      barrierColor: Colors.black.withOpacity(0.7),
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.primary,
         title: const Text('Delete Fanbase'),
@@ -432,7 +432,8 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel',
+            child: Text(
+              'Cancel',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onPrimary,
               ),
@@ -497,15 +498,14 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                 ),
               ] else ...[
                 ListTile(
-                  leading: const Icon(Icons.flag, color: Colors.orange),
-                  title: const Text('Report Fanbase'),
+                  leading: Icon(LucideIcons.flag, color: Colors.red),
+                  title: const Text(
+                    'Report Fanbase',
+                    style: TextStyle(color: Colors.red),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: Implement report functionality
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Report functionality coming soon')),
-                    );
+                    _showReportOptions(context);
                   },
                 ),
               ],
@@ -520,6 +520,313 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
       },
     );
   }
+
+  /// Shows report options modal
+  void _showReportOptions(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black;
+    final purpleColor = const Color(0xFFA855F7);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: backgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with rounded drag handle
+                Container(
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+
+                // Title with icon
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 8.0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        LucideIcons.flag,
+                        color: purpleColor,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Report Fanbase',
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 8.0),
+                  child: Text(
+                    'Why are you reporting this fanbase?',
+                    style: TextStyle(
+                      color: textColor.withOpacity(0.8),
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // Report options with enhanced styling
+                _buildReportOption(
+                  context,
+                  'Spam',
+                  LucideIcons.ban,
+                  textColor,
+                  purpleColor,
+                ),
+                _buildReportOption(
+                  context,
+                  'Inappropriate content',
+                  LucideIcons.alertTriangle,
+                  textColor,
+                  purpleColor,
+                ),
+                _buildReportOption(
+                  context,
+                  'Harmful or abusive',
+                  LucideIcons.shield,
+                  textColor,
+                  purpleColor,
+                ),
+                _buildReportOption(
+                  context,
+                  'Intellectual property violation',
+                  LucideIcons.copyright,
+                  textColor,
+                  purpleColor,
+                ),
+                _buildReportOption(
+                  context,
+                  'Other',
+                  LucideIcons.helpCircle,
+                  textColor,
+                  purpleColor,
+                ),
+
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Builds a single report option tile
+  Widget _buildReportOption(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color textColor,
+    Color purpleColor,
+  ) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      decoration: BoxDecoration(
+        color: textColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: textColor.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: purpleColor,
+          size: 20,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.w500,
+            fontSize: 16,
+          ),
+        ),
+        onTap: () {
+          Navigator.pop(context);
+          _submitReport(context, title);
+        },
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      ),
+    );
+  }
+
+  /// Submits the report to the backend
+  Future<void> _submitReport(BuildContext context, String reason) async {
+    if (_fanbase == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Error: Fanbase information not available'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show loading indicator
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: const [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Submitting report...'),
+          ],
+        ),
+        duration: const Duration(seconds: 30),
+        backgroundColor: Colors.grey,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(10),
+      ),
+    );
+
+    try {
+      final result = await FanbaseReportService.reportFanbase(
+        reportedFanbaseId: _fanbase!.id,
+        reportedUserId: _fanbase!.createdBy.id,
+        reason: reason,
+        description: 'User reported fanbase: ${_fanbase!.fanbaseName}',
+        context: context,
+      );
+
+      // Clear the loading snackbar first
+      messenger.clearSnackBars();
+
+      // Small delay to ensure the loading snackbar is cleared
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Check for success
+      final isSuccess = result['success'] == true;
+
+      if (isSuccess) {
+        // Show success message with a longer duration and different approach
+        messenger.showSnackBar(
+          SnackBar(
+            content: Row(
+              children: const [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Report submitted successfully! Thank you for helping keep our community safe.',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFA855F7),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      } else {
+        // Show error message
+        messenger.showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    result['message']?.toString() ?? 'Failed to submit report',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Exception in _submitReport: $e');
+
+      // Clear the loading snackbar
+      messenger.clearSnackBars();
+
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Error submitting report: $e',
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  // ...rest of existing code...
 
   @override
   Widget build(BuildContext context) {
