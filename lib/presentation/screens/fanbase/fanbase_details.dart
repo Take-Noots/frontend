@@ -206,8 +206,23 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                       'username': comment.userName,
                       'text': comment.comment,
                       'userId': comment.userId,
+                      'commentId': comment.commentId, // ✅ ADD THIS
                       'likeCount': comment.likeCount.toString(),
+                      'isLiked': comment.isLiked, // ✅ ADD THIS
                       'createdAt': comment.createdAt.toIso8601String(),
+                      'subComments': (comment.subComments)
+                          .map((subComment) => {
+                                // ✅ ADD THIS
+                                'username': subComment.userName,
+                                'text': subComment.comment,
+                                'userId': subComment.userId,
+                                'commentId': subComment.commentId,
+                                'likeCount': subComment.likeCount.toString(),
+                                'isLiked': subComment.isLiked,
+                                'createdAt':
+                                    subComment.createdAt.toIso8601String(),
+                              })
+                          .toList(),
                     })
                 .toList(),
             username: post.createdBy['userName'] ?? 'Unknown User',
