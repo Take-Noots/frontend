@@ -83,14 +83,16 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
         return post;
       }).toList();
 
-      // Fetch username for the profile
+      // Fetch username and profile image for the profile
       String? username;
+      String? profileImage;
       try {
         final profileResult =
             await profileService.getUserProfile(widget.userId);
         if (profileResult['success'] == true && profileResult['data'] != null) {
           final profile = ProfileModel.fromJson(profileResult['data']);
           username = profile.username;
+          profileImage = profile.profileImage;
         }
       } catch (_) {}
 
@@ -103,17 +105,32 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
         print("Found at index: $initialIndex");
       }
 
-      // Patch username if missing and copyWith is available
-      final postsWithUsername = posts.map((post) {
+      // Patch username and userImage if missing and copyWith is available
+      final postsWithUsernameAndImage = posts.map((post) {
+        bool needsUpdate = false;
+        String? newUsername = post.username;
+        String? newUserImage = post.userImage;
+
         if ((post.username == null || post.username!.isEmpty) &&
             username != null) {
-          return post.copyWith(username: username);
+          newUsername = username;
+          needsUpdate = true;
+        }
+
+        if ((post.userImage == null || post.userImage!.isEmpty) &&
+            profileImage != null) {
+          newUserImage = profileImage;
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          return post.copyWith(username: newUsername, userImage: newUserImage);
         }
         return post;
       }).toList();
 
       setState(() {
-        _posts = postsWithUsername;
+        _posts = postsWithUsernameAndImage;
         _initialIndex = initialIndex;
         _isLoading = false;
       });
@@ -255,7 +272,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
 
   Future<void> _handlePlay(data_model.Post post) async {
     //print('[DEBUG] HandlePlay: trackId=${post.trackId}, currentlyPlaying=$_currentlyPlayingTrackId, isPlaying=$_isPlaying');
-    
+
     if (_currentlyPlayingTrackId == post.trackId && _isPlaying) {
       //print('[DEBUG] HandlePlay: Pausing current track');
       setState(() {
@@ -303,7 +320,8 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
           _isPlaying = true;
         });
       } else {
-        print('[DEBUG] PlayTrack: Unexpected status code: ${response.statusCode}');
+        print(
+            '[DEBUG] PlayTrack: Unexpected status code: ${response.statusCode}');
       }
     } catch (e) {
       print('[DEBUG] PlayTrack Error: $e');
@@ -324,7 +342,8 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
           _isPlaying = false;
         });
       } else {
-        print('[DEBUG] PausePlayback: Unexpected status code: ${response.statusCode}');
+        print(
+            '[DEBUG] PausePlayback: Unexpected status code: ${response.statusCode}');
       }
     } catch (e) {
       print('[DEBUG] PausePlayback Error: $e');
