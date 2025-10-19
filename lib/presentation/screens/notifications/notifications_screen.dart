@@ -112,8 +112,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
       if (result['success']) {
         final responseData = result['data'];
-        final List<dynamic> notificationsData = responseData['notifications'];
-        final pagination = responseData['pagination'];
+        if (responseData == null) {
+          setState(() {
+            _error = 'No data received from server';
+            _isLoading = false;
+          });
+          return;
+        }
+
+        final List<dynamic> notificationsData = responseData['notifications'] ?? [];
+        final pagination = responseData['pagination'] ?? {};
 
         final notificationList = notificationsData
             .map((json) => NotificationModel.fromJson(json))
@@ -122,7 +130,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         setState(() {
           notifications = notificationList;
           currentPage = 1;
-          hasMorePages = pagination['currentPage'] < pagination['totalPages'];
+          hasMorePages = (pagination['currentPage'] ?? 1) < (pagination['totalPages'] ?? 1);
           _isLoading = false;
         });
       } else {
@@ -154,8 +162,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
       if (result['success']) {
         final responseData = result['data'];
-        final List<dynamic> notificationsData = responseData['notifications'];
-        final pagination = responseData['pagination'];
+        if (responseData == null) {
+          setState(() {
+            _isLoadingMore = false;
+          });
+          return;
+        }
+
+        final List<dynamic> notificationsData = responseData['notifications'] ?? [];
+        final pagination = responseData['pagination'] ?? {};
 
         final newNotifications = notificationsData
             .map((json) => NotificationModel.fromJson(json))
@@ -163,8 +178,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
         setState(() {
           notifications.addAll(newNotifications);
-          currentPage = pagination['currentPage'];
-          hasMorePages = pagination['currentPage'] < pagination['totalPages'];
+          currentPage = pagination['currentPage'] ?? currentPage;
+          hasMorePages = (pagination['currentPage'] ?? currentPage) < (pagination['totalPages'] ?? 1);
           _isLoadingMore = false;
         });
       } else {

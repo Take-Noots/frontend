@@ -12,14 +12,16 @@ class CreateAdvertisementScreen extends StatefulWidget {
   const CreateAdvertisementScreen({Key? key}) : super(key: key);
 
   @override
-  State<CreateAdvertisementScreen> createState() => _CreateAdvertisementScreenState();
+  State<CreateAdvertisementScreen> createState() =>
+      _CreateAdvertisementScreenState();
 }
 
 class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _contactDetailsController = TextEditingController();
+  final TextEditingController _contactDetailsController =
+      TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _genreController = TextEditingController();
   final TextEditingController _hashtagsController = TextEditingController();
@@ -100,32 +102,48 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
                 ),
                 const SizedBox(height: 20),
                 ListTile(
-                  leading: Icon(Icons.photo_library, color: Theme.of(context).colorScheme.secondary),
-                  title: Text('Photo from Gallery', style: TextStyle(fontWeight: FontWeight.w500, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                  leading: Icon(Icons.photo_library,
+                      color: Theme.of(context).colorScheme.secondary),
+                  title: Text('Photo from Gallery',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).textTheme.bodyLarge?.color)),
                   onTap: () {
                     Navigator.of(context).pop();
                     _pickMedia(ImageSource.gallery);
                   },
                 ),
                 ListTile(
-                  leading: Icon(Icons.photo_camera, color: Theme.of(context).colorScheme.secondary),
-                  title: Text('Photo from Camera', style: TextStyle(fontWeight: FontWeight.w500, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                  leading: Icon(Icons.photo_camera,
+                      color: Theme.of(context).colorScheme.secondary),
+                  title: Text('Photo from Camera',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).textTheme.bodyLarge?.color)),
                   onTap: () {
                     Navigator.of(context).pop();
                     _pickMedia(ImageSource.camera);
                   },
                 ),
                 ListTile(
-                  leading: Icon(Icons.video_library, color: Theme.of(context).colorScheme.secondary),
-                  title: Text('Video from Gallery', style: TextStyle(fontWeight: FontWeight.w500, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                  leading: Icon(Icons.video_library,
+                      color: Theme.of(context).colorScheme.secondary),
+                  title: Text('Video from Gallery',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).textTheme.bodyLarge?.color)),
                   onTap: () {
                     Navigator.of(context).pop();
                     _pickVideo(ImageSource.gallery);
                   },
                 ),
                 ListTile(
-                  leading: Icon(Icons.videocam, color: Theme.of(context).colorScheme.secondary),
-                  title: Text('Video from Camera', style: TextStyle(fontWeight: FontWeight.w500, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                  leading: Icon(Icons.videocam,
+                      color: Theme.of(context).colorScheme.secondary),
+                  title: Text('Video from Camera',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).textTheme.bodyLarge?.color)),
                   onTap: () {
                     Navigator.of(context).pop();
                     _pickVideo(ImageSource.camera);
@@ -146,7 +164,9 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
 
       if (!authProvider.isAuthenticated) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You must be logged in to create an advertisement')),
+          const SnackBar(
+              content:
+                  Text('You must be logged in to create an advertisement')),
         );
         return;
       }
@@ -158,16 +178,25 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
       final authService = AuthService(authProvider);
       final advertisementService = AdvertisementService(authService);
 
-      final result = await advertisementService.createAdvertisement(
+      final result = await advertisementService.createAdvertisementWithFile(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        image: null, // Not saving image to DB yet
-        video: null, // Not saving video to DB yet
-        contactDetails: _contactDetailsController.text.trim().isEmpty ? null : _contactDetailsController.text.trim(),
-        location: _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
-        genre: _genreController.text.trim().isEmpty ? null : _genreController.text.trim(),
-        hashtags: _hashtagsController.text.trim().isEmpty ? null : _hashtagsController.text.trim(),
-        keywords: _keywordsController.text.trim().isEmpty ? null : _keywordsController.text.trim(),
+        imageFile: _selectedMedia,
+        contactDetails: _contactDetailsController.text.trim().isEmpty
+            ? null
+            : _contactDetailsController.text.trim(),
+        location: _locationController.text.trim().isEmpty
+            ? null
+            : _locationController.text.trim(),
+        genre: _genreController.text.trim().isEmpty
+            ? null
+            : _genreController.text.trim(),
+        hashtags: _hashtagsController.text.trim().isEmpty
+            ? null
+            : _hashtagsController.text.trim(),
+        keywords: _keywordsController.text.trim().isEmpty
+            ? null
+            : _keywordsController.text.trim(),
       );
 
       setState(() {
@@ -188,7 +217,9 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Failed to create advertisement')),
+          SnackBar(
+              content:
+                  Text(result['message'] ?? 'Failed to create advertisement')),
         );
       }
     }
@@ -229,11 +260,13 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
             ),
             filled: true,
             fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.secondary, width: 2),
+              borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.secondary, width: 2),
             ),
             errorBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.red, width: 1),
@@ -242,12 +275,14 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
               borderSide: BorderSide(color: Colors.red, width: 2),
             ),
           ),
-          validator: required ? (value) {
-            if (value == null || value.isEmpty) {
-              return '$label is required';
-            }
-            return null;
-          } : null,
+          validator: required
+              ? (value) {
+                  if (value == null || value.isEmpty) {
+                    return '$label is required';
+                  }
+                  return null;
+                }
+              : null,
         ),
         const SizedBox(height: 20),
       ],
@@ -270,7 +305,8 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
         ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
-        iconTheme: IconThemeData(color: Theme.of(context).textTheme.titleLarge?.color),
+        iconTheme:
+            IconThemeData(color: Theme.of(context).textTheme.titleLarge?.color),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -325,7 +361,9 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
                     color: isDark ? Colors.grey[800] : Colors.grey[50],
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: _selectedMedia != null ? Theme.of(context).colorScheme.secondary : (isDark ? Colors.grey[600]! : Colors.grey[200]!),
+                      color: _selectedMedia != null
+                          ? Theme.of(context).colorScheme.secondary
+                          : (isDark ? Colors.grey[600]! : Colors.grey[200]!),
                       width: _selectedMedia != null ? 2 : 1,
                     ),
                   ),
@@ -339,7 +377,8 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
                                   child: Icon(
                                     Icons.video_file,
                                     size: 48,
-                                    color: Theme.of(context).colorScheme.secondary,
+                                    color:
+                                        Theme.of(context).colorScheme.secondary,
                                   ),
                                 )
                               : Image.file(
@@ -355,7 +394,10 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .secondary
+                                    .withOpacity(0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
@@ -368,7 +410,9 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
                             Text(
                               'Tap to select image or video',
                               style: TextStyle(
-                                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                color: isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -422,7 +466,8 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _onNextPressed,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isLoading ? Colors.grey : const Color(0xFF8E08EF),
+                    backgroundColor:
+                        _isLoading ? Colors.grey : const Color(0xFF8E08EF),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(
@@ -437,7 +482,8 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       : const Text(
