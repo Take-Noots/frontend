@@ -8,7 +8,9 @@ import '../../../data/services/song_post_service.dart';
 import '../../../data/services/thoughts_service.dart';
 import '../../widgets/thoughts/thoughts_feed_card.dart';
 import '../../widgets/song_post/comment.dart';
-import '../../widgets/home/header_bar.dart';
+import 'package:provider/provider.dart';
+import '../../../core/providers/theme_provider.dart';
+import '../../../data/services/auth_service.dart';
 
 class ThoughtFeedScreen extends StatefulWidget {
   final List<ThoughtsPost> posts;
@@ -37,6 +39,8 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
   int _initialIndex = 0;
   String? _currentUserId;
   late List<ThoughtsPost> _posts; // Local mutable list
+  bool _isPlaying = false;
+  String? _currentlyPlayingTrackId;
 
   @override
   void initState() {
@@ -246,10 +250,113 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
     );
   }
 
+  Future<void> _handlePlay(ThoughtsPost post) async {
+    print('[DEBUG] _handlePlay called for post: ${post.id}');
+    print('[DEBUG] _handlePlay songName: ${post.songName}');
+    print('[DEBUG] _handlePlay artistName: ${post.artistName}');
+    
+   
+    if (post.songName == null || post.songName!.isEmpty) {
+      print('[DEBUG] _handlePlay: No song information, returning early');
+      return;
+    }
+
+    if (_currentlyPlayingTrackId == post.trackId && _isPlaying) {
+      setState(() {
+        _isPlaying = false;
+      });
+      try {
+        await _pausePlayback();
+      } catch (e) {
+        setState(() {
+          _isPlaying = true;
+        });
+      }
+    } else {
+      setState(() {
+        _currentlyPlayingTrackId = post.trackId;
+        _isPlaying = true;
+      });
+      try {
+        await _playTrack(post);
+      } catch (e) {
+        setState(() {
+          _isPlaying = false;
+          _currentlyPlayingTrackId = null;
+        });
+      }
+    }
+  }
+
+  Future<void> _playTrack(ThoughtsPost post) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+      final response = await dio.post(
+        '/spotify/player/post/play',
+        data: {'track_id': post.trackId}, 
+      );
+      if (response.statusCode == 200 ||
+          response.statusCode == 202 ||
+          response.statusCode == 204) {
+        setState(() {
+          _currentlyPlayingTrackId = post.trackId;
+          _isPlaying = true;
+        });
+      } else {
+        print('[DEBUG] PlayTrack: Unexpected status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('[DEBUG] PlayTrack Error: $e');
+      setState(() {
+        _isPlaying = false;
+        _currentlyPlayingTrackId = null;
+      });
+    }
+  }
+
+  Future<void> _pausePlayback() async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+      final response = await dio.put('/spotify/player/post/pause');
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        setState(() {
+          _isPlaying = false;
+        });
+      } else {
+        print('[DEBUG] PausePlayback: Unexpected status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('[DEBUG] PausePlayback Error: $e');
+      setState(() {
+        _isPlaying = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: NootAppBar(),
+      appBar: AppBar(
+        title: const Text('Thoughts Feed'),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        centerTitle: true,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).colorScheme.onSurface),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.brightness_6,
+                color: Theme.of(context).colorScheme.onSurface),
+            onPressed: () {
+              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+            },
+          ),
+        ],
+      ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: ScrollablePositionedList.builder(
         itemScrollController: _itemScrollController,
@@ -257,10 +364,18 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
         itemCount: _posts.length,
         itemBuilder: (context, index) {
           final post = _posts[index];
+          print('[DEBUG] ThoughtFeedScreen: Creating ThoughtsFeedCard for post: ${post.id}');
+          print('[DEBUG] ThoughtFeedScreen: onPlayPause callback is null? ${(() => _handlePlay(post)) == null}');
           return ThoughtsFeedCard(
             post: post,
             onLike: () => _handleLike(post),
             onComment: () => _handleComment(post),
+            onPlayPause: () {
+              print('[DEBUG] onPlayPause callback called for post: ${post.id}');
+              _handlePlay(post);
+            },
+            isPlaying: _isPlaying && _currentlyPlayingTrackId == post.trackId,
+            isCurrentTrack: _currentlyPlayingTrackId == post.trackId,
             onPostUpdated: (updatedPost) {
               // Always remove from local list for immediate UI update
               setState(() {

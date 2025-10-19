@@ -79,9 +79,14 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
       final postsResult =
           await _songPostService.getPostsByIds(widget.savedPostIds, context);
       if (postsResult['success'] == true) {
-        final posts = (postsResult['posts'] as List)
-            .map<data_model.Post>((json) => data_model.Post.fromJson(json))
-            .toList();
+        final posts =
+            (postsResult['posts'] as List).map<data_model.Post>((json) {
+          final post = data_model.Post.fromJson(json);
+          post.likedByMe =
+              (json['likedBy'] as List<dynamic>?)?.contains(widget.userId) ??
+                  false;
+          return post;
+        }).toList();
 
         int initialIndex = 0;
         if (widget.initialPostId != null && widget.initialPostId!.isNotEmpty) {
@@ -139,7 +144,8 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
       }
     });
 
-    final result = await _songPostService.likePost(post.id, currentUserId);
+    final result =
+        await _songPostService.likePost(post.id, currentUserId, context);
     if (!(result['success'] == true)) {
       setState(() {
         if (post.likedByMe) {
@@ -175,7 +181,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
                 ? jsonDecode(userDataString)
                 : {'id': null, 'name': 'Anonymous'};
             final result = await _songPostService.addComment(
-                post.id, userData['id'], userData['name'], text);
+                post.id, userData['id'], userData['name'], text, context);
             if (result['success']) {
               final updatedComments =
                   (result['data']['comments'] as List<dynamic>)

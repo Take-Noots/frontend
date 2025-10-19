@@ -5,7 +5,7 @@ import '../../../widgets/common/full_screen_image_viewer.dart';
 // import '../../../widgets/profile/profile_header.dart';
 import '../profile_feed_screen.dart';
 
-class AlbumArtPostsTab extends StatelessWidget {
+class AlbumArtPostsTab extends StatefulWidget {
   final String username;
   final String fullName;
   final int posts;
@@ -19,6 +19,8 @@ class AlbumArtPostsTab extends StatelessWidget {
   final VoidCallback? onFollowersTap;
   final VoidCallback? onFollowingTap;
   final void Function(String postId)? onPostTap;
+  final VoidCallback? onRefreshStats;
+  final ValueNotifier<bool>? refreshNotifier;
 
   const AlbumArtPostsTab({
     Key? key,
@@ -35,15 +37,56 @@ class AlbumArtPostsTab extends StatelessWidget {
     this.onFollowersTap,
     this.onFollowingTap,
     this.onPostTap,
+    this.onRefreshStats,
+    this.refreshNotifier,
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final userId = postsList.isNotEmpty
-        ? (postsList[0] is Map ? postsList[0]['userId'] : postsList[0].userId)
+  State<AlbumArtPostsTab> createState() => _AlbumArtPostsTabState();
+}
+
+class _AlbumArtPostsTabState extends State<AlbumArtPostsTab> {
+  late Future<List<dynamic>> _postStatsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPostStats();
+    widget.refreshNotifier?.addListener(_onRefresh);
+  }
+
+  @override
+  void dispose() {
+    widget.refreshNotifier?.removeListener(_onRefresh);
+    super.dispose();
+  }
+
+  void _onRefresh() {
+    if (widget.refreshNotifier?.value == true) {
+      refreshStats();
+      widget.refreshNotifier?.value = false;
+    }
+  }
+
+  void _loadPostStats() {
+    final userId = widget.postsList.isNotEmpty
+        ? (widget.postsList[0] is Map
+            ? widget.postsList[0]['userId']
+            : widget.postsList[0].userId)
         : '';
+    _postStatsFuture = ProfileService().getUserPostStats(userId);
+  }
+
+  void refreshStats() {
+    setState(() {
+      _loadPostStats();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder<List<dynamic>>(
-      future: ProfileService().getUserPostStats(userId),
+      future: _postStatsFuture,
       builder: (context, snapshot) {
         final postStats = snapshot.data ?? [];
         // Make sure the grid is in a scrollable container
@@ -51,7 +94,7 @@ class AlbumArtPostsTab extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
-              if (!showGrid) ...[
+              if (!widget.showGrid) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(
                       vertical: 24.0, horizontal: 16.0),
@@ -60,12 +103,12 @@ class AlbumArtPostsTab extends StatelessWidget {
                       GestureDetector(
                         onTap: () {
                           // Open full screen image viewer
-                          final imageToShow =
-                              profileImage != null && profileImage!.isNotEmpty
-                                  ? profileImage!
-                                  : 'assets/images/hehe.png';
-                          final isAsset =
-                              profileImage == null || profileImage!.isEmpty;
+                          final imageToShow = widget.profileImage != null &&
+                                  widget.profileImage!.isNotEmpty
+                              ? widget.profileImage!
+                              : 'assets/images/hehe.png';
+                          final isAsset = widget.profileImage == null ||
+                              widget.profileImage!.isEmpty;
 
                           Navigator.push(
                             context,
@@ -79,14 +122,14 @@ class AlbumArtPostsTab extends StatelessWidget {
                         },
                         child: Hero(
                           tag:
-                              'profile_image_${profileImage ?? 'assets/images/hehe.png'}',
+                              'profile_image_${widget.profileImage ?? 'assets/images/hehe.png'}',
                           child: CircleAvatar(
                             radius: 44,
-                            backgroundImage:
-                                profileImage != null && profileImage!.isNotEmpty
-                                    ? NetworkImage(profileImage!)
-                                    : const AssetImage('assets/images/hehe.png')
-                                        as ImageProvider,
+                            backgroundImage: widget.profileImage != null &&
+                                    widget.profileImage!.isNotEmpty
+                                ? NetworkImage(widget.profileImage!)
+                                : const AssetImage('assets/images/hehe.png')
+                                    as ImageProvider,
                           ),
                         ),
                       ),
@@ -94,16 +137,17 @@ class AlbumArtPostsTab extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            ProfileStatColumn(label: 'Posts', count: posts),
+                            ProfileStatColumn(
+                                label: 'Posts', count: widget.posts),
                             GestureDetector(
-                              onTap: onFollowersTap,
+                              onTap: widget.onFollowersTap,
                               child: ProfileStatColumn(
-                                  label: 'Followers', count: followers),
+                                  label: 'Followers', count: widget.followers),
                             ),
                             GestureDetector(
-                              onTap: onFollowingTap,
+                              onTap: widget.onFollowingTap,
                               child: ProfileStatColumn(
-                                  label: 'Following', count: following),
+                                  label: 'Following', count: widget.following),
                             ),
                           ],
                         ),
@@ -119,13 +163,15 @@ class AlbumArtPostsTab extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          fullName.isNotEmpty ? fullName : username,
+                          widget.fullName.isNotEmpty
+                              ? widget.fullName
+                              : widget.username,
                           style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 18),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          description,
+                          widget.description,
                           style: const TextStyle(fontSize: 15),
                         ),
                       ],
@@ -133,9 +179,9 @@ class AlbumArtPostsTab extends StatelessWidget {
                   ),
                 ),
               ],
-              if (showGrid) ...[
+              if (widget.showGrid) ...[
                 const SizedBox(height: 16),
-                albumImages.isEmpty
+                widget.albumImages.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.all(32.0),
                         child: Center(
@@ -151,7 +197,7 @@ class AlbumArtPostsTab extends StatelessWidget {
                     : GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: albumImages.length,
+                        itemCount: widget.albumImages.length,
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3,
@@ -160,7 +206,7 @@ class AlbumArtPostsTab extends StatelessWidget {
                           childAspectRatio: 1,
                         ),
                         itemBuilder: (context, index) {
-                          final post = postsList[index];
+                          final post = widget.postsList[index];
                           final postId = post is Map ? post['id'] : post.id;
                           final userId =
                               post is Map ? post['userId'] : post.userId;
@@ -175,8 +221,8 @@ class AlbumArtPostsTab extends StatelessWidget {
                               stat != null ? stat['commentsCount'] ?? 0 : 0;
                           return GestureDetector(
                             onTap: () {
-                              if (onPostTap != null && postId != null) {
-                                onPostTap!(postId);
+                              if (widget.onPostTap != null && postId != null) {
+                                widget.onPostTap!(postId);
                               } else {
                                 Navigator.push(
                                   context,
@@ -192,7 +238,7 @@ class AlbumArtPostsTab extends StatelessWidget {
                             child: Stack(
                               children: [
                                 Image.network(
-                                  albumImages[index],
+                                  widget.albumImages[index],
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   height: double.infinity,
