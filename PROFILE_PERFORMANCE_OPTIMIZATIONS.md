@@ -1,15 +1,19 @@
 # Profile Performance Optimizations
 
 ## Overview
+
 Optimized profile loading to make it **significantly faster** when loading from cache by eliminating unnecessary data processing and network transfers.
 
 ## Optimizations Applied
 
 ### 1. Backend Optimization: Lean Post Stats Response
+
 **File**: `backend-nestjs/src/modules/profile/profile.service.ts`
 
 #### Problem
+
 The `getPostStatsByUserId` endpoint was returning complete comment objects with all fields:
+
 ```typescript
 {
   postId: "68779080b84cd5c8b538152a",
@@ -33,11 +37,13 @@ The `getPostStatsByUserId` endpoint was returning complete comment objects with 
 ```
 
 #### Solution
+
 Removed the `comments` array since **album art grid only needs counts**:
+
 ```typescript
 const songPostStats = songPosts.map((post) => ({
   postId: post._id?.toString(),
-  type: 'SongPost',
+  type: "SongPost",
   likes: post.likes || 0,
   commentsCount: post.comments ? post.comments.length : 0,
   // ✅ No comments array - only counts needed
@@ -45,6 +51,7 @@ const songPostStats = songPosts.map((post) => ({
 ```
 
 #### Benefits
+
 - **90% smaller response** for posts with many comments
 - **Faster network transfer**
 - **Smaller cache size** in ProfileProvider
@@ -53,10 +60,13 @@ const songPostStats = songPosts.map((post) => ({
 ---
 
 ### 2. Frontend Optimization: Skip Post JSON Conversion
+
 **File**: `frontend/lib/presentation/screens/profile/my_profile.dart`
 
 #### Problem
+
 Profile was converting all post JSON to Post objects on every load:
+
 ```dart
 // ❌ Expensive operation on every profile load
 final postObjects = cachedProfile.posts.map((json) => Post.fromJson(json)).toList();
@@ -68,7 +78,9 @@ setState(() {
 With 50 posts, this could take **100-500ms** depending on device performance.
 
 #### Solution
+
 Pass raw JSON directly since `AlbumArtPostsTab` handles both formats:
+
 ```dart
 // ✅ Zero conversion cost - instant!
 setState(() {
@@ -77,12 +89,14 @@ setState(() {
 ```
 
 The `AlbumArtPostsTab` already handles both formats:
+
 ```dart
 final postId = post is Map ? post['id'] : post.id;  // Works with both!
 final userId = post is Map ? post['userId'] : post.userId;
 ```
 
 #### Benefits
+
 - **Eliminated 100-500ms delay** on profile load from cache
 - **No CPU overhead** for JSON parsing
 - **Instant profile display** when using cached data
@@ -90,10 +104,13 @@ final userId = post is Map ? post['userId'] : post.userId;
 ---
 
 ### 3. Provider Optimization: Cached Post Stats
+
 **File**: `frontend/lib/core/providers/profile_provider.dart`
 
 #### Enhancement
+
 Added `postStats` to cached profile data:
+
 ```dart
 class CachedProfile {
   final List<dynamic> posts;
@@ -104,6 +121,7 @@ class CachedProfile {
 ```
 
 Fetch post stats in parallel with other data:
+
 ```dart
 final results = await Future.wait([
   _profileService.getUserProfile(userId),
@@ -115,6 +133,7 @@ final results = await Future.wait([
 ```
 
 #### Benefits
+
 - **No separate API call** for post stats when using cache
 - **All profile data** loaded in single provider operation
 - **Consistent caching** across all profile data
@@ -122,14 +141,17 @@ final results = await Future.wait([
 ---
 
 ### 4. Widget Optimization: Use Cached Stats
+
 **File**: `frontend/lib/presentation/screens/profile/tabs/album_art_posts_tab.dart`
 
 #### Enhancement
+
 Accept pre-fetched stats from cache:
+
 ```dart
 class AlbumArtPostsTab extends StatefulWidget {
   final List<dynamic>? cachedPostStats;  // ✅ Optional cached stats
-  
+
   @override
   Widget build(BuildContext context) {
     // Use cached stats if available, otherwise fetch
@@ -142,6 +164,7 @@ class AlbumArtPostsTab extends StatefulWidget {
 ```
 
 #### Benefits
+
 - **No redundant API calls** when stats are cached
 - **Instant stat display** on cached profile load
 - **Graceful fallback** for non-cached scenarios
@@ -151,6 +174,7 @@ class AlbumArtPostsTab extends StatefulWidget {
 ## Performance Impact
 
 ### Before Optimizations
+
 ```
 Open Profile (cached):
 ├─ ProfileProvider.loadProfile()     ~5-10ms
@@ -160,6 +184,7 @@ Open Profile (cached):
 ```
 
 ### After Optimizations
+
 ```
 Open Profile (cached):
 ├─ ProfileProvider.loadProfile()     ~5-10ms
@@ -175,11 +200,13 @@ Open Profile (cached):
 ## User Experience Impact
 
 ### Before
+
 - Navigate away from profile
 - Return to profile → **noticeable lag** (300-900ms)
 - Stats appear after delay
 
 ### After
+
 - Navigate away from profile
 - Return to profile → **instant** (5-10ms)
 - Everything appears immediately
@@ -190,6 +217,7 @@ Open Profile (cached):
 ## Cache Behavior
 
 The profile cache:
+
 - ✅ **Duration**: 5 minutes
 - ✅ **Smart detection**: Checks for post count, followers, following changes
 - ✅ **Force refresh**: Pull-to-refresh or explicit invalidation
@@ -213,12 +241,14 @@ The profile cache:
 ## Code Quality
 
 ### Removed
+
 - ❌ Unused Post model import in `my_profile.dart`
 - ❌ Expensive `Post.fromJson()` conversion
 - ❌ Redundant post stats API calls
 - ❌ Unnecessary `comments` array in post stats response
 
 ### Added
+
 - ✅ Performance-optimized data flow
 - ✅ Proper cache utilization
 - ✅ Lean API responses

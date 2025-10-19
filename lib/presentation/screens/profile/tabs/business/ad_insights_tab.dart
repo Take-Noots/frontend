@@ -3,8 +3,10 @@ import '../../../../../data/services/analytics_service.dart';
 
 class BusinessAdInsightsTab extends StatefulWidget {
   final String userId;
+  final ValueNotifier<bool>? refreshNotifier;
 
-  const BusinessAdInsightsTab({Key? key, required this.userId})
+  const BusinessAdInsightsTab(
+      {Key? key, required this.userId, this.refreshNotifier})
       : super(key: key);
 
   @override
@@ -36,6 +38,17 @@ class _BusinessAdInsightsTabState extends State<BusinessAdInsightsTab> {
   void initState() {
     super.initState();
     _loadAnalyticsData();
+    widget.refreshNotifier?.addListener(_onRefresh);
+  }
+
+  @override
+  void dispose() {
+    widget.refreshNotifier?.removeListener(_onRefresh);
+    super.dispose();
+  }
+
+  void _onRefresh() {
+    _loadAnalyticsData();
   }
 
   Future<void> _loadAnalyticsData() async {
@@ -56,12 +69,15 @@ class _BusinessAdInsightsTabState extends State<BusinessAdInsightsTab> {
       final contentResult = results[1];
       final growthResult = results[2];
 
-      if (userResult['success'] && contentResult['success'] && growthResult['success']) {
+      if (userResult['success'] &&
+          contentResult['success'] &&
+          growthResult['success']) {
         setState(() {
           _userMetrics = userResult['data'];
           _contentMetrics = contentResult['data'];
           _growthMetrics = growthResult['data'];
-          _chartData = _analyticsService.parseGrowthDataForChart(_growthMetrics, 'posts');
+          _chartData = _analyticsService.parseGrowthDataForChart(
+              _growthMetrics, 'posts');
           _isLoading = false;
         });
       } else {
@@ -80,13 +96,20 @@ class _BusinessAdInsightsTabState extends State<BusinessAdInsightsTab> {
 
   String _getPeriodKey() {
     switch (_selectedRange) {
-      case 'Last 7 days': return '7d';
-      case 'Last 30 days': return '30d';
-      case '3 months': return '90d';
-      case '6 months': return '180d';
-      case 'Last year': return '365d';
-      case 'All time': return 'all';
-      default: return '30d';
+      case 'Last 7 days':
+        return '7d';
+      case 'Last 30 days':
+        return '30d';
+      case '3 months':
+        return '90d';
+      case '6 months':
+        return '180d';
+      case 'Last year':
+        return '365d';
+      case 'All time':
+        return 'all';
+      default:
+        return '30d';
     }
   }
 
@@ -118,7 +141,8 @@ class _BusinessAdInsightsTabState extends State<BusinessAdInsightsTab> {
                     DropdownButton<String>(
                       value: _selectedRange,
                       items: _ranges
-                          .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                          .map(
+                              (r) => DropdownMenuItem(value: r, child: Text(r)))
                           .toList(),
                       onChanged: (v) {
                         if (v == null) return;
@@ -132,9 +156,7 @@ class _BusinessAdInsightsTabState extends State<BusinessAdInsightsTab> {
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
             if (_isLoading)
               const Center(child: CircularProgressIndicator())
             else if (_error != null)
@@ -158,34 +180,28 @@ class _BusinessAdInsightsTabState extends State<BusinessAdInsightsTab> {
             else ...[
               Row(
                 children: <Widget>[
-                  Expanded(child: _metricCard(
-                    'Total Users',
-                    _formatNumber(_userMetrics['total'] ?? 0),
-                    Colors.purple
-                  )),
+                  Expanded(
+                      child: _metricCard(
+                          'Total Users',
+                          _formatNumber(_userMetrics['total'] ?? 0),
+                          Colors.purple)),
                   const SizedBox(width: 8),
-                  Expanded(child: _metricCard(
-                    'Total Posts',
-                    _formatNumber(_contentMetrics['total'] ?? 0),
-                    Colors.orange
-                  )),
+                  Expanded(
+                      child: _metricCard(
+                          'Total Posts',
+                          _formatNumber(_contentMetrics['total'] ?? 0),
+                          Colors.orange)),
                 ],
               ),
-
               const SizedBox(height: 8),
-              _metricCard(
-                'Active Users',
-                _formatNumber(_userMetrics['active'] ?? 0),
-                Colors.teal
-              ),
+              _metricCard('Active Users',
+                  _formatNumber(_userMetrics['active'] ?? 0), Colors.teal),
             ],
-
             const SizedBox(height: 16),
-
             if (!_isLoading && _error == null) ...[
-              const Text('Platform Growth over time', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Platform Growth over time',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-
               SizedBox(
                 height: 180,
                 child: Card(
@@ -196,30 +212,23 @@ class _BusinessAdInsightsTabState extends State<BusinessAdInsightsTab> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 12),
-
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.analytics_outlined),
                   title: const Text('Platform Insights'),
                   subtitle: Text(
-                    'Total Content: ${_formatNumber(_contentMetrics['total'] ?? 0)} posts • '
-                    'Moderators: ${_userMetrics['moderators'] ?? 0}'
-                  ),
+                      'Total Content: ${_formatNumber(_contentMetrics['total'] ?? 0)} posts • '
+                      'Moderators: ${_userMetrics['moderators'] ?? 0}'),
                 ),
               ),
-
               const SizedBox(height: 8),
-
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.trending_up_outlined),
                   title: const Text('Growth Summary'),
-                  subtitle: Text(
-                    'Period: $_selectedRange • '
-                    'Popular Posts: ${_contentMetrics['popular'] ?? 0}'
-                  ),
+                  subtitle: Text('Period: $_selectedRange • '
+                      'Popular Posts: ${_contentMetrics['popular'] ?? 0}'),
                 ),
               ),
             ],
@@ -237,9 +246,12 @@ class _BusinessAdInsightsTabState extends State<BusinessAdInsightsTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+            Text(title,
+                style: const TextStyle(fontSize: 12, color: Colors.black54)),
             const SizedBox(height: 8),
-            Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold, color: color)),
           ],
         ),
       ),

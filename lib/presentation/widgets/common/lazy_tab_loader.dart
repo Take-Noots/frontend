@@ -30,7 +30,8 @@ class _LazyTabLoaderState extends State<LazyTabLoader>
     // Only build the child once it's been viewed
     if (!_hasBeenBuilt) {
       _hasBeenBuilt = true;
-      debugPrint('🔄 [LazyTabLoader] Building ${widget.debugLabel} for first time');
+      debugPrint(
+          '🔄 [LazyTabLoader] Building ${widget.debugLabel} for first time');
     }
 
     return widget.child;
@@ -68,7 +69,8 @@ class _LazyTabLoaderWithPlaceholderState
     super.build(context);
 
     if (_cachedChild == null) {
-      debugPrint('🔄 [LazyTabLoader] Building ${widget.debugLabel} for first time');
+      debugPrint(
+          '🔄 [LazyTabLoader] Building ${widget.debugLabel} for first time');
       _cachedChild = widget.builder();
     }
 

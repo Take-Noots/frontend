@@ -141,42 +141,23 @@ class ProfileService {
   // Fetch user's thought posts
   Future<List<dynamic>> getUserThoughtPosts(String userId) async {
     try {
-      // Use authenticated Dio if authService is available
-      if (authService != null) {
-        final dio = authService!.dio;
-        final response = await dio.get('/thoughts/user/$userId');
-        debugPrint('📝 [ProfileService] getUserThoughtPosts response: ${response.data}');
-        
-        if (response.statusCode == 200) {
-          final data = response.data;
-          if (data is List) {
-            return data;
-          } else if (data is Map && data['data'] is List) {
-            return data['data'] as List<dynamic>;
-          }
-          return [];
-        }
-        return [];
-      }
-      
-      // Fallback to unauthenticated request
       final response = await http.get(
         Uri.parse('${AppConstants.baseUrl}/thoughts/user/$userId'),
         headers: {'Content-Type': 'application/json'},
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data is List) {
-          return data;
-        } else if (data is Map && data['data'] is List) {
+        if (data is Map && data['data'] is List) {
           return data['data'] as List<dynamic>;
+        } else if (data is List) {
+          return data;
         }
         return [];
       } else {
         return [];
       }
     } catch (e) {
-      debugPrint('❌ [ProfileService] Error fetching user thought posts: $e');
+      debugPrint('Error fetching user thought posts: $e');
       return [];
     }
   }

@@ -3,6 +3,7 @@ import '../../../widgets/profile/profile_stat_column.dart';
 import '../../../../data/services/profile_service.dart';
 import '../../../widgets/common/full_screen_image_viewer.dart';
 // import '../../../widgets/profile/profile_header.dart';
+import '../../../widgets/loading_screens/profile_grid_skeleton.dart';
 import '../profile_feed_screen.dart';
 
 class AlbumArtPostsTab extends StatefulWidget {
@@ -17,6 +18,7 @@ class AlbumArtPostsTab extends StatefulWidget {
   final String? profileImage;
   final List<dynamic> postsList;
   final List<dynamic>? cachedPostStats; // Add cached post stats
+  final bool isLoading; // Add loading state
   final VoidCallback? onFollowersTap;
   final VoidCallback? onFollowingTap;
   final void Function(String postId)? onPostTap;
@@ -36,6 +38,7 @@ class AlbumArtPostsTab extends StatefulWidget {
     this.profileImage,
     required this.postsList,
     this.cachedPostStats,
+    this.isLoading = false, // Default to false
     this.onFollowersTap,
     this.onFollowingTap,
     this.onPostTap,
@@ -94,7 +97,7 @@ class _AlbumArtPostsTabState extends State<AlbumArtPostsTab> {
     if (widget.cachedPostStats != null) {
       return _buildContent(widget.cachedPostStats!);
     }
-    
+
     return FutureBuilder<List<dynamic>>(
       future: _postStatsFuture,
       builder: (context, snapshot) {
@@ -104,100 +107,105 @@ class _AlbumArtPostsTabState extends State<AlbumArtPostsTab> {
     );
   }
 
+  Widget _buildSkeletonGrid() {
+    return const ProfileGridSkeleton();
+  }
+
   Widget _buildContent(List<dynamic> postStats) {
     // Make sure the grid is in a scrollable container
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       child: Column(
         children: [
-              if (!widget.showGrid) ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 24.0, horizontal: 16.0),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          // Open full screen image viewer
-                          final imageToShow = widget.profileImage != null &&
-                                  widget.profileImage!.isNotEmpty
-                              ? widget.profileImage!
-                              : 'assets/images/hehe.png';
-                          final isAsset = widget.profileImage == null ||
-                              widget.profileImage!.isEmpty;
+          if (!widget.showGrid) ...[
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      // Open full screen image viewer
+                      final imageToShow = widget.profileImage != null &&
+                              widget.profileImage!.isNotEmpty
+                          ? widget.profileImage!
+                          : 'assets/images/hehe.png';
+                      final isAsset = widget.profileImage == null ||
+                          widget.profileImage!.isEmpty;
 
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => FullScreenImageViewer(
-                                imageUrl: imageToShow,
-                                isAssetImage: isAsset,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Hero(
-                          tag:
-                              'profile_image_${widget.profileImage ?? 'assets/images/hehe.png'}',
-                          child: CircleAvatar(
-                            radius: 44,
-                            backgroundImage: widget.profileImage != null &&
-                                    widget.profileImage!.isNotEmpty
-                                ? NetworkImage(widget.profileImage!)
-                                : const AssetImage('assets/images/hehe.png')
-                                    as ImageProvider,
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FullScreenImageViewer(
+                            imageUrl: imageToShow,
+                            isAssetImage: isAsset,
                           ),
                         ),
+                      );
+                    },
+                    child: Hero(
+                      tag:
+                          'profile_image_${widget.profileImage ?? 'assets/images/hehe.png'}',
+                      child: CircleAvatar(
+                        radius: 44,
+                        backgroundImage: widget.profileImage != null &&
+                                widget.profileImage!.isNotEmpty
+                            ? NetworkImage(widget.profileImage!)
+                            : const AssetImage('assets/images/hehe.png')
+                                as ImageProvider,
                       ),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            ProfileStatColumn(
-                                label: 'Posts', count: widget.posts),
-                            GestureDetector(
-                              onTap: widget.onFollowersTap,
-                              child: ProfileStatColumn(
-                                  label: 'Followers', count: widget.followers),
-                            ),
-                            GestureDetector(
-                              onTap: widget.onFollowingTap,
-                              child: ProfileStatColumn(
-                                  label: 'Following', count: widget.following),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Text(
-                          widget.fullName.isNotEmpty
-                              ? widget.fullName
-                              : widget.username,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 18),
+                        ProfileStatColumn(label: 'Posts', count: widget.posts),
+                        GestureDetector(
+                          onTap: widget.onFollowersTap,
+                          child: ProfileStatColumn(
+                              label: 'Followers', count: widget.followers),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          widget.description,
-                          style: const TextStyle(fontSize: 15),
+                        GestureDetector(
+                          onTap: widget.onFollowingTap,
+                          child: ProfileStatColumn(
+                              label: 'Following', count: widget.following),
                         ),
                       ],
                     ),
                   ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.fullName.isNotEmpty
+                          ? widget.fullName
+                          : widget.username,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      widget.description,
+                      style: const TextStyle(fontSize: 15),
+                    ),
+                  ],
                 ),
-              ],
-              if (widget.showGrid) ...[
-                const SizedBox(height: 16),
-                widget.albumImages.isEmpty
+              ),
+            ),
+          ],
+          if (widget.showGrid) ...[
+            const SizedBox(height: 16),
+            widget.albumImages.isEmpty && widget.isLoading
+                ? _buildSkeletonGrid()
+                : widget.albumImages.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.all(32.0),
                         child: Center(
@@ -224,7 +232,9 @@ class _AlbumArtPostsTabState extends State<AlbumArtPostsTab> {
                         itemBuilder: (context, index) {
                           final post = widget.postsList[index];
                           // Check both 'id' and '_id' fields for compatibility
-                          final postId = post is Map ? (post['id'] ?? post['_id']) : post.id;
+                          final postId = post is Map
+                              ? (post['id'] ?? post['_id'])
+                              : post.id;
                           final userId =
                               post is Map ? post['userId'] : post.userId;
                           final stat = postStats.firstWhere(
@@ -311,9 +321,9 @@ class _AlbumArtPostsTabState extends State<AlbumArtPostsTab> {
                           );
                         },
                       ),
-              ],
-            ],
-          ),
-        );
+          ],
+        ],
+      ),
+    );
   }
 }
