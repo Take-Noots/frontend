@@ -3,10 +3,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:dio/dio.dart';
+import 'package:provider/provider.dart';
 // ...existing code...
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers/auth_provider.dart';
 import '../../../../data/models/profile_model.dart';
 import '../../../../data/services/profile_service.dart';
-import '../../../../data/services/cloudinary_service.dart';
 import '../../../../presentation/widgets/loading_screens/common_loading.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -25,7 +28,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   String userType = 'public'; // Default user type
 
   final ProfileService _service = ProfileService();
-  final CloudinaryService _cloudinaryService = CloudinaryService();
   final ImagePicker _imagePicker = ImagePicker();
 
   bool _loading = true;
@@ -220,22 +222,44 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       setState(() => _uploading = true);
 
-      // Upload to Cloudinary
-      final file = File(pickedFile.path);
-      final imageUrl = await _cloudinaryService.uploadImage(
-        file,
-        folder: 'profile_pictures',
-      );
-
-      if (mounted) {
-        setState(() {
-          profileImage = imageUrl;
-          _uploading = false;
-        });
-
+      // Get userId from AuthProvider
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userId = authProvider.user?.id;
+      if (userId == null) {
+        setState(() => _uploading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Image uploaded successfully!')),
+          const SnackBar(content: Text('User not logged in')),
         );
+        return;
+      }
+
+      // Upload to backend
+      final file = File(pickedFile.path);
+      final formData = FormData.fromMap({
+        'profileImage': await MultipartFile.fromFile(file.path,
+            filename: 'profile_image.jpg'),
+      });
+
+      final dio = Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
+      final response = await dio.post('/profile/$userId/upload-profile-picture',
+          data: formData);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data;
+        final imageUrl = data['imageUrl'];
+        if (imageUrl != null) {
+          setState(() {
+            profileImage = imageUrl;
+            _uploading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Image uploaded successfully!')),
+          );
+        } else {
+          throw Exception('No image URL in response');
+        }
+      } else {
+        throw Exception('Upload failed: ${response.statusMessage}');
       }
     } catch (e) {
       if (mounted) {
