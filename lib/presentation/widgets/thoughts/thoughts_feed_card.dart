@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:palette_generator/palette_generator.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'dart:convert';
 import '../../../data/models/thoughts_model.dart';
 import '../../../data/services/thoughts_service.dart';
-import '../../../data/services/auth_service.dart';
-import '../../../data/services/spotify_service.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../despost/widgets/TMP_des_post_bg_container.dart';
 import '../song_post/comment.dart';
 import '../song_post/post_options_menu.dart';
 import '../../../data/models/post_model.dart' as data_model;
 import '../../../data/services/song_post_service.dart';
-import '../../../data/services/thoughts_service.dart';
 import '../../../core/styles/app_colors.dart';
 import '../../screens/thoughts_posts/update_thoughts.dart';
 
+// ================= ThoughtsFeedCard (Main Widget) =================
 class ThoughtsFeedCard extends StatefulWidget {
   final ThoughtsPost post;
   final VoidCallback? onLike;
@@ -76,17 +74,17 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     super.didUpdateWidget(oldWidget);
     // Update local post when parent updates
     if (widget.post != oldWidget.post) {
-          setState(() {
+      setState(() {
         _currentPost = widget.post;
       });
     }
   }
 
   Future<void> _extractColorFromCoverImage() async {
-
-          setState(() {
+    setState(() {
       _extractedColor = _currentPost.backgroundColor != null
-          ? Color(int.parse(_currentPost.backgroundColor!.replaceFirst('#', '0xFF')))
+          ? Color(int.parse(
+              _currentPost.backgroundColor!.replaceFirst('#', '0xFF')))
           : null; // Will use default color
     });
   }
@@ -100,14 +98,13 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     if (currentUserId == null) {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      final userData = userDataString != null
-          ? jsonDecode(userDataString)
-          : {'id': ''}; 
+      final userData =
+          userDataString != null ? jsonDecode(userDataString) : {'id': ''};
       currentUserId = userData['id'];
     }
 
     if (mounted) {
-    setState(() {
+      setState(() {
         _currentUserId = currentUserId;
       });
     }
@@ -125,7 +122,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
       postUserId: _currentPost.userId,
       currentUserId: _currentUserId,
       isOwnPost: isOwnPost,
-      isSaved: _currentPost.isSaved, 
+      isSaved: _currentPost.isSaved,
       postId: _currentPost.id,
       onSharePost: () {
         // print('Copy link pressed for thoughts post: ${_currentPost.id}');
@@ -145,15 +142,21 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         // print('Report pressed for thoughts post: ${_currentPost.id}');
         // TODO: Implement report functionality
       },
-      onEdit: isOwnPost ? () async {
-        await _handleEditPost();
-      } : null,
-      onDelete: isOwnPost ? () {
-        _handleDeletePost();
-      } : null,
-      onHide: isOwnPost ? () {
-        _handleHidePost();
-      } : null,
+      onEdit: isOwnPost
+          ? () async {
+              await _handleEditPost();
+            }
+          : null,
+      onDelete: isOwnPost
+          ? () {
+              _handleDeletePost();
+            }
+          : null,
+      onHide: isOwnPost
+          ? () {
+              _handleHidePost();
+            }
+          : null,
     );
   }
 
@@ -186,20 +189,15 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     String? currentUserId = authProvider.user?.id;
 
-    //print('[DEBUG] _handleComment: AuthProvider user ID: $currentUserId');
-    //print('[DEBUG] _handleComment: AuthProvider user: ${authProvider.user}');
-
-    
+    // Fallback to SharedPreferences if AuthProvider doesn't have user ID
     if (currentUserId == null) {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      //print('[DEBUG] _handleComment: SharedPreferences user_data: $userDataString');
 
       final userData = userDataString != null
           ? jsonDecode(userDataString)
-          : {'id': '685fb750cc084ba7e0ef8533'}; 
+          : {'id': '685fb750cc084ba7e0ef8533'};
       currentUserId = userData['id'];
-      //print('[DEBUG] _handleComment: Fallback user ID: $currentUserId');
     }
 
     if (currentUserId == null || currentUserId.isEmpty) {
@@ -223,11 +221,9 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         latestComments = (postData['comments'] as List<dynamic>)
             .map((c) => ThoughtsComment.fromJson(c))
             .toList();
-        // print('[DEBUG] Fetched latest comments: ${latestComments.length}');
       }
     }
 
-   
     final convertedComments = latestComments.map((thoughtsComment) {
       return data_model.Comment(
         id: thoughtsComment.id,
@@ -249,11 +245,6 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
         child: CommentSection(
           comments: convertedComments,
           onAddComment: (text) async {
-            //print('[DEBUG] Adding comment: $text');
-            //print('[DEBUG] Post ID: ${_currentPost.id}');
-            //print('[DEBUG] User ID: $currentUserId');
-            //print('[DEBUG] Comment text: $text');
-
             // Get current user info for optimistic update
             final prefs = await SharedPreferences.getInstance();
             final userDataString = prefs.getString('user_data');
@@ -261,9 +252,9 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 ? jsonDecode(userDataString)
                 : {'id': currentUserId, 'name': 'User'};
 
-            // Create optimistic comment 
+            // Create optimistic comment
             final optimisticComment = data_model.Comment(
-              id: 'temp_${DateTime.now().millisecondsSinceEpoch}', 
+              id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
               userId: currentUserId!,
               username: userData['name'] ?? 'User',
               text: text,
@@ -277,9 +268,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 List<data_model.Comment>.from(convertedComments)
                   ..add(optimisticComment);
 
-            // print('[DEBUG] Showing optimistic comment immediately');
-
-            
+            // Now add to database in background
             try {
               final result = await _thoughtsService.addComment(
                 _currentPost.id,
@@ -287,12 +276,6 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 text,
                 context,
               );
-
-              //print('[DEBUG] Comment add result: $result');
-              //print('[DEBUG] Comment add result type: ${result.runtimeType}');
-              //print('[DEBUG] Comment add result keys: ${result.keys}');
-              //print('[DEBUG] Comment add success value: ${result['success']}');
-              //print('[DEBUG] Comment add data value: ${result['data']}');
 
               // Check if success - handle different response formats
               bool isSuccess = false;
@@ -364,15 +347,11 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 // Notify parent widget
                 widget.onPostUpdated?.call(_currentPost);
 
-                //print('[DEBUG] Comment successfully added to database');
-
                 // Comment added successfully - no need to show SnackBar
 
                 return convertedUpdatedComments;
               } else {
-     
-    // print('[DEBUG] Database failed, removing optimistic comment');
-
+                // Database failed, remove optimistic comment
                 // Handle error message - it might be a string or array
                 String errorMessage = 'Failed to add comment';
                 if (result['message'] != null) {
@@ -384,33 +363,30 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 }
 
                 if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(errorMessage),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+
+                return convertedComments;
+              }
+            } catch (e) {
+              // Network error, remove optimistic comment
+              if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(errorMessage),
+                  const SnackBar(
+                    content: Text('Network error. Please try again.'),
                     backgroundColor: Colors.red,
                   ),
                 );
-                }
-
-                return convertedComments; 
-              }
-            } catch (e) {
-
-    // print('[DEBUG] Network error: $e');
-
-              if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Network error. Please try again.'),
-                  backgroundColor: Colors.red,
-                ),
-              );
               }
 
-              return convertedComments; 
+              return convertedComments;
             }
 
-            
             return optimisticComments;
           },
           postId: _currentPost.id,
@@ -429,77 +405,47 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
   @override
   Widget build(BuildContext context) {
     final Color backgroundColor = _extractedColor ?? _defaultColor;
-    const double postAspectRatio = 490 / 350;
+    // Aspect ratio from TMP_des_post_bg_container.dart
+    const double postAspectRatio = 372 / 228;
 
-    return Stack(
-      children: [
-        // Main card container
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxHeight: 350, 
-            ),
-            child: AspectRatio(
-              aspectRatio: postAspectRatio,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Background layer with custom shape
-                  CustomPaint(
-                    painter: PostShape(backgroundColor: backgroundColor),
-                    child: Container(),
-                  ),
-                  // Content layer
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 16.0),
-                    child: _ThoughtsContent(
-                      post: _currentPost,
-                      onUserTap: widget.onUserTap,
-                      backgroundColor: _extractedColor ?? _defaultColor,
-                      onPlayPause: widget.onPlayPause,
-                      onOptionsTap: widget.onOptionsTap ?? _handleOptionsTap,
-                      isPlaying: widget.isPlaying,
-                      isCurrentTrack: widget.isCurrentTrack,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: AspectRatio(
+        aspectRatio: postAspectRatio,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Get parent dimensions for responsive sizing
+            final parentWidth = constraints.maxWidth;
+            final parentHeight = constraints.maxHeight;
 
-        Positioned(
-          bottom: 10,
-          left: 16,
-          right: 16,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Song info on the left
-              Expanded(
-                child: _SongInfoSection(post: _currentPost),
-              ),
-              // Interaction buttons on the right
-              _InteractionButtons(
-                post: _currentPost,
-                onLike: () {
-             
-                  if (widget.onLike != null) {
-                    widget.onLike!();
-                  }
-                },
-                onComment: () {
-                 
-                  if (widget.onComment != null) {
-                    widget.onComment!();
-                  }
-                },
-              ),
-            ],
-          ),
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // Background layer with custom shape
+                CustomPaint(
+                  painter: PostShape(backgroundColor: backgroundColor),
+                  child: Container(),
+                ),
+                // Content layer with responsive dimensions
+                _ThoughtsContent(
+                  post: _currentPost,
+                  onUserTap: widget.onUserTap,
+                  backgroundColor: _extractedColor ?? _defaultColor,
+                  onPlayPause: widget.onPlayPause,
+                  onOptionsTap: widget.onOptionsTap ?? _handleOptionsTap,
+                  isPlaying: widget.isPlaying,
+                  isCurrentTrack: widget.isCurrentTrack,
+                  onLike: widget.onLike,
+                  onComment: widget.onComment,
+                  currentUserId: _currentUserId,
+                  parentWidth: parentWidth,
+                  parentHeight: parentHeight,
+                ),
+              ],
+            );
+          },
         ),
-      ],
+      ),
     );
   }
 
@@ -510,7 +456,8 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
           content: const Text('Please log in to save posts'),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
@@ -528,7 +475,8 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
             content: const Text('Thoughts post saved successfully'),
             backgroundColor: AppColors.primaryPurple,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
@@ -561,7 +509,8 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
             content: Text(result['message'] ?? 'Failed to save thoughts post'),
             backgroundColor: AppColors.primaryPurple,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
@@ -573,7 +522,8 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
           content: Text('Error saving thoughts post: $e'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
@@ -588,7 +538,8 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
           content: const Text('Please log in to unsave posts'),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
@@ -606,7 +557,8 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
             content: const Text('Thoughts post unsaved successfully'),
             backgroundColor: AppColors.primaryPurple,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
@@ -636,10 +588,12 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Failed to unsave thoughts post'),
+            content:
+                Text(result['message'] ?? 'Failed to unsave thoughts post'),
             backgroundColor: AppColors.primaryPurple,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
@@ -651,7 +605,8 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
           content: Text('Error unsaving thoughts post: $e'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
@@ -659,44 +614,37 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     }
   }
 
-
   Future<void> _handleDeletePost() async {
- 
     if (_currentUserId == null) {
       _showMessage('Please log in to delete posts', Colors.orange);
       return;
     }
 
-
     bool? shouldDelete = await _showDeleteDialog();
     if (shouldDelete != true) return;
 
-   
-
     try {
-      final result = await _thoughtsService.deletePost(_currentPost.id, context);
-      
+      final result =
+          await _thoughtsService.deletePost(_currentPost.id, context);
+
       if (result['success'] == true) {
         // Success - remove post from screen
         _showMessage('Post deleted successfully', AppColors.primaryPurple);
-        
+
         // Debug logging
         //print('[DEBUG] DeleteThoughts: Post deleted successfully, calling onPostUpdated');
         //print('[DEBUG] DeleteThoughts: onPostUpdated callback exists: ${widget.onPostUpdated != null}');
         //print('[DEBUG] DeleteThoughts: Post ID: ${_currentPost.id}');
-        
+
         widget.onPostUpdated?.call(_currentPost);
       } else {
-       
         _showMessage(result['message'] ?? 'Failed to delete post', Colors.red);
       }
     } catch (e) {
-      
       _showMessage('Error: $e', Colors.red);
     }
   }
 
- 
   void _showMessage(String message, Color color) {
     if (mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();
@@ -705,7 +653,8 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
           content: Text(message),
           backgroundColor: color,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
@@ -713,8 +662,6 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     }
   }
 
-  
-  
   Future<bool?> _showDeleteDialog() {
     return showDialog<bool>(
       context: context,
@@ -750,11 +697,12 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
       ),
     );
 
-    
     if (result == true) {
       try {
-        final updatedPostData = await _thoughtsService.getPostById(_currentPost.id);
-        if (updatedPostData['success'] == true && updatedPostData['data'] != null) {
+        final updatedPostData =
+            await _thoughtsService.getPostById(_currentPost.id);
+        if (updatedPostData['success'] == true &&
+            updatedPostData['data'] != null) {
           setState(() {
             _currentPost = ThoughtsPost.fromJson(updatedPostData['data']);
           });
@@ -774,22 +722,17 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     bool? shouldHide = await _showHideDialog();
     if (shouldHide != true) return;
 
-  
     try {
       final result = await _thoughtsService.hidePost(_currentPost.id);
-      
+
       if (result['success'] == true) {
-      
         _showMessage('Post hidden successfully', AppColors.primaryPurple);
-        
 
         widget.onPostUpdated?.call(_currentPost);
       } else {
-
         _showMessage(result['message'] ?? 'Failed to hide post', Colors.red);
       }
     } catch (e) {
-
       _showMessage('Error: $e', Colors.red);
     }
   }
@@ -816,6 +759,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
   }
 }
 
+// ================= _ThoughtsContent =================
 class _ThoughtsContent extends StatelessWidget {
   final ThoughtsPost post;
   final void Function(String userId, String? username)? onUserTap;
@@ -824,6 +768,11 @@ class _ThoughtsContent extends StatelessWidget {
   final VoidCallback? onOptionsTap;
   final bool isPlaying;
   final bool isCurrentTrack;
+  final VoidCallback? onLike;
+  final VoidCallback? onComment;
+  final String? currentUserId;
+  final double parentWidth;
+  final double parentHeight;
 
   const _ThoughtsContent({
     required this.post,
@@ -833,6 +782,11 @@ class _ThoughtsContent extends StatelessWidget {
     this.onOptionsTap,
     this.isPlaying = false,
     this.isCurrentTrack = false,
+    this.onLike,
+    this.onComment,
+    this.currentUserId,
+    required this.parentWidth,
+    required this.parentHeight,
   });
 
   @override
@@ -841,33 +795,60 @@ class _ThoughtsContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header section - moved to top with maximized size
-        _ThoughtsHeader(
-          post: post,
-          onUserTap: onUserTap,
-          onPlayPause: onPlayPause,
-          onOptionsTap: onOptionsTap,
-          isPlaying: isPlaying,
-          isCurrentTrack: isCurrentTrack,
+        SizedBox(
+          height: headerHeight,
+          child: _ThoughtsHeader(
+            post: post,
+            onUserTap: onUserTap,
+            onPlayPause: onPlayPause,
+            onOptionsTap: onOptionsTap,
+            isPlaying: isPlaying,
+            isCurrentTrack: isCurrentTrack,
+            currentUserId: currentUserId,
+            parentWidth: parentWidth,
+            parentHeight: parentHeight,
+          ),
         ),
-        const SizedBox(height: 20),
-        // Main content area with left-right layout
+        SizedBox(height: spacingBetween),
         Expanded(
           child: Container(
             width: double.infinity,
-            margin: const EdgeInsets.only(top: 1),
+            margin: EdgeInsets.only(top: parentHeight * 0.004),
             child: _ThoughtsBody(
               post: post,
               backgroundColor: backgroundColor,
+              parentWidth: parentWidth,
+              parentHeight: parentHeight,
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: parentHeight * 0.035),
+        // Footer section matching post.dart structure
+        SizedBox(
+          height: footerHeight,
+          child: Row(
+            children: [
+              _SongInfoSection(
+                post: post,
+                parentWidth: parentWidth,
+                parentHeight: parentHeight,
+              ),
+              _InteractionButtons(
+                post: post,
+                onLike: onLike,
+                onComment: onComment,
+                parentWidth: parentWidth,
+                parentHeight: parentHeight,
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 }
 
+// ================= _ThoughtsHeader =================
 class _ThoughtsHeader extends StatelessWidget {
   final ThoughtsPost post;
   final void Function(String userId, String? username)? onUserTap;
@@ -875,6 +856,9 @@ class _ThoughtsHeader extends StatelessWidget {
   final VoidCallback? onOptionsTap;
   final bool isPlaying;
   final bool isCurrentTrack;
+  final String? currentUserId;
+  final double parentWidth;
+  final double parentHeight;
 
   const _ThoughtsHeader({
     required this.post,
@@ -883,136 +867,187 @@ class _ThoughtsHeader extends StatelessWidget {
     this.onOptionsTap,
     this.isPlaying = false,
     this.isCurrentTrack = false,
+    this.currentUserId,
+    required this.parentWidth,
+    required this.parentHeight,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: () => onUserTap?.call(post.userId, post.username),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(20.0),
-              image: post.userImage != null && post.userImage!.isNotEmpty
-                  ? DecorationImage(
-                      image: post.userImage!.startsWith('http')
-                          ? NetworkImage(post.userImage!) as ImageProvider
-                          : AssetImage(post.userImage!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
+    // Calculate responsive dimensions
+    final iconSize = (parentHeight * 0.096).clamp(20.0, 24.0);
+    final spacing = parentWidth * 0.032;
+
+    return Container(
+      margin: const EdgeInsets.only(left: 0, bottom: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // User Image - taking maximum height possible
+          Padding(
+            padding: EdgeInsets.only(bottom: parentHeight * 0.02),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: GestureDetector(
+                onTap: () => onUserTap?.call(post.userId, post.username),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(16.0),
+                    image: post.userImage != null && post.userImage!.isNotEmpty
+                        ? DecorationImage(
+                            image: post.userImage!.startsWith('http')
+                                ? NetworkImage(post.userImage!) as ImageProvider
+                                : AssetImage(post.userImage!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: post.userImage == null || post.userImage!.isEmpty
+                      ? Center(
+                          child: Text(
+                            post.username != null && post.username!.isNotEmpty
+                                ? post.username![0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        )
+                      : null,
+                ),
+              ),
             ),
-            child: post.userImage == null || post.userImage!.isEmpty
-                ? Center(
-                    child: Text(
-                      post.username != null && post.username!.isNotEmpty
-                          ? post.username![0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.black87,
-                      ),
+          ),
+          SizedBox(width: spacing),
+          // Username in AutoSizeText
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: parentHeight * 0.02),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: () => onUserTap?.call(post.userId, post.username),
+                  child: AutoSizeText(
+                    post.username ?? 'Unknown User',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      letterSpacing: 0.2,
                     ),
-                  )
-                : null,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            post.username ?? 'Unknown',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
+                    minFontSize: 14,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.left,
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
-        // Add 3-dot menu
-        if (onOptionsTap != null)
-          GestureDetector(
-            onTap: onOptionsTap,
-            child: Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: const Icon(
-                Icons.more_vert,
-                color: Colors.white,
-                size: 22,
+          // Push options icon to the far right
+          SizedBox(width: spacing * 0.67),
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: onOptionsTap,
+              child: Container(
+                alignment: Alignment.center,
+                padding: EdgeInsets.symmetric(horizontal: spacing * 0.67),
+                child: Icon(
+                  Icons.more_vert,
+                  color: Colors.white,
+                  size: iconSize * 0.92,
+                ),
+              ),
             ),
           ),
-        ),
-        if (post.songName != null && post.songName!.isNotEmpty)
-          _ThoughtsSpotifyControl(
-            post: post,
-            onPlayPause: onPlayPause,
-            isPlaying: isPlaying,
-            isCurrentTrack: isCurrentTrack,
-          ),
-      ],
+          // Add Spotify controls if song information is available
+          if (post.songName != null && post.songName!.isNotEmpty)
+            _ThoughtsSpotifyControl(
+              post: post,
+              onPlayPause: onPlayPause,
+              isPlaying: isPlaying,
+              isCurrentTrack: isCurrentTrack,
+              parentWidth: parentWidth,
+              parentHeight: parentHeight,
+            ),
+        ],
+      ),
     );
   }
 }
 
+// ================= _ThoughtsBody =================
 class _ThoughtsBody extends StatelessWidget {
   final ThoughtsPost post;
   final Color backgroundColor;
+  final double parentWidth;
+  final double parentHeight;
 
   const _ThoughtsBody({
     required this.post,
     required this.backgroundColor,
+    required this.parentWidth,
+    required this.parentHeight,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Calculate responsive dimensions
+    final coverImageWidth = parentWidth * 0.32; // 32% of parent width
+    final coverImageHeight = parentHeight * 0.35; // 35% of parent height
+    final imageMargin = parentWidth * 0.024;
+    final imageBorderRadius = (parentHeight * 0.035).clamp(6.0, 10.0);
+    final spacing = parentWidth * 0.012;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Left side - Cover image (matching song post style)
         if (post.coverImage != null && post.coverImage!.isNotEmpty) ...[
           Container(
-            margin: const EdgeInsets.only(
-              left: 9.0,
-              right: 9.0,
+            margin: EdgeInsets.only(
+              left: imageMargin,
+              right: imageMargin,
               top: 0.0,
-              bottom: 4.0,
+              bottom: parentHeight * 0.018,
             ),
-            height: 25,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8.0),
+              borderRadius: BorderRadius.circular(imageBorderRadius),
               child: Image.network(
                 post.coverImage!,
-                width: 120,
-                height: 25,
+                width: coverImageWidth,
+                height: coverImageHeight,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
-                  width: 120,
-                  height: 25,
+                  width: coverImageWidth,
+                  height: coverImageHeight,
                   decoration: BoxDecoration(
                     color: const Color(0xFF4A3B8A),
-                    borderRadius: BorderRadius.circular(16.0),
+                    borderRadius: BorderRadius.circular(imageBorderRadius),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.music_note,
                     color: Colors.white,
-                    size: 30,
+                    size: (parentHeight * 0.13).clamp(25.0, 35.0),
                   ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: spacing),
         ],
         // Right side - Text content with overflow handling
         Expanded(
           child: _ThoughtsTextContent(
             post: post,
             backgroundColor: backgroundColor,
+            parentWidth: parentWidth,
+            parentHeight: parentHeight,
           ),
         ),
       ],
@@ -1020,6 +1055,7 @@ class _ThoughtsBody extends StatelessWidget {
   }
 }
 
+// ================= _FullContentBottomSheet =================
 class _FullContentBottomSheet extends StatelessWidget {
   final ThoughtsPost post;
   final Color backgroundColor;
@@ -1121,13 +1157,18 @@ class _FullContentBottomSheet extends StatelessWidget {
   }
 }
 
+// ================= _ThoughtsTextContent =================
 class _ThoughtsTextContent extends StatefulWidget {
   final ThoughtsPost post;
   final Color backgroundColor;
+  final double parentWidth;
+  final double parentHeight;
 
   const _ThoughtsTextContent({
     required this.post,
     required this.backgroundColor,
+    required this.parentWidth,
+    required this.parentHeight,
   });
 
   @override
@@ -1151,89 +1192,52 @@ class _ThoughtsTextContentState extends State<_ThoughtsTextContent> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  widget.post.text,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    height: 1.4,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  maxLines: 5,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.justify,
-                ),
-              ),
-              if (widget.post.text.length > 200) ...[
-                const SizedBox(height: 4),
-                GestureDetector(
-                  onTap: _showFullContentBottomSheet,
-                  child: const Text(
-                    'see more',
+    // Calculate responsive font sizes and spacing
+    final textFontSize = (widget.parentHeight * 0.061).clamp(12.0, 16.0);
+    final seeMoreFontSize = (widget.parentHeight * 0.053).clamp(10.0, 13.0);
+    final seeMoreSpacing = widget.parentHeight * 0.018;
+    final topPadding = widget.parentHeight * 0.04;
+    final rightPadding = widget.parentHeight * 0.06;
+
+    return Padding(
+      padding: EdgeInsets.only(top: topPadding, right: rightPadding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.post.text,
                     style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      decoration: TextDecoration.underline,
+                      color: Colors.white,
+                      fontSize: textFontSize,
+                      height: 1.4,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    maxLines: 5,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.left,
+                  ),
+                ),
+                if (widget.post.text.length > 200) ...[
+                  SizedBox(height: seeMoreSpacing),
+                  GestureDetector(
+                    onTap: _showFullContentBottomSheet,
+                    child: Text(
+                      'see more',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: seeMoreFontSize,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SongInfoSection extends StatelessWidget {
-  final ThoughtsPost post;
-
-  const _SongInfoSection({
-    required this.post,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.music_note,
-            color: Colors.deepPurple,
-            size: 14,
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (post.songName != null && post.songName!.isNotEmpty)
-                Text(
-                  post.songName!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              if (post.artistName != null && post.artistName!.isNotEmpty)
-                Text(
-                  post.artistName!,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10,
-                  ),
-                ),
-            ],
+            ),
           ),
         ],
       ),
@@ -1241,15 +1245,92 @@ class _SongInfoSection extends StatelessWidget {
   }
 }
 
+// ================= _SongInfoSection =================
+class _SongInfoSection extends StatelessWidget {
+  final ThoughtsPost post;
+  final double parentWidth;
+  final double parentHeight;
+
+  const _SongInfoSection({
+    required this.post,
+    required this.parentWidth,
+    required this.parentHeight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Always use white for song/artist, white70 for caption
+    final textColor = Colors.white;
+
+    // Calculate responsive padding
+    final horizontalPadding = parentWidth * 0.032;
+    final verticalPadding = parentHeight * 0.026;
+
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: verticalPadding,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (post.songName != null && post.songName!.isNotEmpty)
+              AutoSizeText(
+                post.songName ?? 'Unknown Track',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+                minFontSize: 8,
+                maxFontSize: 14,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.left,
+              ),
+            if (post.artistName != null && post.artistName!.isNotEmpty)
+              AutoSizeText(
+                post.artistName != null
+                    ? (post.artistName!.length > 20
+                        ? '${post.artistName!.substring(0, 20)}...'
+                        : post.artistName!)
+                    : 'Unknown Artist',
+                style: TextStyle(
+                  color: textColor.withOpacity(0.8),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                ),
+                minFontSize: 8,
+                maxFontSize: 13,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.left,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ================= _InteractionButtons =================
 class _InteractionButtons extends StatefulWidget {
   final ThoughtsPost post;
   final VoidCallback? onLike;
   final VoidCallback? onComment;
+  final VoidCallback? onShare;
+  final double parentWidth;
+  final double parentHeight;
 
   const _InteractionButtons({
     required this.post,
     this.onLike,
     this.onComment,
+    this.onShare,
+    required this.parentWidth,
+    required this.parentHeight,
   });
 
   @override
@@ -1290,58 +1371,80 @@ class _InteractionButtonsState extends State<_InteractionButtons> {
   Widget build(BuildContext context) {
     final isLiked =
         currentUserId != null && widget.post.likedBy.contains(currentUserId!);
+    final iconColor = Colors.white;
+    final likedColor = const Color(0xFFd535f9);
 
-    // print('[DEBUG] _InteractionButtons.build: currentUserId = $currentUserId');
-    // print('[DEBUG] _InteractionButtons.build: isLiked = $isLiked');
-    // print(
-    //     '[DEBUG] _InteractionButtons.build: post.likedBy = ${widget.post.likedBy}');
+    // Match spacing from post.dart InteractionWidget
+    final spacing = (widget.parentWidth * 0.02).clamp(6.0, 20.0);
+    final paddingTop = widget.parentHeight * 0.026;
+    final paddingBottom = widget.parentHeight * 0.0;
+    final paddingLeft = widget.parentWidth * 0.022;
+    final paddingRight = widget.parentWidth * 0.018;
 
-    return Row(
-      children: [
-        // Like button
-        GestureDetector(
-          onTap: widget.onLike,
-          child: Icon(
-            isLiked ? Icons.favorite : Icons.favorite_border,
-            color: isLiked ? Colors.deepPurple : Colors.white,
-            size: 24,
+    return Container(
+      padding: EdgeInsets.only(
+        top: paddingTop,
+        bottom: paddingBottom,
+        left: paddingLeft,
+        right: paddingRight,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Like button
+          GestureDetector(
+            onTap: widget.onLike,
+            child: Icon(
+              isLiked ? Icons.favorite : Icons.favorite_border,
+              color: isLiked ? likedColor : iconColor,
+              size: 24,
+            ),
           ),
-        ),
-        SizedBox(
-            width: (MediaQuery.of(context).size.width * 0.02).clamp(6.0, 20.0)),
-        // Comment button
-        GestureDetector(
-          onTap: widget.onComment,
-          child: Icon(
-            LucideIcons.messageCircle,
-            color: Colors.white,
-            size: 22,
+          SizedBox(width: spacing),
+          // Comment button
+          GestureDetector(
+            onTap: widget.onComment,
+            child: Icon(
+              LucideIcons.messageCircle,
+              color: iconColor,
+              size: 22,
+            ),
           ),
-        ),
-        SizedBox(
-            width: (MediaQuery.of(context).size.width * 0.02).clamp(6.0, 20.0)),
-        // Share button
-        Icon(
-          LucideIcons.share2,
-          color: Colors.white,
-          size: 22,
-        ),
-      ],
+          SizedBox(width: spacing),
+          // Share button
+          GestureDetector(
+            onTap: widget.onShare,
+            child: Icon(
+              LucideIcons.share2,
+              color: iconColor,
+              size: 22,
+            ),
+          ),
+          SizedBox(width: spacing),
+        ],
+      ),
     );
   }
 }
 
+// ================= _ThoughtsSpotifyControl =================
 class _ThoughtsSpotifyControl extends StatelessWidget {
   final ThoughtsPost post;
   final VoidCallback? onPlayPause;
   final bool isPlaying;
   final bool isCurrentTrack;
+  final double parentWidth;
+  final double parentHeight;
 
   const _ThoughtsSpotifyControl({
     required this.post,
     this.onPlayPause,
     this.isPlaying = false,
     this.isCurrentTrack = false,
+    required this.parentWidth,
+    required this.parentHeight,
   });
 
   @override
@@ -1354,26 +1457,42 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
         ? 'assets/icons/icons-spotify-dark.svg'
         : 'assets/icons/icons-spotify-light.svg';
 
+    // Calculate responsive dimensions
+    final pillHeight = (parentHeight * 0.14).clamp(28.0, 36.0);
+    final pillBorderRadius = (parentHeight * 0.061).clamp(12.0, 16.0);
+    final horizontalPadding = parentWidth * 0.032;
+    final verticalPadding = parentHeight * 0.026;
+    final iconSize = (parentHeight * 0.079).clamp(16.0, 20.0);
+    final spotifyIconSize = (parentHeight * 0.079).clamp(16.0, 20.0);
+    final spacing = parentWidth * 0.076;
+
     return Container(
+      margin: EdgeInsets.only(
+        right: parentWidth * 0.018,
+        top: parentHeight * 0.028,
+      ),
       child: Container(
-        height: 32,
+        height: pillHeight,
         decoration: BoxDecoration(
           color: pillColor,
-          borderRadius: BorderRadius.circular(14.0),
+          borderRadius: BorderRadius.circular(pillBorderRadius),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: verticalPadding,
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              width: 18,
-              height: 18,
+              width: spotifyIconSize,
+              height: spotifyIconSize,
               child: SvgPicture.asset(
                 spotifyAsset,
                 fit: BoxFit.contain,
               ),
             ),
-            const SizedBox(width: 20),
+            SizedBox(width: spacing),
             GestureDetector(
               onTap: () {
                 // print('[DEBUG] _ThoughtsSpotifyControl: Play button tapped');
@@ -1392,7 +1511,7 @@ class _ThoughtsSpotifyControl extends StatelessWidget {
                     ? LucideIcons.pause
                     : LucideIcons.play,
                 color: iconColor,
-                size: 18,
+                size: iconSize,
               ),
             ),
           ],

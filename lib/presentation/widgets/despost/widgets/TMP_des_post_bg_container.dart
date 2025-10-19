@@ -16,36 +16,37 @@ class PostShape extends CustomPainter {
     double w = size.width;
     double h = size.height;
     // The original SVG's width and height
-    double origW = 471;
-    double origH = 222;
+    double origW = 372;
+    double origH = 228;
     double scaleX = w / origW;
     double scaleY = h / origH;
 
-    path.moveTo(345.653 * scaleX, 50.3865 * scaleY);
-    path.cubicTo(351.176 * scaleX, 50.3865 * scaleY, 355.653 * scaleX,
-        45.9094 * scaleY, 355.653 * scaleX, 40.3865 * scaleY);
-    path.lineTo(355.653 * scaleX, 20 * scaleY);
-    path.cubicTo(355.653 * scaleX, 8.95432 * scaleY, 364.607 * scaleX, 0,
-        375.653 * scaleX, 0);
-    path.lineTo(451 * scaleX, 0);
-    path.cubicTo(462.046 * scaleX, 0, 471 * scaleX, 8.95431 * scaleY,
-        471 * scaleX, 20 * scaleY);
-    path.lineTo(471 * scaleX, 162.589 * scaleY);
-    path.cubicTo(471 * scaleX, 173.634 * scaleY, 462.046 * scaleX,
-        182.589 * scaleY, 451 * scaleX, 182.589 * scaleY);
-    path.lineTo(365.653 * scaleX, 182.589 * scaleY);
-    path.cubicTo(360.13 * scaleX, 182.589 * scaleY, 355.653 * scaleX,
-        187.066 * scaleY, 355.653 * scaleX, 192.589 * scaleY);
-    path.lineTo(355.653 * scaleX, 212 * scaleY);
-    path.cubicTo(355.653 * scaleX, 217.523 * scaleY, 351.176 * scaleX,
-        222 * scaleY, 345.653 * scaleX, 222 * scaleY);
-    path.lineTo(20 * scaleX, 222 * scaleY);
+    path.moveTo(0, 61 * scaleY);
+    path.cubicTo(0, 49.9543 * scaleY, 8.95431 * scaleX, 41 * scaleY,
+        20 * scaleX, 41 * scaleY);
+    path.lineTo(260 * scaleX, 41 * scaleY);
+    path.cubicTo(265.523 * scaleX, 41 * scaleY, 270 * scaleX, 36.5228 * scaleY,
+        270 * scaleX, 31 * scaleY);
+    path.lineTo(270 * scaleX, 20 * scaleY);
     path.cubicTo(
-        8.95429 * scaleX, 222 * scaleY, 0, 213.046 * scaleY, 0, 202 * scaleY);
-    path.lineTo(0, 70.3865 * scaleY);
-    path.cubicTo(0, 59.3408 * scaleY, 8.9543 * scaleX, 50.3865 * scaleY,
-        20 * scaleX, 50.3865 * scaleY);
-    path.lineTo(345.653 * scaleX, 50.3865 * scaleY);
+        270 * scaleX, 8.95431 * scaleY, 278.954 * scaleX, 0, 290 * scaleX, 0);
+    path.lineTo(352 * scaleX, 0);
+    path.cubicTo(363.046 * scaleX, 0, 372 * scaleX, 8.9543 * scaleY,
+        372 * scaleX, 20 * scaleY);
+    path.lineTo(372 * scaleX, 23 * scaleY);
+    path.lineTo(372 * scaleX, 167.5 * scaleY);
+    path.cubicTo(372 * scaleX, 178.546 * scaleY, 363.046 * scaleX,
+        187.5 * scaleY, 352 * scaleX, 187.5 * scaleY);
+    path.lineTo(280 * scaleX, 187.5 * scaleY);
+    path.cubicTo(274.477 * scaleX, 187.5 * scaleY, 270 * scaleX,
+        191.977 * scaleY, 270 * scaleX, 197.5 * scaleY);
+    path.lineTo(270 * scaleX, 218 * scaleY);
+    path.cubicTo(270 * scaleX, 223.523 * scaleY, 265.523 * scaleX, 228 * scaleY,
+        260 * scaleX, 228 * scaleY);
+    path.lineTo(9.99999 * scaleX, 228 * scaleY);
+    path.cubicTo(
+        4.47715 * scaleX, 228 * scaleY, 0, 223.523 * scaleY, 0, 218 * scaleY);
+    path.lineTo(0, 61 * scaleY);
     path.close();
 
     canvas.drawPath(path, paint);
