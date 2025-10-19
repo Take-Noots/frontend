@@ -215,8 +215,8 @@ class _MusicPlayerBarState extends State<MusicPlayerBar> {
     _refreshTimer?.cancel();
     // Use a more frequent check interval when widget is hidden to detect new sessions faster
     final interval = widget.isHidden
-        ? const Duration(seconds: 3)
-        : const Duration(seconds: 5);
+        ? const Duration(seconds: 1)
+        : const Duration(seconds: 1);
 
     _refreshTimer = Timer.periodic(interval, (_) {
       // Always fetch track data regardless of visibility
@@ -361,7 +361,7 @@ class _MusicPlayerBarState extends State<MusicPlayerBar> {
     }
   }
 
-  String _truncate(String text, [int maxLength = 40]) {
+  String _truncate(String text, [int maxLength = 25]) {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   }

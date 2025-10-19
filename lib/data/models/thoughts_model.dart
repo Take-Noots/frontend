@@ -14,9 +14,9 @@ class ThoughtsPost {
   String? trackId;
   String? coverImage;
   String? backgroundColor;
-  final int isHidden; 
-  final int isDeleted; 
-  bool isSaved; 
+  final int isHidden;
+  final int isDeleted;
+  bool isSaved;
 
   ThoughtsPost({
     required this.id,
@@ -44,6 +44,7 @@ class ThoughtsPost {
       id: json['_id'] ?? '',
       userId: json['userId'] ?? '',
       username: json['username'],
+      userImage: json['userImage'],
       text: json['text'] ?? json['thoughtsText'] ?? '',
       createdAt:
           DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),

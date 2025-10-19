@@ -4,6 +4,7 @@ import '../toggle_button.dart';
 import '../../../data/services/notification_service.dart';
 import '../../../core/router/route_names.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../core/router/route_names.dart';
 
 class NootAppBar extends StatefulWidget implements PreferredSizeWidget {
   const NootAppBar({super.key});
@@ -63,45 +64,12 @@ class _NootAppBarState extends State<NootAppBar> {
             ),
           ),
           const Spacer(),
-          // temparary toggle button
-          const ToggleButton(),
-          // Notification Icon with badge
-          Stack(
-            children: [
-              IconButton(
-                icon: Icon(LucideIcons.heart,
-                    color: Theme.of(context).colorScheme.onPrimary, size: 22),
-                onPressed: () async {
-                  await context.push(AppRoutes.notifications);
-                  // Refresh unread count when returning from notifications
-                  _loadUnreadCount();
-                },
-              ),
-              if (_unreadCount > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 14,
-                      minHeight: 14,
-                    ),
-                    child: Text(
-                      '$_unreadCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
+          IconButton(
+            icon: Icon(LucideIcons.heart,
+                color: Theme.of(context).colorScheme.onPrimary, size: 22),
+            onPressed: () {
+              context.push(AppRoutes.requests);
+            },
           ),
           // Message Icon - Updated this section
           IconButton(
