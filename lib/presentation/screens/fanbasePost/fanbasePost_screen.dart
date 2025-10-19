@@ -140,8 +140,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
               left: 10,
               right: 10,
               top: 16,
-              bottom: 170 +
-                  bottomPadding, // Add enough padding for input bar + nav bar
+              bottom: bottomPadding, // Add enough padding for input bar + nav bar
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
