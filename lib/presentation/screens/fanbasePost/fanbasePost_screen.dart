@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-// import 'package:lucide_icons/lucide_icons.dart';
-import 'dart:ui'; // For BackdropFilter (blur effect)
+import 'dart:ui';
 import '../../../data/services/fanbase_post_service.dart';
 import 'fanbasePost_screen_comments.dart';
+import 'fanbasePost_screen_songControl.dart'; // Add this import
 
 /// PostDetailPage displays a single fanbase post with its comments
 /// Users can add comments and reply to existing comments
@@ -140,7 +140,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
               left: 10,
               right: 10,
               top: 16,
-              bottom: bottomPadding, // Add enough padding for input bar + nav bar
+              bottom:
+                  bottomPadding, // Add enough padding for input bar + nav bar
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,19 +258,20 @@ class _PostDetailPageState extends State<PostDetailPage> {
               ],
             ),
           ),
-          IconButton(
-            icon: Icon(
-              Icons.play_arrow_sharp,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: Image.asset(
-              'assets/images/spotify.png',
-              height: 24,
-            ),
-            onPressed: () {},
+          const SizedBox(width: 8),
+          // Use the new CompactSongControlWidget
+          CompactSongControlWidget(
+            trackId: widget.trackId,
+            isPlaying: widget.isPlaying,
+            isCurrentTrack: widget.isCurrentTrack,
+            onPlayPause: () {
+              // TODO: Implement play/pause functionality
+              print('Play/Pause pressed for track: ${widget.trackId}');
+            },
+            onSpotifyTap: () {
+              // TODO: Implement Spotify link functionality
+              print('Spotify icon pressed for track: ${widget.trackId}');
+            },
           ),
         ],
       ),

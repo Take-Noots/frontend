@@ -1,8 +1,8 @@
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+// import 'package:shared_preferences/shared_preferences.dart';
+// import 'dart:convert';
 import 'auth_service.dart';
 
 class FanbaseReportService {
@@ -69,20 +69,20 @@ class FanbaseReportService {
   }
 
   /// Maps user-friendly reason to backend category
-  static String _mapReasonToCategory(String reason) {
-    switch (reason.toLowerCase()) {
-      case 'spam':
-        return 'spam';
-      case 'inappropriate content':
-        return 'inappropriate';
-      case 'harmful or abusive':
-        return 'harassment';
-      case 'intellectual property violation':
-        return 'copyright';
-      default:
-        return 'other';
-    }
-  }
+  // static String _mapReasonToCategory(String reason) {
+  //   switch (reason.toLowerCase()) {
+  //     case 'spam':
+  //       return 'spam';
+  //     case 'inappropriate content':
+  //       return 'inappropriate';
+  //     case 'harmful or abusive':
+  //       return 'harassment';
+  //     case 'intellectual property violation':
+  //       return 'copyright';
+  //     default:
+  //       return 'other';
+  //   }
+  // }
 
   /// Gets all reports submitted by the current user
   static Future<Map<String, dynamic>> getMyReports(
