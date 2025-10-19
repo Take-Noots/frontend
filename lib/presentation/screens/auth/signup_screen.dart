@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../widgets/auth/custom_text_form_field.dart';
 import '../../widgets/auth/custom_button.dart';
 import '../../widgets/auth/custom_snack_bar.dart';
 import '../../../core/utils/temp_storage.dart';
 import '../../../data/services/auth_service.dart';
+import '../../../core/router/route_names.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({Key? key}) : super(key: key);
@@ -77,7 +79,7 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     // Navigate to username screen without sensitive data
-    Navigator.pushNamed(context, '/username');
+    context.push(AppRoutes.username);
   }
 
   @override
@@ -248,7 +250,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         Center(
                           child: ElevatedButton(
                             onPressed: () {
-                              Navigator.pushNamed(context, '/login');
+                              context.go(AppRoutes.login);
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,

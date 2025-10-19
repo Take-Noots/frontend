@@ -157,4 +157,64 @@ class UserService {
       return null;
     }
   }
+
+  Future<Map<String, dynamic>> getFollowersCount(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/profile/$userId/followers'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'count': data is List ? data.length : 0,
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'count': 0,
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'count': 0,
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> getFollowingCount(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/profile/$userId/following'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'count': data is List ? data.length : 0,
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'count': 0,
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'count': 0,
+      };
+    }
+  }
 }
