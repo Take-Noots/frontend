@@ -382,7 +382,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleThoughtsPlay(ThoughtsPost post) async {
-    if (post.songName == null || post.songName!.isEmpty) {
+    // Use the trackId directly from the post
+    if (post.trackId == null || post.trackId!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('No song information available for this post'),
@@ -392,8 +393,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    // Create a unique identifier for thoughts posts
-    final thoughtsTrackId = '${post.songName}_${post.artistName}';
+    final thoughtsTrackId = post.trackId!;
     
     if (_currentlyPlayingTrackId == thoughtsTrackId && _isPlaying) {
       setState(() {
@@ -662,90 +662,27 @@ class _HomeScreenState extends State<HomeScreen> {
       final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
       
-      // Search for the track first - try with both song name and artist name
-      final searchQuery = '${post.songName} ${post.artistName}';
-      final searchResponse = await dio.get(
-        '/spotify/search/track',
-        queryParameters: {'track_name': searchQuery},
+      // Use the trackId directly from the post instead of searching
+      final trackId = post.trackId;
+      
+      if (trackId == null || trackId.isEmpty) {
+        throw Exception('Track ID is missing');
+        }
+        
+      // Play the track
+      final playResponse = await dio.post(
+        '/spotify/player/post/play',
+        data: {'track_id': trackId},
       );
       
-      // Check if response has the expected structure
-      if (searchResponse.data == null) {
-        throw Exception('Search returned null data');
-      }
-      
-      if (searchResponse.data['tracks'] == null) {
-        throw Exception(
-            'Search response missing tracks field. Data: ${searchResponse.data}');
-      }
-      
-      if (searchResponse.data['tracks']['items'] == null) {
-        throw Exception(
-            'Search response missing items field. Data: ${searchResponse.data}');
-      }
-      
-      if (searchResponse.statusCode == 200 &&
-          searchResponse.data['tracks']['items'].isNotEmpty) {
-        // Find the track that matches both song name and artist name
-        final tracks = searchResponse.data['tracks']['items'] as List;
-        
-        String? trackId;
-        
-        for (var track in tracks) {
-          final trackName = track['name']?.toString().toLowerCase() ?? '';
-          
-          // Handle artists - could be a list of strings or list of objects
-          String trackArtists = '';
-          try {
-            final artistsList = track['artists'] as List;
-            trackArtists = artistsList
-                .map((a) {
-              // If artist is a string, use it directly
-              if (a is String) return a.toLowerCase();
-              // If artist is a map/object, get the name field
-                  if (a is Map && a['name'] != null)
-                    return a['name'].toString().toLowerCase();
-              return '';
-                })
-                .where((name) => name.isNotEmpty)
-                .join(' ');
-          } catch (e) {
-            trackArtists = '';
-          }
-          
-          final postSongName = post.songName?.toLowerCase() ?? '';
-          final postArtistName = post.artistName?.toLowerCase() ?? '';
-          
-          if (trackName.contains(postSongName) &&
-              trackArtists.contains(postArtistName)) {
-            trackId = track['id'];
-            break;
-          }
-        }
-        
-        // If no exact match found, use the first result
-        if (trackId == null) {
-          trackId = tracks.first['id'];
-        }
-        
-        // Play the track
-        final playResponse = await dio.post(
-          '/spotify/player/post/play',
-          data: {'track_id': trackId},
-        );
-        
-        // Accept any 2xx status code as success
-        if (playResponse.statusCode != null &&
-            playResponse.statusCode! >= 200 &&
-            playResponse.statusCode! < 300) {
-          // Successfully started playing track
-        } else {
-          throw Exception(
-              'Failed to play track - Status: ${playResponse.statusCode}');
-        }
+      // Accept any 2xx status code as success
+      if (playResponse.statusCode != null &&
+          playResponse.statusCode! >= 200 &&
+          playResponse.statusCode! < 300) {
+        // Successfully started playing track
       } else {
         throw Exception(
-            'Track not found - Search returned ${searchResponse.statusCode} with ${searchResponse.data['tracks']['items']?.length ?? 0} results');
+            'Failed to play track - Status: ${playResponse.statusCode}');
       }
     } on DioException catch (e) {
       if (e.response?.data != null) {

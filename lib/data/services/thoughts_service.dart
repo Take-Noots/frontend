@@ -1052,4 +1052,35 @@ class ThoughtsService {
       };
     }
   }
+
+  // Get thoughts posts by IDs
+  Future<Map<String, dynamic>> getThoughtsPostsByIds(
+      List<String> ids, BuildContext context) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.post('/thoughts/by-ids', data: {'ids': ids});
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data;
+        return {
+          'success': true,
+          'posts': data['posts'] ?? [],
+        };
+      } else {
+        return {
+          'success': false,
+          'posts': [],
+          'message': 'Failed to get thoughts posts',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'posts': [],
+        'message': 'Network error: $e',
+      };
+    }
+  }
 }

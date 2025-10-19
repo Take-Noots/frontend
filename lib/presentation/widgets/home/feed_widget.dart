@@ -197,12 +197,9 @@ class _FeedWidgetState extends State<FeedWidget> {
     if (item.type == FeedItemType.song && item.songPost != null) {
       return _buildSongPostItem(item.songPost!);
     } else if (item.type == FeedItemType.thought && item.thoughtsPost != null) {
-      // Create a unique identifier for thoughts posts using song name and artist name
       final thoughtsPost = item.thoughtsPost!;
-      final thoughtsTrackId =
-          thoughtsPost.songName != null && thoughtsPost.artistName != null
-              ? '${thoughtsPost.songName}_${thoughtsPost.artistName}'
-              : null;
+      // Use the actual trackId from the ThoughtsPost model
+      final thoughtsTrackId = thoughtsPost.trackId;
 
       return ThoughtsFeedCard(
         post: thoughtsPost,
