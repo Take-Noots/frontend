@@ -51,7 +51,7 @@ class CompactSongControlWidget extends StatelessWidget {
             onTap: onSpotifyTap ??
                 () {
                   // Default behavior: open Spotify link
-                  print('Open Spotify for track: $trackId');
+                  // print('Open Spotify for track: $trackId');
                 },
             child: Container(
               padding: const EdgeInsets.all(4),

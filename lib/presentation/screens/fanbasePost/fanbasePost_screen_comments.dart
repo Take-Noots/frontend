@@ -46,7 +46,7 @@ class FanbasePostCommentsSectionState
     super.initState();
     _initializeControllers();
     _comments = List.from(widget.comments);
-    _debugPrintComments();
+    // _debugPrintComments();
   }
 
   void _initializeControllers() {
@@ -56,11 +56,11 @@ class FanbasePostCommentsSectionState
     _subCommentFocusNode = FocusNode();
   }
 
-  void _debugPrintComments() {
-    print('=== Comments Section Debug ===');
-    print('Total comments received: ${widget.comments.length}');
-    print('Comments data: ${widget.comments}');
-  }
+  // void _debugPrintComments() {
+  //   print('=== Comments Section Debug ===');
+  //   print('Total comments received: ${widget.comments.length}');
+  //   print('Comments data: ${widget.comments}');
+  // }
 
   @override
   void didUpdateWidget(FanbasePostCommentsSection oldWidget) {
