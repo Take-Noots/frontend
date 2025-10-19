@@ -13,6 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../data/services/auth_service.dart';
 import 'package:dio/dio.dart';
+import 'package:go_router/go_router.dart';
+import '../../core/router/route_names.dart';
 import '../widgets/song_post/comment.dart';
 import './profile/user_profiles.dart';
 import '../widgets/song_post/post_options_menu.dart';
@@ -51,6 +53,21 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadUserIdAndPosts();
+    // Check for Stripe redirect query params (e.g. ?payment=success)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final paymentStatus = Uri.base.queryParameters['payment'];
+      if (paymentStatus != null) {
+        if (paymentStatus == 'success') {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment succeeded'), backgroundColor: Colors.green));
+        } else if (paymentStatus == 'cancel') {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment cancelled'), backgroundColor: Colors.orange));
+        }
+        // Clear query by navigating to home without params
+        try {
+          context.go(AppRoutes.home);
+        } catch (_) {}
+      }
+    });
   }
 
   Future<void> _loadUserIdAndPosts() async {
