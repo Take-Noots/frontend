@@ -178,8 +178,8 @@ class _CreateAdvertisementScreenState extends State<CreateAdvertisementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Advertisement created successfully!')),
         );
-        // Navigate to set audience screen
-        context.go(AppRoutes.setAudience);
+  // Navigate to set audience screen (use push to preserve navigation stack)
+  context.push(AppRoutes.setAudience);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result['message'] ?? 'Failed to create advertisement')),
