@@ -1155,7 +1155,7 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
 
-    // When in shell mode, render with app bar but without bottom navigation
+    
     if (widget.inShell) {
       return Scaffold(
         appBar: NootAppBar(),
