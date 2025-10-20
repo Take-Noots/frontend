@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import 'package:provider/provider.dart';
@@ -62,8 +63,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _fullNameController.addListener(_onFieldChanged);
   }
 
+
   void _onFieldChanged() {
     setState(() {}); // Rebuild to update button state
+  }
+
+  // Clean username validator (Instagram-like rules): letters, numbers, periods and underscores; 1-30 chars
+  bool _validUsername(String u) {
+    return RegExp(r'^[A-Za-z0-9._]{1,30}$').hasMatch(u);
   }
 
   bool get _hasChanges {
@@ -358,6 +365,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
       return;
     }
+    // Validate username
+    final usernameText = _usernameController.text.trim();
+    if (!_validUsername(usernameText)) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Username invalid. Use letters, numbers, periods and underscores only (1-30 chars).')),
+        );
+      }
+      return;
+    }
     final editProfile = EditProfileModel(
       username: _usernameController.text,
       bio: _bioController.text,
@@ -429,7 +447,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     children: [
                       CircleAvatar(
                         radius: 48,
-                        backgroundImage: NetworkImage(profileImage),
+                        backgroundImage: (() {
+                          // If profileImage is empty or looks like an asset path, use AssetImage
+                          if (profileImage.isEmpty) {
+                            return const AssetImage('assets/hehe.png');
+                          }
+                          // simple heuristic: treat http/https as network image
+                          if (profileImage.startsWith('http')) {
+                            return NetworkImage(profileImage);
+                          }
+                          // fallback to asset image for local paths
+                          return AssetImage(profileImage);
+                        })() as ImageProvider,
                       ),
                       if (_uploading)
                         Positioned.fill(
@@ -483,6 +512,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: _usernameController,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9._]')),
+                    LengthLimitingTextInputFormatter(30),
+                  ],
                   style:
                       TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   decoration: InputDecoration(

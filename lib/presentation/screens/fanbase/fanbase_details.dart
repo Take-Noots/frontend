@@ -1068,7 +1068,7 @@ class FanbaseDetailsHeader extends StatelessWidget {
                             color: Color(0xFFC20BF5),
                           ),
                         ],
-                        const Spacer(),
+                        // const Spacer(),
                         IconButton(
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
