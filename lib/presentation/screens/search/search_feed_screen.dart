@@ -15,7 +15,7 @@ import 'package:Noot/data/models/feed_item.dart';
 
 import 'package:Noot/presentation/widgets/search/searchbar.dart';
 
-import 'package:Noot/presentation/widgets/search/category_selector.dart';
+
 import 'package:Noot/presentation/widgets/search/user_search_results.dart';
 import 'package:Noot/presentation/widgets/search/fanbase_search_results.dart';
 
@@ -73,7 +73,7 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
   bool _isLoading = false;
   String? _error;
 
-  List<String> _exploreImages = [];
+  List<Map<String, String>> _exploreImages = [];
 
   // Fetch song posts for explore feed (album images, ascending by date)
   Future<void> _fetchExploreImages() async {
@@ -81,11 +81,14 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
     try {
       final results = await _searchService.search(''); // Empty query to get all
       final songPosts = (results['songPosts'] ?? []) as List;
-      // Filter out posts without valid albumImage and map to image URLs
+      // Filter out posts without valid albumImage and map to objects with id and albumImage
       setState(() {
         _exploreImages = songPosts
             .where((post) => post['albumImage'] != null && post['albumImage'].toString().trim().isNotEmpty)
-            .map<String>((post) => post['albumImage'] as String)
+            .map<Map<String, String>>((post) => {
+              'id': post['id'] as String,
+              'albumImage': post['albumImage'] as String,
+            })
             .toList();
       });
     } catch (e) {
@@ -102,15 +105,7 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
     _fetchExploreImages();
   }
 
-  final List<String> _categories = [
-    'Trending',
-    'Pop',
-    'Superhits',
-    'Kollywood',
-    'Raps',
-    'Kpop'
-  ];
-  int _selectedCategory = 0;
+
 
   @override
   Widget build(BuildContext context) {
@@ -168,16 +163,6 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
               onSegmentSelected: (index) {
                 setState(() {
                   _selectedSegment = index;
-                });
-              },
-            )
-          else
-            CategorySelector(
-              categories: _categories,
-              selectedIndex: _selectedCategory,
-              onCategorySelected: (index) {
-                setState(() {
-                  _selectedCategory = index;
                 });
               },
             ),
