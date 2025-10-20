@@ -66,11 +66,11 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
               duration: const Duration(seconds: 2),
             ),
           );
-          // Navigate back to home screen
+          // back to home screen
           context.go(AppRoutes.home);
         }
       } else {
-        // Show error message
+      
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -143,16 +143,12 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Create New Noot')),
-      // Use SafeArea + scroll view and add bottom padding to account for
-      // persistent bottom music player or system insets to avoid overflow.
       body: SafeArea(
         child: LayoutBuilder(builder: (context, constraints) {
-          // account for keyboard and system bottom padding and give extra
-          // space for a bottom music player (approx. 80px)
           final double viewInsetsBottom =
               MediaQuery.of(context).viewInsets.bottom;
           final double paddingBottom = MediaQuery.of(context).padding.bottom;
-          final double bottomBuffer = 80.0; // space for music player
+          final double bottomBuffer = 80.0; 
           final double bottomPadding =
               viewInsetsBottom + paddingBottom + bottomBuffer;
 

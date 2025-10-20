@@ -3,7 +3,6 @@ import 'package:palette_generator/palette_generator.dart';
 
 class ColorExtractor {
   /// Extracts a dominant dark color from an image URL
-  /// Returns a hex color string (e.g., "#FF0000") or null if extraction fails
   static Future<String?> extractBackgroundColor(String imageUrl) async {
     if (imageUrl.isEmpty) return null;
     
@@ -11,11 +10,11 @@ class ColorExtractor {
       final PaletteGenerator paletteGenerator =
           await PaletteGenerator.fromImageProvider(
         NetworkImage(imageUrl),
-        size: const Size(100, 100), // Small size for faster processing
+        size: const Size(100, 100), 
         maximumColorCount: 10,
       );
 
-      // Try to get a dark muted color first, then fallback to other dark colors
+      
       Color? extractedColor = paletteGenerator.darkMutedColor?.color ??
           paletteGenerator.darkVibrantColor?.color ??
           paletteGenerator.dominantColor?.color;
