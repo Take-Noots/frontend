@@ -1195,4 +1195,12 @@ class _ThoughtsToSongPostAdapter extends SongPostService {
     return await _thoughtsService.likeComment(
         postId, commentId, userId, context);
   }
+
+  @override
+  Future<Map<String, dynamic>> deleteComment(
+      String postId, String commentId,
+      [BuildContext? context]) async {
+    return await _thoughtsService.deleteComment(
+        postId, commentId, context);
+  }
 }
