@@ -9,8 +9,10 @@ class FanbasePostCommentsSection extends StatefulWidget {
   final String postId;
   final String fanbaseId;
   final List<Map<String, dynamic>> comments;
-  final Future<void> Function()
-      onCommentAdded; // Change from VoidCallback to async function
+  final Future<void> Function() onCommentAdded;
+  final String? currentUserId; // ✅ Add current user ID
+  final String? postCreatorId; // ✅ Add post creator ID
+  final String? fanbaseOwnerId; // ✅ Add fanbase owner ID
 
   const FanbasePostCommentsSection({
     super.key,
@@ -18,6 +20,9 @@ class FanbasePostCommentsSection extends StatefulWidget {
     required this.fanbaseId,
     required this.comments,
     required this.onCommentAdded,
+    this.currentUserId,
+    this.postCreatorId,
+    this.fanbaseOwnerId,
   });
 
   @override
@@ -196,6 +201,121 @@ class FanbasePostCommentsSectionState
     }
   }
 
+  // ==================== COMMENT DELETION ====================
+
+  Future<void> _deleteComment(String commentId) async {
+    // Show confirmation dialog
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete Comment'),
+          content: const Text(
+            'Are you sure you want to delete this comment? All replies will also be deleted.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // If user didn't confirm, return
+    if (confirmed != true) return;
+
+    try {
+      await FanbasePostService.deleteComment(
+        widget.postId,
+        commentId,
+        context,
+        fanbaseId: widget.fanbaseId,
+      );
+
+      if (mounted) {
+        _showSuccessMessage('Comment deleted successfully!');
+        // Refresh comments from backend
+        await widget.onCommentAdded();
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorMessage('Error deleting comment: $e');
+      }
+    }
+  }
+
+  Future<void> _deleteSubComment(String commentId, String subCommentId) async {
+    print('[DEBUG] _deleteSubComment called');
+    print('[DEBUG] postId: ${widget.postId}');
+    print('[DEBUG] commentId (parent): $commentId');
+    print('[DEBUG] subCommentId: $subCommentId');
+    print('[DEBUG] fanbaseId: ${widget.fanbaseId}');
+
+    // Show confirmation dialog
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete Reply'),
+          content: const Text(
+            'Are you sure you want to delete this reply?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // If user didn't confirm, return
+    if (confirmed != true) {
+      print('[DEBUG] User cancelled deletion');
+      return;
+    }
+
+    print('[DEBUG] User confirmed deletion, proceeding...');
+
+    try {
+      await FanbasePostService.deleteSubComment(
+        widget.postId,
+        commentId,
+        subCommentId,
+        context,
+        fanbaseId: widget.fanbaseId,
+      );
+
+      if (mounted) {
+        _showSuccessMessage('Reply deleted successfully!');
+        // Refresh comments from backend
+        await widget.onCommentAdded();
+      }
+    } catch (e) {
+      print('[ERROR] Failed to delete subcomment: $e');
+      if (mounted) {
+        _showErrorMessage('Error deleting reply: $e');
+      }
+    }
+  }
+
   // ==================== HELPER METHODS ====================
 
   void _showSuccessMessage(String message) {
@@ -354,6 +474,13 @@ class FanbasePostCommentsSectionState
     final hasValidId = commentId.isNotEmpty;
     final isLiked = comment['isLiked'] ?? false;
     final likeCount = comment['likeCount'] ?? '0';
+    final commentUserId = comment['userId']?.toString() ?? '';
+
+    // ✅ Check if current user can delete this comment
+    final canDelete = widget.currentUserId != null &&
+        (commentUserId == widget.currentUserId || // Comment owner
+            widget.currentUserId == widget.postCreatorId || // Post creator
+            widget.currentUserId == widget.fanbaseOwnerId); // Fanbase owner
 
     return Padding(
       padding: const EdgeInsets.only(left: 15),
@@ -412,6 +539,16 @@ class FanbasePostCommentsSectionState
               ),
             ),
           ),
+          const Spacer(), // Push the delete icon to the right
+          if (canDelete) // ✅ Only show delete if user has permission
+            GestureDetector(
+              onTap: hasValidId ? () => _deleteComment(commentId) : null,
+              child: Icon(
+                Icons.remove_circle_outline,
+                size: 16,
+                color: hasValidId ? Colors.red.shade400 : Colors.grey.shade500,
+              ),
+            ),
         ],
       ),
     );
@@ -550,17 +687,27 @@ class FanbasePostCommentsSectionState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ...List.generate(subComments.length, (index) {
-            final subComment = subComments[index];
+            final subComment = subComments[index] as Map<String, dynamic>;
             final subCommentId = subComment['commentId']?.toString() ?? '';
 
+            // ✅ Add parentCommentId to subComment map with proper type
+            final enrichedSubComment = Map<String, dynamic>.from(subComment)
+              ..['parentCommentId'] = parentCommentId;
+
             return ThreadedCommentWidget(
-              comment: subComment,
+              comment: enrichedSubComment,
               isFirst: index == 0,
               isLast: index == subComments.length - 1,
               formatDateTime: _formatDateTime,
               lineColor: threadLineColor,
+              currentUserId: widget.currentUserId, // ✅ Pass user IDs
+              postCreatorId: widget.postCreatorId,
+              fanbaseOwnerId: widget.fanbaseOwnerId,
               onLike: subCommentId.isNotEmpty && parentCommentId.isNotEmpty
                   ? (scId) => _likeSubComment(parentCommentId, scId)
+                  : null,
+              onDelete: subCommentId.isNotEmpty && parentCommentId.isNotEmpty
+                  ? (parentId, scId) => _deleteSubComment(parentId, scId)
                   : null,
             );
           }),

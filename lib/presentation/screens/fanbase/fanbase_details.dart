@@ -206,13 +206,12 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                       'username': comment.userName,
                       'text': comment.comment,
                       'userId': comment.userId,
-                      'commentId': comment.commentId, // ✅ ADD THIS
+                      'commentId': comment.commentId,
                       'likeCount': comment.likeCount.toString(),
-                      'isLiked': comment.isLiked, // ✅ ADD THIS
+                      'isLiked': comment.isLiked,
                       'createdAt': comment.createdAt.toIso8601String(),
                       'subComments': (comment.subComments)
                           .map((subComment) => {
-                                // ✅ ADD THIS
                                 'username': subComment.userName,
                                 'text': subComment.comment,
                                 'userId': subComment.userId,
@@ -235,6 +234,8 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
             backgroundColor:
                 _extractedColors[post.albumArt ?? ''] ?? _defaultColor,
             fanbaseId: widget.fanbaseId,
+            postCreatorId: post.createdBy['userId'], // ✅ Pass post creator ID
+            fanbaseOwnerId: _fanbase?.createdBy.id, // ✅ Pass fanbase owner ID
             likesCount: post.likesCount,
             commentsCount: post.commentsCount,
           ),

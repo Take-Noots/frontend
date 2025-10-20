@@ -134,8 +134,14 @@ class _FanbaseDetailsCreatorAboutState
                             )),
                     if (controllers.length < 15)
                       TextButton.icon(
-                        icon: const Icon(Icons.add),
+                        icon: Icon(Icons.add,
+                            color: Theme.of(context).colorScheme.onPrimary),
                         label: const Text('Add Rule'),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          side: BorderSide(color: Theme.of(context).colorScheme.onPrimary),
+                        ),
                         onPressed: () {
                           setDialogState(() {
                             controllers.add(TextEditingController());
