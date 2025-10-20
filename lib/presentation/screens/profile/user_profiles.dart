@@ -484,22 +484,29 @@ class _UserProfilePageState extends State<UserProfilePage>
               if (!isPrivateProfile || isFollowingUser) ...[
                 Container(
                   color: Theme.of(context).colorScheme.surface,
-                  child: TabBar(
-                    controller: _tabController,
-                    indicatorColor: Theme.of(context).colorScheme.onSurface,
-                    // Make the active tab clearly visible using primary color
-                    labelColor: Theme.of(context).colorScheme.primary,
-                    unselectedLabelColor:
-                        Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.9),
-                    tabs: const [
-                      Tab(icon: Icon(Icons.grid_on)),
-                      Tab(icon: Icon(Icons.description)),
-                      Tab(icon: Icon(Icons.person_pin)),
-                    ],
+                  child: SizedBox(
+                    height: 50,
+                    child: TabBar(
+                      controller: _tabController,
+                      indicatorColor: Theme.of(context).colorScheme.onSurface,
+                      indicatorWeight: 2,
+                      labelPadding: const EdgeInsets.symmetric(
+                          horizontal: 0, vertical: 2),
+                      // Use explicit gray tones so the active tab icon is consistently gray
+                      labelColor: Colors.grey[700],
+                      unselectedLabelColor: Colors.grey[500],
+                      labelStyle: const TextStyle(fontSize: 12),
+                      unselectedLabelStyle: const TextStyle(fontSize: 12),
+                      tabs: const [
+                        Tab(icon: Icon(Icons.grid_on, size: 20)),
+                        Tab(icon: Icon(Icons.description, size: 20)),
+                        Tab(icon: Icon(Icons.person_pin, size: 20)),
+                      ],
+                    ),
                   ),
                 ),
                 SizedBox(
-                  height: MediaQuery.of(context).size.height - 300,
+                  height: MediaQuery.of(context).size.height - 320,
                   child: TabBarView(
                     controller: _tabController,
                     children: [
