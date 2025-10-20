@@ -5,6 +5,8 @@ import '../../../data/models/post_model.dart';
 import '../../../core/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../../widgets/song_post/post.dart';
+import '../../widgets/song_post/post_shape.dart';
 
 class PostDetailsScreen extends StatefulWidget {
   final String postId;
@@ -23,11 +25,28 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
   Post? _post;
   bool _isLoading = true;
   String? _error;
+  String? _currentUserId;
 
   @override
   void initState() {
     super.initState();
+    _loadCurrentUserId();
     _loadPost();
+  }
+
+  Future<void> _loadCurrentUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        setState(() {
+          _currentUserId = userData['id'];
+        });
+      }
+    } catch (e) {
+      print('Error loading current user ID: $e');
+    }
   }
 
   Future<void> _loadPost() async {
@@ -149,58 +168,92 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
       );
     }
 
-    // Display the post with a custom layout
+    // Display the post using the same structure as the feed
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildPostHeader(),
-            const SizedBox(height: 16),
-            _buildPostContent(),
-            const SizedBox(height: 16),
-            _buildActionButtons(),
-          ],
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+        child: _buildPostItem(),
       ),
     );
   }
 
-  Widget _buildPostHeader() {
-    return Row(
+  Widget _buildPostItem() {
+    if (_post == null) return const SizedBox.shrink();
+
+    // Define the aspect ratio for consistency (same as feed)
+    const postAspectRatio = 490 / 595;
+
+    // Get default color helper
+    Color get defaultColor {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      return isDark
+          ? const Color.fromARGB(255, 17, 37, 37)
+          : const Color(0xFFF5F5F5);
+    }
+
+    // Use stored background color from database, or default if not available
+    final backgroundColor = _post!.backgroundColor != null
+        ? Color(int.parse(_post!.backgroundColor!.replaceFirst('#', '0xFF')))
+        : defaultColor;
+
+    // Check if the post belongs to the current user
+    final bool isOwnPost = _post!.userId != null &&
+        _currentUserId != null &&
+        _post!.userId == _currentUserId;
+
+    return Column(
       children: [
-        CircleAvatar(
-          radius: 25,
-          backgroundColor: Colors.grey[300],
-          child: Text(
-            _post!.username?.substring(0, 1).toUpperCase() ?? 'U',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        AspectRatio(
+          aspectRatio: postAspectRatio,
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              Text(
-                _post!.username ?? 'Unknown User',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+              // Layer for post_shape widget
+              CustomPaint(
+                painter: PostShape(backgroundColor: backgroundColor),
+                child: Container(),
               ),
-              Text(
-                '${_post!.songName ?? 'Unknown Song'} • ${_post!.artists ?? 'Unknown Artist'}',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
-                  fontSize: 14,
-                ),
+              // Layer for post widget
+              Post(
+                trackId: _post!.trackId ?? '',
+                songName: _post!.songName ?? '',
+                artists: _post!.artists ?? '',
+                albumImage: _post!.albumImage ?? '',
+                caption: _post!.caption ?? '',
+                username: _post!.username ?? '',
+                userId: _post!.userId,
+                currentUserId: _currentUserId,
+                postId: _post!.id,
+                userImage: _post!.userImage ?? 'assets/images/profile_picture.jpg',
+                isOwnPost: isOwnPost,
+                onLike: _handleLike,
+                onComment: () {
+                  // Handle comment functionality
+                },
+                onPlayPause: () {
+                  // Handle play/pause functionality
+                },
+                onShare: () {
+                  // Handle share functionality
+                },
+                onMoreOptions: null, // Can add options menu if needed
+                isLiked: _post!.likedByMe,
+                isPlaying: false, // Can be connected to music player state
+                isCurrentTrack: false, // Can be connected to music player state
+                isSaved: _post!.isSaved,
+                onUsernameTap: () {
+                  // Handle username tap to navigate to user profile
+                  if (_post!.userId != null) {
+                    // Navigate to user profile
+                  }
+                },
+                onDelete: isOwnPost ? () {
+                  // Handle delete functionality
+                } : null,
+                onHide: () {
+                  // Handle hide functionality
+                },
+                // likeCount and commentCount intentionally omitted for consistency
               ),
             ],
           ),
@@ -209,115 +262,9 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     );
   }
 
-  Widget _buildPostContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Album Image
-        if (_post!.albumImage != null)
-          Container(
-            width: double.infinity,
-            height: 300,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                _post!.albumImage!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey[800],
-                    child: const Icon(
-                      Icons.music_note,
-                      size: 64,
-                      color: Colors.white54,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-        const SizedBox(height: 12),
-
-        // Caption
-        if (_post!.caption != null && _post!.caption!.isNotEmpty)
-          Text(
-            _post!.caption!,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary,
-              fontSize: 16,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        _buildActionButton(
-          icon: Icons.favorite_border,
-          label: '${_post!.likes}',
-          onTap: _handleLike,
-        ),
-        const SizedBox(width: 20),
-        _buildActionButton(
-          icon: Icons.chat_bubble_outline,
-          label: '${_post!.comments.length}',
-          onTap: () {
-            // Handle comment tap
-          },
-        ),
-        const SizedBox(width: 20),
-        _buildActionButton(
-          icon: Icons.share,
-          label: '',
-          onTap: () {
-            // Handle share tap
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: Theme.of(context).colorScheme.onPrimary,
-            size: 24,
-          ),
-          if (label.isNotEmpty) ...[
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onPrimary,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
   Future<void> _handleLike() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userDataString = prefs.getString('user_data');
-
-      if (userDataString == null) {
+      if (_currentUserId == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -329,20 +276,19 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
         return;
       }
 
-      final userData = jsonDecode(userDataString);
-      final userId = userData['id'];
-
-      final result = await _songPostService.likePost(_post!.id, userId, context);
+      final result = await _songPostService.likePost(_post!.id, _currentUserId!, context);
 
       if (result['success'] == true) {
         // Update the post likes locally
         setState(() {
-          if (_post!.likedBy.contains(userId)) {
-            _post!.likedBy.remove(userId);
+          if (_post!.likedBy.contains(_currentUserId)) {
+            _post!.likedBy.remove(_currentUserId!);
             _post!.likes = (_post!.likes > 0) ? _post!.likes - 1 : 0;
+            _post!.likedByMe = false;
           } else {
-            _post!.likedBy.add(userId);
+            _post!.likedBy.add(_currentUserId!);
             _post!.likes += 1;
+            _post!.likedByMe = true;
           }
         });
       } else {
