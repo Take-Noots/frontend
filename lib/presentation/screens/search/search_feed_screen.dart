@@ -77,6 +77,7 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
 
   // Fetch song posts for explore feed (album images, ascending by date)
   Future<void> _fetchExploreImages() async {
+    if (_exploreImages.isNotEmpty) return; // Prevent refetching if already loaded
     try {
       final results = await _searchService.search(''); // Empty query to get all
       final songPosts = (results['songPosts'] ?? []) as List;

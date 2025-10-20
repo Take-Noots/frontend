@@ -31,10 +31,12 @@ class _ExploreFeedState extends State<ExploreFeed> {
   void _removeInvalidImageAtIndex(int index) {
     if (index >= 0 && index < _validImages.length) {
       final img = _validImages[index];
-      _failedImages.add(img);
-      setState(() {
-        _validImages.removeAt(index);
-      });
+      if (!_failedImages.contains(img)) {
+        _failedImages.add(img);
+        setState(() {
+          _validImages.removeAt(index);
+        });
+      }
     }
   }
 
