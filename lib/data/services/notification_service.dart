@@ -1,41 +1,39 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class NotificationService {
   static const String baseUrl = 'http://localhost:3000/notifications';
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
-  // Get all notifications for current user
+  // Get authorization headers with Bearer token
+  Future<Map<String, String>> _getAuthHeaders() async {
+    final token = await _secureStorage.read(key: 'access_token');
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  // Get all notifications for current user using authenticated endpoint
   Future<Map<String, dynamic>> getUserNotifications({
     int page = 1,
     int limit = 20,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userDataString = prefs.getString('user_data');
-      
-      if (userDataString == null) {
-        return {
-          'success': false,
-          'message': 'User not logged in.',
-        };
-      }
-      
-      final userData = jsonDecode(userDataString);
-      final userId = userData['id'];
-      
+      final headers = await _getAuthHeaders();
+
       final response = await http.get(
-        Uri.parse('$baseUrl/$userId?page=$page&limit=$limit'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        Uri.parse('$baseUrl/my-notifications?page=$page&limit=$limit'),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return {
           'success': true,
-          'data': data,
+          'data': data['data'], // The new endpoint returns data wrapped in a 'data' field
           'message': 'Notifications retrieved successfully',
         };
       } else {
@@ -53,34 +51,21 @@ class NotificationService {
     }
   }
 
-  // Get unread notification count
+  // Get unread notification count using authenticated endpoint
   Future<Map<String, dynamic>> getUnreadCount() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userDataString = prefs.getString('user_data');
-      
-      if (userDataString == null) {
-        return {
-          'success': false,
-          'message': 'User not logged in.',
-        };
-      }
-      
-      final userData = jsonDecode(userDataString);
-      final userId = userData['id'];
-      
+      final headers = await _getAuthHeaders();
+
       final response = await http.get(
-        Uri.parse('$baseUrl/$userId/unread-count'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        Uri.parse('$baseUrl/my-notifications/unread-count'),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return {
           'success': true,
-          'data': data,
+          'data': data['data'], // The new endpoint returns data wrapped in a 'data' field
           'message': 'Unread count retrieved successfully',
         };
       } else {
@@ -98,37 +83,21 @@ class NotificationService {
     }
   }
 
-  // Mark notification as read
+  // Mark notification as read using authenticated endpoint
   Future<Map<String, dynamic>> markAsRead(String notificationId) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userDataString = prefs.getString('user_data');
-      
-      if (userDataString == null) {
-        return {
-          'success': false,
-          'message': 'User not logged in.',
-        };
-      }
-      
-      final userData = jsonDecode(userDataString);
-      final userId = userData['id'];
-      
+      final headers = await _getAuthHeaders();
+
       final response = await http.post(
-        Uri.parse('$baseUrl/$notificationId/read'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'userId': userId,
-        }),
+        Uri.parse('$baseUrl/mark-as-read/$notificationId'),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return {
           'success': true,
-          'data': data,
+          'data': data['data'],
           'message': 'Notification marked as read',
         };
       } else {
@@ -146,34 +115,21 @@ class NotificationService {
     }
   }
 
-  // Mark all notifications as read
+  // Mark all notifications as read using authenticated endpoint
   Future<Map<String, dynamic>> markAllAsRead() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userDataString = prefs.getString('user_data');
-      
-      if (userDataString == null) {
-        return {
-          'success': false,
-          'message': 'User not logged in.',
-        };
-      }
-      
-      final userData = jsonDecode(userDataString);
-      final userId = userData['id'];
-      
+      final headers = await _getAuthHeaders();
+
       final response = await http.post(
-        Uri.parse('$baseUrl/$userId/mark-all-read'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        Uri.parse('$baseUrl/mark-all-read'),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return {
           'success': true,
-          'data': data,
+          'data': data['data'],
           'message': 'All notifications marked as read',
         };
       } else {
@@ -191,27 +147,28 @@ class NotificationService {
     }
   }
 
-  // Delete notification
+  // Delete notification (keeping old endpoint as backend doesn't have authenticated version yet)
   Future<Map<String, dynamic>> deleteNotification(String notificationId) async {
     try {
+      final headers = await _getAuthHeaders();
+
+      // Get user data for fallback if needed
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
       final userId = userData['id'];
-      
+
       final response = await http.delete(
         Uri.parse('$baseUrl/$notificationId'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: headers,
         body: jsonEncode({
           'userId': userId,
         }),
@@ -221,7 +178,7 @@ class NotificationService {
         final data = jsonDecode(response.body);
         return {
           'success': true,
-          'data': data,
+          'data': data['data'] ?? data,
           'message': 'Notification deleted successfully',
         };
       } else {
