@@ -471,8 +471,9 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
         await FanbaseService.deleteFanbase(_fanbase!.id, context);
 
         if (mounted) {
-          // Navigate back to previous screen after successful deletion
-          Navigator.of(context).pop();
+          // Return a map indicating deletion occurred and we should switch to Creator tab
+          Navigator.of(context)
+              .pop({'deleted': true, 'switchToCreatorTab': true});
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Fanbase deleted successfully')),
           );
