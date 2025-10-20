@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart'; // Uncomment this
 import 'dart:convert'; // Uncomment this
 import 'tabs/album_art_posts_tab.dart';
 import 'tabs/thought_posts_tab.dart';
-import 'tabs/tagged_posts_tab.dart';
 
 import 'settings/create_profile.dart';
 import 'settings/edit_profile.dart';
@@ -14,11 +13,7 @@ import 'followers_list_wrapper.dart';
 import 'following_list_wrapper.dart';
 import 'profile_feed_screen.dart';
 import './user_profiles.dart';
-import 'tabs/artist/new_releases_tab.dart'; // Create this for artist features
-import 'tabs/artist/concerts_tab.dart'; // Create this for artist features
-import 'tabs/artist/upcoming_tab.dart'; // Create this for artist features
-import 'tabs/artist/insights_tab.dart'; // Create this for artist features
-import 'tabs/business/ads_tab.dart'; // Create this for business features
+import 'tabs/business/ads_tab.dart'; 
 import '../../widgets/loading_screens/profile_loading_screen.dart';
 
 import '../../../data/models/profile_model.dart';
@@ -56,7 +51,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _tabScrollController.addListener(() {
       if (_tabScrollController.offset < 0) {
         _tabScrollController.jumpTo(0);
@@ -140,9 +135,9 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
         existingCache.isValid) {
       // Update TabController based on cached profile
       final userType = existingCache.profile?.userType ?? 'public';
-      int tabCount = 3;
+      int tabCount = 2; // Default for normal users
       if (userType == 'artist')
-        tabCount = 5;
+        tabCount = 3;
       else if (userType == 'business') tabCount = 3;
       if (_tabController == null || _tabController!.length != tabCount) {
         _tabController?.dispose();
@@ -220,9 +215,9 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
     // AlbumArtPostsTab can handle raw JSON, so skip expensive fromJson conversion
 
     final userType = cachedProfile.profile?.userType ?? 'public';
-    int tabCount = 3;
+    int tabCount = 2; // Default for normal users
     if (userType == 'artist')
-      tabCount = 5;
+      tabCount = 3;
     else if (userType == 'business') tabCount = 3;
     if (_tabController == null || _tabController!.length != tabCount) {
       _tabController?.dispose();
@@ -261,27 +256,26 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
 
   // Helper to get tabs based on user type
   List<Tab> getProfileTabs() {
+    print('[DEBUG] getProfileTabs - userType: $userType');
     if (userType == 'artist') {
-      return const [
-        Tab(icon: Icon(Icons.grid_on), text: "Posts"),
-        Tab(icon: Icon(Icons.music_note), text: "New Releases"),
-        Tab(icon: Icon(Icons.description), text: "Description"),
-        Tab(icon: Icon(Icons.event), text: "Concerts"),
-        Tab(icon: Icon(Icons.upcoming), text: "Upcoming"),
-        Tab(icon: Icon(Icons.person_pin), text: "Tagged"),
-      ];
-    } else if (userType == 'business') {
+      print('[DEBUG] Returning 3 tabs for artist');
       return const [
         Tab(icon: Icon(Icons.grid_on), text: "Posts"),
         Tab(icon: Icon(Icons.campaign), text: "Advertisements"),
         Tab(icon: Icon(Icons.description), text: "Description"),
-        Tab(icon: Icon(Icons.person_pin), text: "Tagged"),
+      ];
+    } else if (userType == 'business') {
+      print('[DEBUG] Returning 3 tabs for business');
+      return const [
+        Tab(icon: Icon(Icons.grid_on), text: "Posts"),
+        Tab(icon: Icon(Icons.campaign), text: "Advertisements"),
+        Tab(icon: Icon(Icons.description), text: "Description"),
       ];
     } else {
+      print('[DEBUG] Returning 2 tabs for normal user');
       return const [
         Tab(icon: Icon(Icons.grid_on)),
         Tab(icon: Icon(Icons.description)),
-        Tab(icon: Icon(Icons.person_pin)),
       ];
     }
   }
@@ -317,15 +311,13 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           },
           refreshNotifier: refreshTabNotifier,
         ),
-        ArtistNewReleasesTab(userId: userId!), // Implement this tab
+        BusinessAdsTab(
+            userId: userId!,
+            refreshNotifier: refreshTabNotifier),
         ThoughtPostsTab(
             postsList: thoughtPosts,
             userId: userId,
             refreshNotifier: refreshTabNotifier),
-        ArtistConcertsTab(userId: userId!), // Implement this tab
-        ArtistUpcomingTab(userId: userId!), // Implement this tab
-        // ArtistInsightsTab(userId: userId!),
-        const TaggedPostsTab(),
       ];
     } else if (userType == 'business') {
       return [
@@ -358,12 +350,11 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
         ),
         BusinessAdsTab(
             userId: userId!,
-            refreshNotifier: refreshTabNotifier), // Implement this tab
+            refreshNotifier: refreshTabNotifier), 
         ThoughtPostsTab(
             postsList: thoughtPosts,
             userId: userId,
             refreshNotifier: refreshTabNotifier),
-        const TaggedPostsTab(),
       ];
     } else {
       return [
@@ -398,7 +389,6 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
             postsList: thoughtPosts,
             userId: userId,
             refreshNotifier: refreshTabNotifier),
-        const TaggedPostsTab(),
       ];
     }
   }
@@ -601,46 +591,13 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                   );
                 },
               ),
-              // --- Add Insights and Edit Profile Buttons aligned horizontally ---
+              // --- Edit Profile Button ---
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Insights Button (left side)
-                    if (userType == 'artist')
-                      SizedBox(
-                        width: 160,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ArtistInsightsTab(userId: userId!),
-                              ),
-                            );
-                          },
-                          icon: Icon(Icons.insights,
-                              color: Theme.of(context).colorScheme.onSurface),
-                          label: Text(
-                            'Insights',
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                                color: Theme.of(context).colorScheme.onSurface),
-                            backgroundColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    if (userType == 'artist') const SizedBox(width: 12),
-                    // Edit Profile Button (right side)
+                    // Edit Profile Button
                     SizedBox(
                       width: 160,
                       child: OutlinedButton.icon(
