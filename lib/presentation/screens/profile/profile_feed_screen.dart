@@ -220,7 +220,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.75,
+        height: MediaQuery.of(context).size.height * 0.5,
         child: CommentSection(
           comments: post.comments,
           onAddComment: (text) async {

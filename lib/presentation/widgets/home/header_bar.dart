@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../toggle_button.dart';
 import '../../../data/services/notification_service.dart';
-import '../../../core/router/route_names.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/router/route_names.dart';
 
@@ -56,7 +54,9 @@ class _NootAppBarState extends State<NootAppBar> {
             child: Row(
               children: [
                 Image.asset(
-                  isDark ? 'assets/images/logo.png' : 'assets/images/logo.png',
+                  isDark
+                      ? 'assets/images/logo.png'
+                      : 'assets/images/logo_black.png',
                   width: 100,
                   height: 40,
                 ),
@@ -64,8 +64,7 @@ class _NootAppBarState extends State<NootAppBar> {
             ),
           ),
           const Spacer(),
-          // temparary toggle button
-          const ToggleButton(),
+          // (theme toggle removed)
           // Notification Icon with badge
           Stack(
             children: [

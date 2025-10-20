@@ -188,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.75,
+        height: MediaQuery.of(context).size.height * 0.5,
         child: CommentSection(
           comments: post.comments,
           onAddComment: (text) async {
@@ -490,7 +490,7 @@ class _HomeScreenState extends State<HomeScreen> {
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (context) => SizedBox(
-          height: MediaQuery.of(context).size.height * 0.75,
+          height: MediaQuery.of(context).size.height * 0.5,
           child: CommentSection(
             postId: post.id,
             comments: convertedComments,
@@ -603,7 +603,6 @@ class _HomeScreenState extends State<HomeScreen> {
             'Search response missing items field. Data: ${searchResponse.data}');
       }
       
-
       if (searchResponse.statusCode == 200 &&
           searchResponse.data['tracks']['items'].isNotEmpty) {
         // Find the track that matches both song name and artist name
@@ -1155,7 +1154,6 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
 
-    
     if (widget.inShell) {
       return Scaffold(
         appBar: NootAppBar(),
@@ -1163,7 +1161,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-   
     // when all screens are migrated to the ShellScreen
     return Scaffold(
       // OLD NAVIGATION: App bar will be provided by ShellScreen in the future
@@ -1197,10 +1194,8 @@ class _ThoughtsToSongPostAdapter extends SongPostService {
   }
 
   @override
-  Future<Map<String, dynamic>> deleteComment(
-      String postId, String commentId,
+  Future<Map<String, dynamic>> deleteComment(String postId, String commentId,
       [BuildContext? context]) async {
-    return await _thoughtsService.deleteComment(
-        postId, commentId, context);
+    return await _thoughtsService.deleteComment(postId, commentId, context);
   }
 }
