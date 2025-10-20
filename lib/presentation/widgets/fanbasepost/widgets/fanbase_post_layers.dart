@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter_svg/svg.dart';
 import '../../../screens/fanbasePost/fanbasePost_screen.dart';
-import 'post_options_menu.dart'; // Use the local post_options_menu
+import 'post_options_menu.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../../data/services/profile_service.dart'; // Add this import
 
 // ========== HeaderWidget ==========
 class HeaderWidget extends StatelessWidget {
@@ -82,12 +83,12 @@ class HeaderWidget extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           // Spotify control pill
-          SongControlWidget(
-            trackId: trackId,
-            isPlaying: isPlaying,
-            isCurrentTrack: isCurrentTrack,
-            onPlayPause: onPlayPause,
-          ),
+          // SongControlWidget(
+          //   trackId: trackId,
+          //   isPlaying: isPlaying,
+          //   isCurrentTrack: isCurrentTrack,
+          //   onPlayPause: onPlayPause,
+          // ),
         ],
       ),
     );
@@ -129,8 +130,10 @@ class _SongControlWidgetState extends State<SongControlWidget> {
       width: 80, // Fixed width for pill shape
       decoration: BoxDecoration(
         color: pillColor,
-        borderRadius:
-            BorderRadius.circular(18.0), // Half of height for perfect pill
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(18.0),
+          topRight: Radius.circular(18.0),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -173,7 +176,7 @@ class _SongControlWidgetState extends State<SongControlWidget> {
 }
 
 // ========== UserDetailWidget ==========
-class UserDetailWidget extends StatelessWidget {
+class UserDetailWidget extends StatefulWidget {
   final Map<String, dynamic>? details;
   final String? username;
   final String? userId;
@@ -196,10 +199,84 @@ class UserDetailWidget extends StatelessWidget {
   });
 
   @override
+  State<UserDetailWidget> createState() => _UserDetailWidgetState();
+}
+
+class _UserDetailWidgetState extends State<UserDetailWidget> {
+  String? _profileImageUrl;
+  bool _isLoadingImage = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfileImage();
+  }
+
+  @override
+  void didUpdateWidget(UserDetailWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Refetch if userId changes
+    if (oldWidget.userId != widget.userId) {
+      _fetchProfileImage();
+    }
+  }
+
+  Future<void> _fetchProfileImage() async {
+    if (widget.userId == null || widget.userId!.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _isLoadingImage = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      final profileService = ProfileService();
+      final profileResult = await profileService.getUserProfile(widget.userId!);
+
+      if (profileResult['success'] == true && profileResult['data'] != null) {
+        final profileData = profileResult['data'];
+        if (mounted) {
+          setState(() {
+            _profileImageUrl = profileData['profileImage'] as String?;
+            _isLoadingImage = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoadingImage = false;
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching profile image in UserDetailWidget: $e");
+      if (mounted) {
+        setState(() {
+          _isLoadingImage = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final isDark = brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black;
+
+    // Determine which image to use
+    ImageProvider? imageProvider;
+    if (_profileImageUrl != null && _profileImageUrl!.isNotEmpty) {
+      imageProvider = NetworkImage(_profileImageUrl!);
+    } else if (widget.userImage != null && widget.userImage!.isNotEmpty) {
+      imageProvider = widget.userImage!.startsWith('http')
+          ? NetworkImage(widget.userImage!)
+          : AssetImage(widget.userImage!) as ImageProvider;
+    } else {
+      imageProvider = const AssetImage('assets/images/hehe.png');
+    }
 
     return Row(
       children: [
@@ -210,23 +287,33 @@ class UserDetailWidget extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.grey.shade300,
             borderRadius: BorderRadius.circular(16.0),
-            image: userImage != null
-                ? DecorationImage(
-                    image: userImage!.startsWith('http')
-                        ? NetworkImage(userImage!) as ImageProvider
-                        : AssetImage(userImage!),
-                    fit: BoxFit.cover,
-                  )
-                : null,
+            image: DecorationImage(
+              image: imageProvider,
+              fit: BoxFit.cover,
+            ),
           ),
+          child: _isLoadingImage
+              ? Center(
+                  child: SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                  ),
+                )
+              : null,
         ),
         const SizedBox(width: 8),
         // Username
         Expanded(
           child: GestureDetector(
-            onTap: onUsernameTap,
+            onTap: widget.onUsernameTap,
             child: Text(
-              username ?? 'Unknown User',
+              widget.username ?? 'Unknown User',
               style: TextStyle(
                 color: textColor,
                 fontWeight: FontWeight.w600,
@@ -239,28 +326,19 @@ class UserDetailWidget extends StatelessWidget {
         // Options button
         GestureDetector(
           onTap: () {
-            if (onMoreOptions != null) {
-              onMoreOptions!();
+            if (widget.onMoreOptions != null) {
+              widget.onMoreOptions!();
             } else {
               PostOptionsMenu.show(
                 context,
-                postUserId: userId,
-                currentUserId: currentUserId,
-                isOwnPost: isOwnPost,
-                onCopyLink: () =>
-                    print('Copy link pressed for user: $username'),
-                onSavePost: () =>
-                    print('Save post pressed for user: $username'),
-                onUnfollow: () => print('Unfollow pressed for user: $username'),
-                onReport: () => print('Report pressed for user: $username'),
-                onEdit: isOwnPost
-                    ? () => print('Edit post pressed for user: $username')
-                    : null,
-                onDelete: isOwnPost
-                    ? () => print('Delete post pressed for user: $username')
-                    : null,
-                onHide: isOwnPost
-                    ? () => print('Hide post pressed for user: $username')
+                postUserId: widget.userId,
+                currentUserId: widget.currentUserId,
+                isOwnPost: widget.isOwnPost,
+                onReport: () =>
+                    print('Report pressed for user: ${widget.username}'),
+                onDelete: widget.isOwnPost
+                    ? () => print(
+                        'Delete post pressed for user: ${widget.username}')
                     : null,
               );
             }
