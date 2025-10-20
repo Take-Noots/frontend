@@ -8,8 +8,8 @@ class AppConstants {
       return 'http://localhost:3000';
     } else {
       // Running on Android/iOS (mobile)
-      return 'https://unthreshed-eugenic-edgar.ngrok-free.dev';
-      // return 'https://jeremiah-unphotographable-basely.ngrok-free.dev';
+      // return 'https://unthreshed-eugenic-edgar.ngrok-free.dev';
+      return 'https://jeremiah-unphotographable-basely.ngrok-free.dev';
     }
   }
 
