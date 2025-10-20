@@ -507,8 +507,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                   label: const Text('Create Profile'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor:
-                        Theme.of(context).colorScheme.onPrimary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(
                         vertical: 14.0, horizontal: 12.0),
                     shape: RoundedRectangleBorder(
