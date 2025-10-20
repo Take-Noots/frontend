@@ -5,6 +5,7 @@ import '../../../data/services/profile_service.dart';
 import '../../../data/services/user_service.dart';
 import 'group_details_screen.dart';
 import 'user_profile_screen.dart';
+import 'package:intl/intl.dart';
 
 class GroupChatScreen extends StatefulWidget {
   final String groupChatId;
@@ -535,9 +536,9 @@ class GroupMessageBubble extends StatelessWidget {
           
           if (message.isMe) ...[
             const SizedBox(width: 8),
-            const CircleAvatar(
+            ProfilePictureWidget(
+              userId: message.senderId,
               radius: 12,
-              backgroundImage: AssetImage('assets/images/hehe.png'),
             ),
           ],
         ],
@@ -546,12 +547,23 @@ class GroupMessageBubble extends StatelessWidget {
   }
 
   String _formatTime(DateTime timestamp) {
-    final hour = timestamp.hour;
-    final minute = timestamp.minute.toString().padLeft(2, '0');
-    final period = hour >= 12 ? 'PM' : 'AM';
-    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-    
-    return '$displayHour:$minute $period';
+    try {
+      // Convert UTC timestamp to user's local time
+      final localTime = timestamp.toLocal();
+
+      // Format using device's timezone or use a specific timezone
+      final formatter = DateFormat('h:mm a');
+      return formatter.format(localTime);
+    } catch (e) {
+      // Fallback to basic format if there's any error
+      final localTime = timestamp.toLocal();
+      final hour = localTime.hour;
+      final minute = localTime.minute.toString().padLeft(2, '0');
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+
+      return '$displayHour:$minute $period';
+    }
   }
 }
 // ProfilePictureWidget to fetch and display real profile pictures
