@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class ExploreFeed extends StatefulWidget {
   final List<Map<String, String>> imageUrls;
@@ -65,12 +66,8 @@ class _ExploreFeedState extends State<ExploreFeed> {
         final isNetwork = img.startsWith('http');
         return GestureDetector(
           onTap: () {
-            // Open a detail popup (Instagram-like) with the tapped image
-            showDialog(
-              context: context,
-              barrierDismissible: true,
-              builder: (context) => PostDetailDialog(imageUrl: img, postId: imgData['id']!),
-            );
+            // Navigate to post details screen with post ID
+            context.push('/post/${imgData['id']}');
           },
           child: isNetwork
               ? Image.network(
@@ -99,89 +96,4 @@ class _ExploreFeedState extends State<ExploreFeed> {
   }
 }
 
-// A simple full-screen dialog that displays the tapped image and some dummy
-// post details. Keeps UI-only dummy data as requested.
-class PostDetailDialog extends StatelessWidget {
-  final String imageUrl;
-  final String postId;
 
-  const PostDetailDialog({Key? key, required this.imageUrl, required this.postId}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final isNetwork = imageUrl.startsWith('http');
-    return Dialog(
-      insetPadding: EdgeInsets.zero,
-      backgroundColor: Colors.black,
-      child: SafeArea(
-        child: Column(
-          children: [
-            // Close button aligned to the top-right
-            Align(
-              alignment: Alignment.topRight,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-            // Expanded image area
-            Expanded(
-              child: isNetwork
-                  ? Image.network(
-                      imageUrl,
-                      fit: BoxFit.contain,
-                      width: double.infinity,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.broken_image, size: 100, color: Colors.white),
-                    )
-                  : Image.asset(
-                      imageUrl,
-                      fit: BoxFit.contain,
-                      width: double.infinity,
-                    ),
-            ),
-            // Dummy details similar to an Instagram post
-            Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: const [
-                      CircleAvatar(radius: 18, backgroundColor: Colors.grey),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text('artist_placeholder',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                      Icon(Icons.favorite_border),
-                      SizedBox(width: 8),
-                      Icon(Icons.comment_outlined),
-                      SizedBox(width: 8),
-                      Icon(Icons.send_outlined),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Song Title — Artist Name',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Post ID: $postId',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'This is a dummy caption shown for the explore post detail. Replace with real content when integrating.',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
