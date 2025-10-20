@@ -25,7 +25,6 @@ class NotificationService {
   }) async {
     try {
       final headers = await _getAuthHeaders();
-
       final response = await http.get(
         Uri.parse('$baseUrl/my-notifications?page=$page&limit=$limit'),
         headers: headers,
@@ -38,6 +37,9 @@ class NotificationService {
           'data': data['data'], // The new endpoint returns data wrapped in a 'data' field
           'message': 'Notifications retrieved successfully',
         };
+      } else if (response.statusCode == 401) {
+        // Fallback to old method if JWT auth fails
+        return await _getUserNotificationsFallback(page: page, limit: limit);
       } else {
         final errorData = jsonDecode(response.body);
         return {
@@ -198,6 +200,54 @@ class NotificationService {
           'message': errorData['message'] ??
               errorData['error'] ??
               'Failed to delete notification',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  // Fallback method using the old approach
+  Future<Map<String, dynamic>> _getUserNotificationsFallback({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+
+      if (userDataString == null) {
+        return {
+          'success': false,
+          'message': 'User not logged in.',
+        };
+      }
+
+      final userData = jsonDecode(userDataString);
+      final userId = userData['id'];
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/$userId?page=$page&limit=$limit'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': data['data'],
+          'message': 'Notifications retrieved successfully',
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to retrieve notifications',
         };
       }
     } catch (e) {
