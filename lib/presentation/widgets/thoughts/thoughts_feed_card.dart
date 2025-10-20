@@ -69,7 +69,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     super.didUpdateWidget(oldWidget);
     // Update local post when parent updates
     if (widget.post != oldWidget.post) {
-          setState(() {
+      setState(() {
         _currentPost = widget.post;
       });
     }
@@ -234,7 +234,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.75,
+        height: MediaQuery.of(context).size.height * 0.5,
         child: CommentSection(
           comments: convertedComments,
           onAddComment: (text) async {
@@ -356,12 +356,12 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
                 }
 
                 if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(errorMessage),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(errorMessage),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
                 }
 
                 return convertedComments;
@@ -369,12 +369,12 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
             } catch (e) {
               // Network error, remove optimistic comment
               if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Network error. Please try again.'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Network error. Please try again.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
 
               return convertedComments;
@@ -402,9 +402,9 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
     const double postAspectRatio = 372 / 228;
 
     return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-            child: AspectRatio(
-              aspectRatio: postAspectRatio,
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: AspectRatio(
+        aspectRatio: postAspectRatio,
         child: LayoutBuilder(
           builder: (context, constraints) {
             // Get parent dimensions for responsive sizing
@@ -412,22 +412,22 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
             final parentHeight = constraints.maxHeight;
 
             return Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Background layer with custom shape
-                  CustomPaint(
-                    painter: PostShape(backgroundColor: backgroundColor),
-                    child: Container(),
-                  ),
+              fit: StackFit.expand,
+              children: [
+                // Background layer with custom shape
+                CustomPaint(
+                  painter: PostShape(backgroundColor: backgroundColor),
+                  child: Container(),
+                ),
                 // Content layer with responsive dimensions
                 _ThoughtsContent(
-                      post: _currentPost,
-                      onUserTap: widget.onUserTap,
-                      backgroundColor: _extractedColor ?? _defaultColor,
-                      onPlayPause: widget.onPlayPause,
+                  post: _currentPost,
+                  onUserTap: widget.onUserTap,
+                  backgroundColor: _extractedColor ?? _defaultColor,
+                  onPlayPause: widget.onPlayPause,
                   onOptionsTap: widget.onOptionsTap ?? _handleOptionsTap,
-                      isPlaying: widget.isPlaying,
-                      isCurrentTrack: widget.isCurrentTrack,
+                  isPlaying: widget.isPlaying,
+                  isCurrentTrack: widget.isCurrentTrack,
                   onLike: widget.onLike,
                   onComment: widget.onComment,
                   currentUserId: _currentUserId,
@@ -671,9 +671,9 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
-              ),
-            ],
           ),
+        ],
+      ),
     );
   }
 
@@ -796,16 +796,16 @@ class _ThoughtsContent extends StatelessWidget {
         SizedBox(
           height: headerHeight,
           child: _ThoughtsHeader(
-          post: post,
-          onUserTap: onUserTap,
-          onPlayPause: onPlayPause,
+            post: post,
+            onUserTap: onUserTap,
+            onPlayPause: onPlayPause,
             onOptionsTap: onOptionsTap,
-          isPlaying: isPlaying,
-          isCurrentTrack: isCurrentTrack,
+            isPlaying: isPlaying,
+            isCurrentTrack: isCurrentTrack,
             currentUserId: currentUserId,
             parentWidth: parentWidth,
             parentHeight: parentHeight,
-        ),
+          ),
         ),
         SizedBox(height: spacingBetween),
         Expanded(
@@ -881,7 +881,7 @@ class _ThoughtsHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+        children: [
           // User Image - taking maximum height possible
           Padding(
             padding: EdgeInsets.only(bottom: parentHeight * 0.02),
@@ -889,40 +889,40 @@ class _ThoughtsHeader extends StatelessWidget {
               aspectRatio: 1,
               child: GestureDetector(
                 onTap: () => onUserTap?.call(post.userId, post.username),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(16.0),
-              image: post.userImage != null && post.userImage!.isNotEmpty
-                  ? DecorationImage(
-                      image: post.userImage!.startsWith('http')
-                          ? NetworkImage(post.userImage!) as ImageProvider
-                          : AssetImage(post.userImage!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: post.userImage == null || post.userImage!.isEmpty
-                ? Center(
-                    child: Text(
-                      post.username != null && post.username!.isNotEmpty
-                          ? post.username![0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  )
-                : null,
-          ),
-        ),
+                    image: post.userImage != null && post.userImage!.isNotEmpty
+                        ? DecorationImage(
+                            image: post.userImage!.startsWith('http')
+                                ? NetworkImage(post.userImage!) as ImageProvider
+                                : AssetImage(post.userImage!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: post.userImage == null || post.userImage!.isEmpty
+                      ? Center(
+                          child: Text(
+                            post.username != null && post.username!.isNotEmpty
+                                ? post.username![0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        )
+                      : null,
+                ),
+              ),
             ),
           ),
           SizedBox(width: spacing),
           // Username in AutoSizeText
-        Expanded(
+          Expanded(
             child: Padding(
               padding: EdgeInsets.only(bottom: parentHeight * 0.02),
               child: Align(
@@ -931,11 +931,11 @@ class _ThoughtsHeader extends StatelessWidget {
                   onTap: () => onUserTap?.call(post.userId, post.username),
                   child: AutoSizeText(
                     post.username ?? 'Unknown User',
-            style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark 
-                  ? Colors.white 
-                  : Colors.black87,
-              fontWeight: FontWeight.w600,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black87,
+                      fontWeight: FontWeight.w600,
                       fontSize: 18,
                       letterSpacing: 0.2,
                     ),
@@ -959,25 +959,25 @@ class _ThoughtsHeader extends StatelessWidget {
                 padding: EdgeInsets.symmetric(horizontal: spacing * 0.67),
                 child: Icon(
                   Icons.more_vert,
-                  color: Theme.of(context).brightness == Brightness.dark 
-                      ? Colors.white 
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
                       : Colors.black87,
                   size: iconSize * 0.92,
                 ),
+              ),
             ),
           ),
-        ),
-        // Add Spotify controls if song information is available
-        if (post.songName != null && post.songName!.isNotEmpty)
-          _ThoughtsSpotifyControl(
-            post: post,
-            onPlayPause: onPlayPause,
-            isPlaying: isPlaying,
-            isCurrentTrack: isCurrentTrack,
+          // Add Spotify controls if song information is available
+          if (post.songName != null && post.songName!.isNotEmpty)
+            _ThoughtsSpotifyControl(
+              post: post,
+              onPlayPause: onPlayPause,
+              isPlaying: isPlaying,
+              isCurrentTrack: isCurrentTrack,
               parentWidth: parentWidth,
               parentHeight: parentHeight,
-          ),
-      ],
+            ),
+        ],
       ),
     );
   }
@@ -1204,48 +1204,48 @@ class _ThoughtsTextContentState extends State<_ThoughtsTextContent> {
     return Padding(
       padding: EdgeInsets.only(top: topPadding, right: rightPadding),
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  widget.post.text,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.post.text,
                     style: TextStyle(
-                    color: Theme.of(context).brightness == Brightness.dark 
-                        ? Colors.white 
-                        : Colors.black87,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black87,
                       fontSize: textFontSize,
-                    height: 1.4,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
+                      height: 1.4,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.left,
+                  ),
                 ),
-              ),
-              if (widget.post.text.length > 200) ...[
+                if (widget.post.text.length > 200) ...[
                   SizedBox(height: seeMoreSpacing),
-                GestureDetector(
-                  onTap: _showFullContentBottomSheet,
+                  GestureDetector(
+                    onTap: _showFullContentBottomSheet,
                     child: Text(
-                    'see more',
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                          ? Colors.white70 
-                          : Colors.black54,
+                      'see more',
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white70
+                            : Colors.black54,
                         fontSize: seeMoreFontSize,
-                      decoration: TextDecoration.underline,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
       ),
     );
   }
@@ -1280,23 +1280,23 @@ class _SongInfoSection extends StatelessWidget {
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (post.songName != null && post.songName!.isNotEmpty)
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (post.songName != null && post.songName!.isNotEmpty)
               AutoSizeText(
                 post.songName ?? 'Unknown Track',
                 style: TextStyle(
                   color: textColor,
-                    fontSize: 12,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  ),
+                ),
                 minFontSize: 8,
                 maxFontSize: 14,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.left,
-                ),
-              if (post.artistName != null && post.artistName!.isNotEmpty)
+              ),
+            if (post.artistName != null && post.artistName!.isNotEmpty)
               AutoSizeText(
                 post.artistName != null
                     ? (post.artistName!.length > 20
@@ -1313,9 +1313,9 @@ class _SongInfoSection extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.left,
-                ),
-            ],
-          ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1398,38 +1398,38 @@ class _InteractionButtonsState extends State<_InteractionButtons> {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
-      children: [
-        // Like button
-        GestureDetector(
-          onTap: widget.onLike,
-          child: Icon(
-            isLiked ? Icons.favorite : Icons.favorite_border,
+        children: [
+          // Like button
+          GestureDetector(
+            onTap: widget.onLike,
+            child: Icon(
+              isLiked ? Icons.favorite : Icons.favorite_border,
               color: isLiked ? likedColor : iconColor,
-            size: 24,
+              size: 24,
+            ),
           ),
-        ),
           SizedBox(width: spacing),
-        // Comment button
-        GestureDetector(
-          onTap: widget.onComment,
-          child: Icon(
-            LucideIcons.messageCircle,
+          // Comment button
+          GestureDetector(
+            onTap: widget.onComment,
+            child: Icon(
+              LucideIcons.messageCircle,
               color: iconColor,
-            size: 22,
+              size: 22,
+            ),
           ),
-        ),
           SizedBox(width: spacing),
-        // Share button
+          // Share button
           GestureDetector(
             onTap: widget.onShare,
             child: Icon(
-          LucideIcons.share2,
+              LucideIcons.share2,
               color: iconColor,
-          size: 22,
-        ),
+              size: 22,
+            ),
           ),
           SizedBox(width: spacing),
-      ],
+        ],
       ),
     );
   }

@@ -48,7 +48,8 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener =
       ItemPositionsListener.create();
-  final ItemScrollController _thoughtsItemScrollController = ItemScrollController();
+  final ItemScrollController _thoughtsItemScrollController =
+      ItemScrollController();
   final ItemPositionsListener _thoughtsItemPositionsListener =
       ItemPositionsListener.create();
   final SongPostService _songPostService = SongPostService();
@@ -187,7 +188,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.75,
+        height: MediaQuery.of(context).size.height * 0.5,
         child: CommentSection(
           comments: post.comments,
           onAddComment: (text) async {
@@ -797,8 +798,8 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
       final thoughtsResult = await _thoughtsService.getThoughtsPostsByIds(
           widget.savedThoughtsIds, context);
       if (thoughtsResult['success'] == true) {
-        final posts = (thoughtsResult['posts'] as List)
-            .map<ThoughtsPost>((json) {
+        final posts =
+            (thoughtsResult['posts'] as List).map<ThoughtsPost>((json) {
           final post = ThoughtsPost.fromJson(json);
           // Ensure likedBy is properly initialized
           if (json['likedBy'] != null && json['likedBy'] is List) {
@@ -850,7 +851,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
 
     // Call API
     final result = await _thoughtsService.likeThoughts(post.id, context);
-    
+
     // Update with backend data or revert on failure
     if (result['success'] == true && result['data'] != null) {
       // Use the actual data from backend to ensure consistency
@@ -895,7 +896,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.75,
+        height: MediaQuery.of(context).size.height * 0.5,
         child: CommentSection(
           comments: post.comments
               .map((c) => data_model.Comment(
@@ -964,7 +965,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
   Future<void> _handleThoughtPlay(ThoughtsPost post) async {
     print('[DEBUG] SavedPosts: _handleThoughtPlay called for post: ${post.id}');
     print('[DEBUG] SavedPosts: trackId = ${post.trackId}');
-    
+
     if (post.trackId == null) {
       print('[DEBUG] SavedPosts: trackId is null, returning early');
       return;
@@ -1011,7 +1012,8 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
         '/spotify/player/post/play',
         data: {'track_id': trackId},
       );
-      print('[DEBUG] SavedPosts: Spotify API response code: ${response.statusCode}');
+      print(
+          '[DEBUG] SavedPosts: Spotify API response code: ${response.statusCode}');
       if (response.statusCode == 200 ||
           response.statusCode == 202 ||
           response.statusCode == 204) {
@@ -1100,12 +1102,21 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
           ),
         ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: TabBarView(
-          children: [
-            _buildSongPostsTab(),
-            _buildThoughtsTab(),
-          ],
-        ),
+        body: Builder(builder: (context) {
+          // Ensure TabBarView children count matches the DefaultTabController length
+          var tabChildren = <Widget>[_buildSongPostsTab(), _buildThoughtsTab()];
+          const expected = 2;
+          if (tabChildren.length > expected) {
+            tabChildren = tabChildren.take(expected).toList();
+          } else if (tabChildren.length < expected) {
+            tabChildren = [
+              ...tabChildren,
+              for (var i = tabChildren.length; i < expected; i++) Container()
+            ];
+          }
+
+          return TabBarView(children: tabChildren);
+        }),
       ),
     );
   }
