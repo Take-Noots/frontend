@@ -32,6 +32,7 @@ import '../../presentation/screens/notifications/notifications_screen.dart';
 import '../../presentation/screens/chat/chat_list_screen.dart';
 import '../../presentation/screens/chat/chat_screen.dart';
 import '../../presentation/screens/chat/group_chat_screen.dart';
+import '../../presentation/screens/post/post_details_screen.dart';
 import 'route_names.dart';
 
 /// Main application router configuration using GoRouter
@@ -252,9 +253,7 @@ class AppRouter {
             path: '/post/:postId',
             builder: (context, state) {
               final postId = state.pathParameters['postId']!;
-              // You might need to create a PostDetailsScreen or redirect to appropriate screen
-              // For now, redirect to home
-              return HomeScreen(inShell: true);
+              return PostDetailsScreen(postId: postId);
             },
           ),
           GoRoute(
