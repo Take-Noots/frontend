@@ -54,7 +54,9 @@ class AppRouter {
 
       final isGoingToAuth = state.matchedLocation.startsWith('/login') ||
           state.matchedLocation.startsWith('/signup') ||
-          state.matchedLocation.startsWith('/username') ||
+          state.matchedLocation.startsWith('/username');
+
+      final isGoingToLinkSpotify =
           state.matchedLocation.startsWith('/link-spotify');
 
       // If not authenticated and not going to auth pages, redirect to login
@@ -63,11 +65,14 @@ class AppRouter {
         return AppRoutes.login;
       }
 
-      // If authenticated and trying to access auth pages, redirect to home
+      // If authenticated and trying to access auth pages (but NOT Spotify linking), redirect to home
       if (isAuthenticated && isGoingToAuth) {
         print('[DEBUG] Redirecting to home (already authenticated)');
         return AppRoutes.home;
       }
+
+      // Allow authenticated users to access Spotify linking page
+      // This is needed when users want to link Spotify after signup
 
       print('[DEBUG] No redirect needed');
       return null; // No redirect needed
@@ -234,7 +239,8 @@ class AppRouter {
             path: '/group-chat/:groupChatId',
             builder: (context, state) {
               final groupChatId = state.pathParameters['groupChatId']!;
-              final currentUserId = state.uri.queryParameters['currentUserId'] ?? '';
+              final currentUserId =
+                  state.uri.queryParameters['currentUserId'] ?? '';
               return GroupChatScreen(
                 groupChatId: groupChatId,
                 currentUserId: currentUserId,

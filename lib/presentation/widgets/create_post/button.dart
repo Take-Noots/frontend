@@ -39,17 +39,39 @@ ButtonStyle _getOutlinedButtonStyle() {
   );
 }
 
+// Style for tab buttons with active/inactive states
+ButtonStyle _getTabButtonStyle(BuildContext context, bool isActive) {
+  return ElevatedButton.styleFrom(
+    backgroundColor: isActive ? Colors.white : kPrimaryPurple,
+    foregroundColor: isActive ? kPrimaryPurple : Colors.white,
+    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: BorderSide(
+        color: kPrimaryPurple,
+        width: isActive ? 2 : 0,
+      ),
+    ),
+    elevation: isActive ? 4 : 0,
+    minimumSize: const Size(double.infinity, 56),
+  );
+}
+
 // Navigation buttons for switching between post types
 class CustomBottomBar extends StatelessWidget {
   final VoidCallback onSharePost;
   final VoidCallback onShareThoughts;
   final VoidCallback? onMakeAdvertisements;
+  final bool isSongPostActive; 
+  final bool isThoughtsPostActive;
 
   const CustomBottomBar({
     Key? key,
     required this.onSharePost,
     required this.onShareThoughts,
     this.onMakeAdvertisements,
+    this.isSongPostActive = false,
+    this.isThoughtsPostActive = false,
   }) : super(key: key);
 
   @override
@@ -64,17 +86,51 @@ class CustomBottomBar extends StatelessWidget {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: onSharePost,
-                  style: _getElevatedButtonStyle(),
-                  child: const Text('Share Post'),
+                  onPressed: isSongPostActive ? null : onSharePost, 
+                  style: _getTabButtonStyle(context, isSongPostActive),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.music_note,
+                        size: 18,
+                        color: isSongPostActive ? kPrimaryPurple : Colors.white,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Song Post',
+                        style: TextStyle(
+                          color: isSongPostActive ? kPrimaryPurple : Colors.white,
+                          fontWeight: isSongPostActive ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: onShareThoughts,
-                  style: _getElevatedButtonStyle(),
-                  child: const Text('Share Thoughts'),
+                  onPressed: isThoughtsPostActive ? null : onShareThoughts, 
+                  style: _getTabButtonStyle(context, isThoughtsPostActive),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.edit_note,
+                        size: 18,
+                        color: isThoughtsPostActive ? kPrimaryPurple : Colors.white,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Thoughts Post',
+                        style: TextStyle(
+                          color: isThoughtsPostActive ? kPrimaryPurple : Colors.white,
+                          fontWeight: isThoughtsPostActive ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

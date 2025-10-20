@@ -118,7 +118,6 @@ class _FeedWidgetState extends State<FeedWidget> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     if (widget.isLoading) {
@@ -163,7 +162,7 @@ class _FeedWidgetState extends State<FeedWidget> {
             Icon(Icons.music_note, color: Colors.white, size: 48),
             SizedBox(height: 16),
             Text('No posts yet', style: TextStyle(fontSize: 18)),
-            Text('Be the first to share your favorite music or thoughts!'),
+            Text('Follow users to view posts or thoughts!'),
           ],
         ),
       );
@@ -197,12 +196,9 @@ class _FeedWidgetState extends State<FeedWidget> {
     if (item.type == FeedItemType.song && item.songPost != null) {
       return _buildSongPostItem(item.songPost!);
     } else if (item.type == FeedItemType.thought && item.thoughtsPost != null) {
-      // Create a unique identifier for thoughts posts using song name and artist name
       final thoughtsPost = item.thoughtsPost!;
-      final thoughtsTrackId =
-          thoughtsPost.songName != null && thoughtsPost.artistName != null
-              ? '${thoughtsPost.songName}_${thoughtsPost.artistName}'
-              : null;
+      // Use the actual trackId from the ThoughtsPost model
+      final thoughtsTrackId = thoughtsPost.trackId;
 
       return ThoughtsFeedCard(
         post: thoughtsPost,
@@ -235,7 +231,7 @@ class _FeedWidgetState extends State<FeedWidget> {
     const postAspectRatio = 490 / 595;
 
     // Use stored background color from database, or default if not available
-    final backgroundColor = post.backgroundColor != null 
+    final backgroundColor = post.backgroundColor != null
         ? Color(int.parse(post.backgroundColor!.replaceFirst('#', '0xFF')))
         : _defaultColor;
 
@@ -361,7 +357,8 @@ class _FeedWidgetState extends State<FeedWidget> {
                           ),
                         ],
                       ),
-                      maxLines: 1,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

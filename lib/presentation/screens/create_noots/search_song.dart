@@ -96,7 +96,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     }
   }
 
-  //waits for 600ms after user stops typing, then searches for songs
+  
   void _onSearchChanged() {
     if (_debounce?.isActive ?? false) _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 600), () {
@@ -273,6 +273,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
         child: _buildSharePostInterface(colorScheme, theme),
       ),
       bottomNavigationBar: CustomBottomBar(
+        isSongPostActive: true, 
+        isThoughtsPostActive: false,
         onSharePost: () {
           // Already on search song page - do nothing
         },

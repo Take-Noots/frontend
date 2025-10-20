@@ -25,7 +25,7 @@ class LinkSpotifyScreen extends StatelessWidget {
       final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio; // Authenticated Dio instance
       final response = await dio.post('/spotify/login');
-      if (response.statusCode == 200 || response.statusCode == 302) {
+      if (response.statusCode == 200) {
         final data = response.data;
         final regex = RegExp(r'Redirecting to (https?://\S+)');
         final match = regex.firstMatch(data.toString());
@@ -40,6 +40,24 @@ class LinkSpotifyScreen extends StatelessWidget {
             SnackBar(content: Text('Failed to get Spotify redirect URL.')),
           );
         }
+      } else if (response.statusCode == 302 &&
+          response.headers['location'] != null) {
+        final url = response.headers['location']!.first;
+        if (await canLaunchUrl(Uri.parse(url))) {
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('Failed to launch Spotify authorization URL.')),
+          );
+        }
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'You must be logged in to link Spotify. Please log in first.')),
+        );
+        context.go(AppRoutes.login);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to initiate Spotify login.')),

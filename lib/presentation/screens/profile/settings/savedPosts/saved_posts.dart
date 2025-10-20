@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-// import removed, use correct import below
-import '../../../../../../data/services/song_post_service.dart';
-import '../../../../../../data/models/post_model.dart';
+// Use the same relative import style as other screens in this folder
+import '../../../../../data/services/song_post_service.dart';
+import '../../../../../data/services/thoughts_service.dart';
+import '../../../../../data/models/post_model.dart';
+import '../../../../../data/models/thoughts_model.dart';
 import 'saved_posts_feed_screen.dart';
 
 class SavedPostsPage extends StatefulWidget {
@@ -14,21 +16,63 @@ class SavedPostsPage extends StatefulWidget {
 
 class _SavedPostsPageState extends State<SavedPostsPage> {
   late Future<List<String>> _savedPostsFuture;
+  late Future<List<String>> _savedThoughtsFuture;
 
   @override
   void initState() {
     super.initState();
     _savedPostsFuture = _fetchSavedPosts();
+    _savedThoughtsFuture = _fetchSavedThoughts();
   }
 
   Future<List<String>> _fetchSavedPosts() async {
     final service = SongPostService();
-    final result = await service.getSavedPosts(widget.userId, context);
-    if (result['success'] == true && result['savedPosts'] != null) {
-      List<String> ids = (result['savedPosts'] as List).cast<String>();
-      return ids;
+    try {
+      final Map<String, dynamic> result =
+          await service.getSavedPosts(widget.userId, context);
+      // Debug: print raw response for diagnosis
+      // ignore: avoid_print
+      print('[SavedPosts] getSavedPosts raw result: $result');
+
+      if (result['savedPosts'] != null && result['savedPosts'] is List) {
+        return (result['savedPosts'] as List).cast<String>();
+      }
+
+      if (result['data'] != null && result['data'] is List) {
+        return (result['data'] as List).cast<String>();
+      }
+
+      // Fallback: some endpoints may return { savedPosts: [] } or just {}
+      return [];
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[SavedPosts] Error fetching saved posts: $e\n$st');
+      return [];
     }
-    return [];
+  }
+
+  Future<List<String>> _fetchSavedThoughts() async {
+    final service = ThoughtsService();
+    try {
+      final Map<String, dynamic> result =
+          await service.getSavedThoughtsPosts(widget.userId, context);
+      // ignore: avoid_print
+      print('[SavedPosts] getSavedThoughtsPosts raw result: $result');
+
+      if (result['savedPosts'] != null && result['savedPosts'] is List) {
+        return (result['savedPosts'] as List).cast<String>();
+      }
+
+      if (result['data'] != null && result['data'] is List) {
+        return (result['data'] as List).cast<String>();
+      }
+
+      return [];
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[SavedPosts] Error fetching saved thoughts: $e\n$st');
+      return [];
+    }
   }
 
   Future<List<Post>> _fetchPostDetails(List<String> ids) async {
@@ -38,6 +82,18 @@ class _SavedPostsPageState extends State<SavedPostsPage> {
     if (postsResult['success'] == true) {
       return (postsResult['posts'] as List)
           .map((json) => Post.fromJson(json))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<List<ThoughtsPost>> _fetchThoughtsDetails(List<String> ids) async {
+    if (ids.isEmpty) return [];
+    final service = ThoughtsService();
+    final postsResult = await service.getThoughtsPostsByIds(ids, context);
+    if (postsResult['success'] == true) {
+      return (postsResult['posts'] as List)
+          .map((json) => ThoughtsPost.fromJson(json))
           .toList();
     }
     return [];
@@ -87,14 +143,18 @@ class _SavedPostsPageState extends State<SavedPostsPage> {
               itemBuilder: (context, index) {
                 final post = posts[index];
                 return GestureDetector(
-                  onTap: () {
+                  onTap: () async {
+                    // Get saved thoughts IDs for passing to feed screen
+                    final savedThoughts = await _savedThoughtsFuture;
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => SavedPostsFeedScreen(
                           userId: widget.userId,
                           savedPostIds: postIds,
+                          savedThoughtsIds: savedThoughts,
                           initialPostId: post.id,
+                          initialTabIndex: 0,
                         ),
                       ),
                     );
@@ -167,7 +227,168 @@ class _SavedPostsPageState extends State<SavedPostsPage> {
   }
 
   Widget _buildThoughtsTab() {
-    return const Center(child: Text('Saved thought posts — coming soon'));
+    if (widget.userId.isEmpty) {
+      return Center(child: Text('Please login to view saved thoughts'));
+    }
+    final theme = Theme.of(context);
+    return FutureBuilder<List<String>>(
+      future: _savedThoughtsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error loading saved thoughts'));
+        }
+        final thoughtIds = snapshot.data ?? [];
+        if (thoughtIds.isEmpty) {
+          return Center(child: Text('No saved thought posts'));
+        }
+
+        // Fetch full thoughts post details for grid preview
+        return FutureBuilder<List<ThoughtsPost>>(
+          future: _fetchThoughtsDetails(thoughtIds),
+          builder: (context, thoughtSnapshot) {
+            if (thoughtSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final thoughts = thoughtSnapshot.data ?? [];
+            if (thoughts.isEmpty) {
+              return Center(child: Text('Failed to load thought details'));
+            }
+
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: thoughts.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 2,
+                crossAxisSpacing: 2,
+                childAspectRatio: 1,
+              ),
+              itemBuilder: (context, index) {
+                final thought = thoughts[index];
+                return GestureDetector(
+                  onTap: () async {
+                    // Get saved song post IDs for passing to feed screen
+                    final savedSongs = await _savedPostsFuture;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SavedPostsFeedScreen(
+                          userId: widget.userId,
+                          savedPostIds: savedSongs,
+                          savedThoughtsIds: thoughtIds,
+                          initialPostId: thought.id,
+                          initialTabIndex: 1,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Stack(
+                    children: [
+                      // Show cover image if available, otherwise show colored background
+                      thought.coverImage != null &&
+                              thought.coverImage!.isNotEmpty
+                          ? Image.network(
+                              thought.coverImage!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  _buildThoughtsColorBackground(thought, theme),
+                            )
+                          : _buildThoughtsColorBackground(thought, theme),
+                      // Overlay with like/comment counts
+                      if (thought.likes > 0 || thought.comments.isNotEmpty)
+                        Positioned(
+                          bottom: 4,
+                          left: 4,
+                          right: 4,
+                          child: Container(
+                            color: Colors.black54,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 2),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                if (thought.likes > 0)
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.favorite,
+                                          color: Colors.purple, size: 16),
+                                      const SizedBox(width: 2),
+                                      Text('${thought.likes}',
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12)),
+                                    ],
+                                  )
+                                else
+                                  const Icon(Icons.favorite_border,
+                                      color: Colors.white, size: 16),
+                                if (thought.comments.isNotEmpty)
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.comment,
+                                          color: Colors.white, size: 16),
+                                      const SizedBox(width: 2),
+                                      Text('${thought.comments.length}',
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12)),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildThoughtsColorBackground(ThoughtsPost thought, ThemeData theme) {
+    Color backgroundColor = const Color(0xFF2D1B69); // Default purple
+    if (thought.backgroundColor != null) {
+      try {
+        backgroundColor = Color(
+            int.parse(thought.backgroundColor!.replaceFirst('#', '0xFF')));
+      } catch (e) {
+        // Use default color if parsing fails
+      }
+    }
+
+    return Container(
+      color: backgroundColor,
+      width: double.infinity,
+      height: double.infinity,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            thought.text.length > 50
+                ? '${thought.text.substring(0, 50)}...'
+                : thought.text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -189,12 +410,22 @@ class _SavedPostsPageState extends State<SavedPostsPage> {
           ),
         ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: TabBarView(
-          children: [
-            _buildSongPostsTab(),
-            _buildThoughtsTab(),
-          ],
-        ),
+        body: Builder(builder: (context) {
+          // Ensure TabBarView children count matches the DefaultTabController length (2)
+          var tabChildren = <Widget>[_buildSongPostsTab(), _buildThoughtsTab()];
+          const expected = 2;
+          if (tabChildren.length > expected) {
+            tabChildren = tabChildren.take(expected).toList();
+          } else if (tabChildren.length < expected) {
+            // Pad with empty containers if somehow fewer children
+            tabChildren = [
+              ...tabChildren,
+              for (var i = tabChildren.length; i < expected; i++) Container()
+            ];
+          }
+
+          return TabBarView(children: tabChildren);
+        }),
       ),
     );
   }

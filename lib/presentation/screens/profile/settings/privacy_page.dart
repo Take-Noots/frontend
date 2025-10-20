@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/common/custom_switch.dart';
 
 class PrivacyPage extends StatelessWidget {
   const PrivacyPage({Key? key}) : super(key: key);
@@ -31,64 +32,66 @@ class PrivacyPage extends StatelessWidget {
               ),
             ),
           ),
-          SwitchListTile(
+          ListTile(
             title: Text(
               'Private Account',
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             subtitle: Text(
-              'Only approved followers can see your posts',
+              'Coming Soon',
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12),
             ),
-            value: false,
-            onChanged: (bool value) {
-              // Handle private account toggle
-            },
-            secondary: Icon(Icons.lock,
+            trailing: CustomSwitch(
+              value: false,
+              onChanged: (bool value) {
+                // Handle private account toggle
+              },
+            ),
+            leading: Icon(Icons.lock,
                 color: Theme.of(context).colorScheme.onSurface),
-            activeColor: Theme.of(context).colorScheme.primary,
           ),
           Divider(color: Theme.of(context).dividerColor),
-          SwitchListTile(
+          ListTile(
             title: Text(
               'Show Online Status',
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             subtitle: Text(
-              'Let others see when you\'re active',
+              'Coming Soon',
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12),
             ),
-            value: true,
-            onChanged: (bool value) {
-              // Handle online status toggle
-            },
-            secondary: Icon(Icons.circle,
-                color: Theme.of(context).colorScheme.primary, size: 16),
-            activeColor: Theme.of(context).colorScheme.primary,
+            trailing: CustomSwitch(
+              value: true,
+              onChanged: (bool value) {
+                // Handle online status toggle
+              },
+            ),
+            leading: Icon(Icons.circle, color: Colors.green, size: 16),
           ),
           Divider(color: Theme.of(context).dividerColor),
-          SwitchListTile(
+          ListTile(
             title: Text(
               'Allow Messages from Everyone',
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             subtitle: Text(
-              'Anyone can send you direct messages',
+              'Coming Soon',
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12),
             ),
-            value: false,
-            onChanged: (bool value) {
-              // Handle message settings toggle
-            },
-            secondary: Icon(Icons.message,
+            trailing: CustomSwitch(
+              value: false,
+              onChanged: (bool value) {
+                // Handle message settings toggle
+              },
+            ),
+            leading: Icon(Icons.message,
                 color: Theme.of(context).colorScheme.onSurface),
-            activeColor: Theme.of(context).colorScheme.primary,
           ),
           Divider(color: Theme.of(context).dividerColor),
           Padding(
@@ -110,7 +113,7 @@ class PrivacyPage extends StatelessWidget {
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             subtitle: Text(
-              'Remove all your search history',
+              'Coming Soon',
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12),
@@ -166,7 +169,7 @@ class PrivacyPage extends StatelessWidget {
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             subtitle: Text(
-              'Manage blocked users',
+              'Coming Soon',
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12),
@@ -187,7 +190,7 @@ class PrivacyPage extends StatelessWidget {
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             subtitle: Text(
-              'Request a copy of your data',
+              'Coming Soon',
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12),

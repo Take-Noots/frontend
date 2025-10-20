@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
-// import 'package:lucide_icons/lucide_icons.dart';
-import 'dart:ui'; // For BackdropFilter (blur effect)
+import 'dart:ui';
+import 'dart:convert'; // ✅ Add this import
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // ✅ Add this import
 import '../../../data/services/fanbase_post_service.dart';
+import '../../../data/services/auth_service.dart';
 import 'fanbasePost_screen_comments.dart';
+import 'fanbasePost_screen_songControl.dart';
+import 'package:dio/dio.dart';
 
 /// PostDetailPage displays a single fanbase post with its comments
 /// Users can add comments and reply to existing comments
@@ -23,6 +28,10 @@ class PostDetailPage extends StatefulWidget {
   final String description;
   final String username;
   final String userImage;
+
+  // User identification for permissions
+  final String? postCreatorId; // ✅ Add post creator ID
+  final String? fanbaseOwnerId; // ✅ Add fanbase owner ID
 
   // Post state
   final bool isLiked;
@@ -51,6 +60,8 @@ class PostDetailPage extends StatefulWidget {
     required this.isCurrentTrack,
     required this.backgroundColor,
     required this.fanbaseId,
+    this.postCreatorId, // ✅ Add to constructor
+    this.fanbaseOwnerId, // ✅ Add to constructor
     this.likesCount = 0,
     this.commentsCount = 0,
   });
@@ -65,16 +76,44 @@ class _PostDetailPageState extends State<PostDetailPage> {
   final GlobalKey<FanbasePostCommentsSectionState> _commentsSectionKey =
       GlobalKey<FanbasePostCommentsSectionState>();
 
+  // Add these state variables for music playback
+  String? _currentlyPlayingTrackId;
+  bool _isPlaying = false;
+  String? _currentUserId; // ✅ Add current user ID
+
   @override
   void initState() {
     super.initState();
     _comments = List.from(widget.comments);
-    // Trigger a rebuild after the first frame to ensure the key is attached
+    // Initialize playback state based on widget properties
+    _currentlyPlayingTrackId = widget.isPlaying ? widget.trackId : null;
+    _isPlaying = widget.isPlaying && widget.isCurrentTrack;
+    _loadCurrentUserId(); // ✅ Load current user ID
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() {});
       }
     });
+  }
+
+  // ✅ Update method to use SharedPreferences
+  Future<void> _loadCurrentUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        if (mounted) {
+          setState(() {
+            _currentUserId = userData['id'];
+          });
+          print('[DEBUG] Current user ID loaded: $_currentUserId');
+        }
+      }
+    } catch (e) {
+      print('[ERROR] Failed to load current user ID: $e');
+    }
   }
 
   /// Refreshes the page by fetching updated post data
@@ -83,7 +122,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
       final updatedPost = await FanbasePostService.getFanbasePost(
         widget.postId,
         context,
-        fanbaseId: widget.fanbaseId, // ✅ Add this parameter
+        fanbaseId: widget.fanbaseId,
       );
 
       if (mounted) {
@@ -125,6 +164,222 @@ class _PostDetailPageState extends State<PostDetailPage> {
     }).toList();
   }
 
+  /// Handles play/pause button press
+  Future<void> _handlePlayPause() async {
+    if (widget.trackId.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No track available for this post'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // If this track is currently playing, pause it
+    if (_currentlyPlayingTrackId == widget.trackId && _isPlaying) {
+      // Optimistically update UI
+      if (mounted) {
+        setState(() {
+          _isPlaying = false;
+        });
+      }
+      try {
+        await _pausePlayback();
+        // Success - state already updated
+      } catch (e) {
+        // Only show error and revert state if there's an actual error
+        // print('[ERROR] Failed to pause: $e');
+        if (mounted) {
+          setState(() {
+            _isPlaying = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Failed to pause: ${e.toString().replaceAll('Exception: ', '')}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } else {
+      // Optimistically update UI
+      if (mounted) {
+        setState(() {
+          _currentlyPlayingTrackId = widget.trackId;
+          _isPlaying = true;
+        });
+      }
+
+      try {
+        await _playTrack();
+        // Success - state already updated, no need to show message
+      } catch (e) {
+        // Only show error and revert state if there's an actual error
+        // print('[ERROR] Failed to play: $e');
+        if (mounted) {
+          setState(() {
+            _isPlaying = false;
+            _currentlyPlayingTrackId = null;
+          });
+
+          String errorMessage = 'Failed to play track';
+          String errorStr = e.toString();
+
+          if (errorStr.contains('401') || errorStr.contains('Unauthorized')) {
+            errorMessage = 'Please connect your Spotify account';
+          } else if (errorStr.contains('404')) {
+            errorMessage = 'Track not found';
+          } else if (errorStr.contains('403')) {
+            errorMessage = 'Playback restricted';
+          } else {
+            // Remove "Exception: " prefix for cleaner message
+            errorMessage = errorStr
+                .replaceAll('Exception: ', '')
+                .replaceAll('Failed to play track: ', '');
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  /// Plays the track using Spotify API
+  Future<void> _playTrack() async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      // print('[DEBUG] Attempting to play track: ${widget.trackId}');
+
+      final response = await dio.post(
+        '/spotify/player/post/play',
+        data: {'track_id': widget.trackId},
+      );
+
+      // print('[DEBUG] Play response status: ${response.statusCode}');
+      // print('[DEBUG] Play response data: ${response.data}');
+
+      // Accept any 2xx status code as success
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        // print('[DEBUG] Track started playing successfully');
+        // State is already updated optimistically in _handlePlayPause
+        return; // Exit successfully
+      } else {
+        // This should rarely happen
+        throw Exception('Unexpected status: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      // print('[ERROR] DioException in _playTrack:');
+      // print('[ERROR] - Message: ${e.message}');
+      // print('[ERROR] - Type: ${e.type}');
+      // print('[ERROR] - Response status: ${e.response?.statusCode}');
+      // print('[ERROR] - Response data: ${e.response?.data}');
+
+      // Check if it's actually a success that Dio is treating as an error
+      if (e.response?.statusCode != null &&
+          e.response!.statusCode! >= 200 &&
+          e.response!.statusCode! < 300) {
+        // print('[DEBUG] Response was actually successful despite DioException');
+        return; // It's actually success
+      }
+
+      String errorMsg = 'Failed to play track';
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data['message'] != null) {
+          errorMsg = data['message'].toString();
+        } else if (data is String && data.isNotEmpty) {
+          errorMsg = data;
+        }
+      } else if (e.message != null && e.message!.isNotEmpty) {
+        errorMsg = e.message!;
+      }
+
+      throw Exception(errorMsg);
+    } catch (e) {
+      // print('[ERROR] Unexpected error in _playTrack: $e');
+      throw Exception('Playback error: ${e.toString()}');
+    }
+  }
+
+  /// Pauses Spotify playback
+  Future<void> _pausePlayback() async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      // print('[DEBUG] Attempting to pause playback');
+
+      final response = await dio.put('/spotify/player/post/pause');
+
+      // print('[DEBUG] Pause response status: ${response.statusCode}');
+
+      // Accept any 2xx status code as success
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        // print('[DEBUG] Playback paused successfully');
+        // State is already updated optimistically in _handlePlayPause
+        return; // Exit successfully
+      } else {
+        throw Exception('Unexpected status: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      // print('[ERROR] DioException in _pausePlayback:');
+      // print('[ERROR] - Message: ${e.message}');
+      // print('[ERROR] - Type: ${e.type}');
+      // print('[ERROR] - Response status: ${e.response?.statusCode}');
+      // print('[ERROR] - Response data: ${e.response?.data}');
+
+      // Check if it's actually a success that Dio is treating as an error
+      if (e.response?.statusCode != null &&
+          e.response!.statusCode! >= 200 &&
+          e.response!.statusCode! < 300) {
+        // print('[DEBUG] Response was actually successful despite DioException');
+        return; // It's actually success
+      }
+
+      String errorMsg = 'Failed to pause playback';
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data['message'] != null) {
+          errorMsg = data['message'].toString();
+        } else if (data is String && data.isNotEmpty) {
+          errorMsg = data;
+        }
+      }
+
+      throw Exception(errorMsg);
+    } catch (e) {
+      // print('[ERROR] Unexpected error in _pausePlayback: $e');
+      throw Exception('Pause error: ${e.toString()}');
+    }
+  }
+
+  /// Handles opening Spotify (could open app or web player)
+  void _handleSpotifyTap() {
+    // TODO: Implement opening Spotify with the track
+    // You could use url_launcher package to open spotify:track:{trackId}
+    // print('Opening Spotify for track: ${widget.trackId}');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Opening in Spotify...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Get the bottom padding to account for navigation bar
@@ -140,7 +395,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
               left: 10,
               right: 10,
               top: 16,
-              bottom: bottomPadding, // Add enough padding for input bar + nav bar
+              bottom: bottomPadding,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,6 +413,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   fanbaseId: widget.fanbaseId,
                   comments: _comments,
                   onCommentAdded: _refreshPost,
+                  currentUserId: _currentUserId, // ✅ Pass current user ID
+                  postCreatorId: widget.postCreatorId, // ✅ Pass post creator ID
+                  fanbaseOwnerId:
+                      widget.fanbaseOwnerId, // ✅ Pass fanbase owner ID
                 ),
               ],
             ),
@@ -257,19 +516,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
               ],
             ),
           ),
-          IconButton(
-            icon: Icon(
-              Icons.play_arrow_sharp,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: Image.asset(
-              'assets/images/spotify.png',
-              height: 24,
-            ),
-            onPressed: () {},
+          const SizedBox(width: 8),
+          // Use the CompactSongControlWidget with actual functionality
+          CompactSongControlWidget(
+            trackId: widget.trackId,
+            isPlaying: _isPlaying,
+            isCurrentTrack: _currentlyPlayingTrackId == widget.trackId,
+            onPlayPause: _handlePlayPause,
+            onSpotifyTap: _handleSpotifyTap,
           ),
         ],
       ),

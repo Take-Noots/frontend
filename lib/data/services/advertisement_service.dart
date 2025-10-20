@@ -65,7 +65,8 @@ class AdvertisementService {
       } else {
         return {
           'success': false,
-          'message': response.data['message'] ?? 'Failed to create advertisement'
+          'message':
+              response.data['message'] ?? 'Failed to create advertisement'
         };
       }
     } on DioException catch (e) {
@@ -73,12 +74,14 @@ class AdvertisementService {
       if (e.response != null) {
         return {
           'success': false,
-          'message': e.response?.data?['message'] ?? 'Failed to create advertisement'
+          'message':
+              e.response?.data?['message'] ?? 'Failed to create advertisement'
         };
       }
       return {
         'success': false,
-        'message': 'Connection error. Please check your connection and try again.'
+        'message':
+            'Connection error. Please check your connection and try again.'
       };
     } catch (e) {
       debugPrint('Create advertisement error: $e');
@@ -109,7 +112,8 @@ class AdvertisementService {
       } else {
         return {
           'success': false,
-          'message': response.data['message'] ?? 'Failed to fetch advertisements'
+          'message':
+              response.data['message'] ?? 'Failed to fetch advertisements'
         };
       }
     } on DioException catch (e) {
@@ -117,12 +121,14 @@ class AdvertisementService {
       if (e.response != null) {
         return {
           'success': false,
-          'message': e.response?.data?['message'] ?? 'Failed to fetch advertisements'
+          'message':
+              e.response?.data?['message'] ?? 'Failed to fetch advertisements'
         };
       }
       return {
         'success': false,
-        'message': 'Connection error. Please check your connection and try again.'
+        'message':
+            'Connection error. Please check your connection and try again.'
       };
     } catch (e) {
       debugPrint('Fetch advertisements error: $e');
@@ -133,10 +139,14 @@ class AdvertisementService {
     }
   }
 
-  Future<Map<String, dynamic>> updateAdvertisement(String id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateAdvertisement(
+      String id, Map<String, dynamic> data) async {
     try {
       if (authService == null) {
-        return {'success': false, 'message': 'Authentication required to update advertisement'};
+        return {
+          'success': false,
+          'message': 'Authentication required to update advertisement'
+        };
       }
 
       await authService!.initialize();
@@ -144,13 +154,23 @@ class AdvertisementService {
       final response = await dio.post('/advertisement/$id', data: data);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return {'success': true, 'data': response.data, 'message': 'Advertisement updated successfully'};
+        return {
+          'success': true,
+          'data': response.data,
+          'message': 'Advertisement updated successfully'
+        };
       }
 
-      return {'success': false, 'message': response.data?['message'] ?? 'Failed to update advertisement'};
+      return {
+        'success': false,
+        'message': response.data?['message'] ?? 'Failed to update advertisement'
+      };
     } catch (e) {
       debugPrint('Update advertisement error: $e');
-      return {'success': false, 'message': 'An error occurred updating advertisement'};
+      return {
+        'success': false,
+        'message': 'An error occurred updating advertisement'
+      };
     }
   }
 
@@ -178,7 +198,8 @@ class AdvertisementService {
       final formData = FormData();
       formData.fields.add(MapEntry('title', title));
       formData.fields.add(MapEntry('description', description));
-      if (contactDetails != null) formData.fields.add(MapEntry('contactDetails', contactDetails));
+      if (contactDetails != null)
+        formData.fields.add(MapEntry('contactDetails', contactDetails));
       if (location != null) formData.fields.add(MapEntry('location', location));
       if (genre != null) formData.fields.add(MapEntry('genre', genre));
       if (hashtags != null) formData.fields.add(MapEntry('hashtags', hashtags));
@@ -186,26 +207,60 @@ class AdvertisementService {
 
       if (imageFile != null && imageFile.existsSync()) {
         final filename = p.basename(imageFile.path);
-        final file = await MultipartFile.fromFile(imageFile.path, filename: filename);
-        formData.files.add(MapEntry('file', file));
+        final file =
+            await MultipartFile.fromFile(imageFile.path, filename: filename);
+        // Backend FileInterceptor expects the field name 'image'
+        formData.files.add(MapEntry('image', file));
       }
 
       final response = await dio.post('/advertisement/create', data: formData);
 
       if (response.statusCode == 201) {
-        return {'success': true, 'data': response.data, 'message': 'Advertisement created successfully'};
+        return {
+          'success': true,
+          'data': response.data,
+          'message': 'Advertisement created successfully'
+        };
       } else {
-        return {'success': false, 'message': response.data['message'] ?? 'Failed to create advertisement'};
+        return {
+          'success': false,
+          'message':
+              response.data['message'] ?? 'Failed to create advertisement'
+        };
       }
     } on DioException catch (e) {
+      // Improved logging to surface server response for easier debugging
       debugPrint('Create advertisement with file error: ${e.message}');
+      debugPrint('DioException status: ${e.response?.statusCode}');
+      debugPrint('DioException response data: ${e.response?.data}');
       if (e.response != null) {
-        return {'success': false, 'message': e.response?.data?['message'] ?? 'Failed to create advertisement'};
+        // Try to extract a helpful message from response body
+        final respData = e.response?.data;
+        String? serverMessage;
+        try {
+          if (respData is Map && respData.containsKey('message')) {
+            serverMessage = respData['message']?.toString();
+          } else if (respData is String) {
+            serverMessage = respData;
+          }
+        } catch (_) {}
+
+        return {
+          'success': false,
+          'message': serverMessage ?? 'Failed to create advertisement'
+        };
       }
-      return {'success': false, 'message': 'Connection error. Please check your connection and try again.'};
+      return {
+        'success': false,
+        'message':
+            'Connection error. Please check your connection and try again.'
+      };
     } catch (e) {
       debugPrint('Create advertisement with file error: $e');
-      return {'success': false, 'message': 'An error occurred. Please try again.'};
+      return {
+        'success': false,
+        'message': 'An error occurred. Please try again.'
+      };
     }
   }
 }

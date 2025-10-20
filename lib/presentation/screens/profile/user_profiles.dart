@@ -273,6 +273,11 @@ class _UserProfilePageState extends State<UserProfilePage>
     }
   }
 
+  Future<void> _handleRefresh() async {
+    await _fetchProfileData();
+    refreshTabNotifier.value = !refreshTabNotifier.value;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -311,275 +316,306 @@ class _UserProfilePageState extends State<UserProfilePage>
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Column(
-        children: [
-          AlbumArtPostsTab(
-            username: profile!.username,
-            fullName: profile!.fullName,
-            posts: postCount,
-            followers: profile!.followers.length,
-            following: profile!.following.length,
-            albumImages: albumImages,
-            description: profile!.bio,
-            showGrid: false,
-            profileImage: profile!.profileImage,
-            postsList: posts,
-            onFollowersTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => FollowersListPageWrapper(
-                    userId: profile!.userId,
-                  ),
-                ),
-              );
-            },
-            onFollowingTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => FollowingListPageWrapper(
-                    userId: profile!.userId,
-                  ),
-                ),
-              );
-            },
-            onPostTap: (postId) {
-              // Debug
-              print("Header section - Tapped post ID: $postId");
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              AlbumArtPostsTab(
+                username: profile!.username,
+                fullName: profile!.fullName,
+                posts: postCount,
+                followers: profile!.followers.length,
+                following: profile!.following.length,
+                albumImages: albumImages,
+                description: profile!.bio,
+                showGrid: false,
+                profileImage: profile!.profileImage,
+                postsList: posts,
+                isLoading: false,
+                onFollowersTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FollowersListPageWrapper(
+                        userId: profile!.userId,
+                      ),
+                    ),
+                  );
+                },
+                onFollowingTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FollowingListPageWrapper(
+                        userId: profile!.userId,
+                      ),
+                    ),
+                  );
+                },
+                onPostTap: (postId) {
+                  // Debug
+                  print("Header section - Tapped post ID: $postId");
 
-              // If postId is empty, try to extract it from the posts list
-              String validPostId = postId;
-              if (validPostId.isEmpty) {
-                // Try to get the first post ID as fallback
-                if (posts.isNotEmpty) {
-                  final firstPost = posts[0];
-                  if (firstPost is Map<String, dynamic>) {
-                    validPostId =
-                        (firstPost['id'] ?? firstPost['_id'])?.toString() ?? '';
-                  } else if (firstPost != null) {
-                    // Handle Post object if applicable
-                    try {
-                      validPostId = firstPost.id?.toString() ?? '';
-                    } catch (e) {
-                      print("Error extracting ID: $e");
+                  // If postId is empty, try to extract it from the posts list
+                  String validPostId = postId;
+                  if (validPostId.isEmpty) {
+                    // Try to get the first post ID as fallback
+                    if (posts.isNotEmpty) {
+                      final firstPost = posts[0];
+                      if (firstPost is Map<String, dynamic>) {
+                        validPostId =
+                            (firstPost['id'] ?? firstPost['_id'])?.toString() ??
+                                '';
+                      } else if (firstPost != null) {
+                        // Handle Post object if applicable
+                        try {
+                          validPostId = firstPost.id?.toString() ?? '';
+                        } catch (e) {
+                          print("Error extracting ID: $e");
+                        }
+                      }
                     }
                   }
-                }
-              }
 
-              if (validPostId.isNotEmpty) {
-                print("Header - Navigating to post ID: $validPostId");
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ProfileFeedScreen(
-                      userId: widget.userId,
-                      initialPostId: validPostId,
-                    ),
-                  ),
-                );
-              } else {
-                print("Header - Cannot navigate: invalid post ID");
-              }
-            },
-          ),
-          // Add Follow and Message buttons for other users
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: 140,
-                  height: 44,
-                  child: ElevatedButton(
-                    onPressed: isLoadingFollow ? null : _handleFollow,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isFollowingUser
-                          ? Theme.of(context).colorScheme.surface
-                          : const Color(0xFFA855F7), // Purple for follow
-                      foregroundColor: isFollowingUser
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: isFollowingUser
-                            ? BorderSide(
-                                color: Theme.of(context).colorScheme.outline)
-                            : BorderSide.none,
+                  if (validPostId.isNotEmpty) {
+                    print("Header - Navigating to post ID: $validPostId");
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfileFeedScreen(
+                          userId: widget.userId,
+                          initialPostId: validPostId,
+                        ),
                       ),
-                    ),
-                    child: isLoadingFollow
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                isFollowingUser
-                                    ? Theme.of(context).colorScheme.onSurface
-                                    : Colors.white,
-                              ),
-                            ),
-                          )
-                        : Text(
-                            isFollowingUser ? 'Following' : 'Follow',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                SizedBox(
-                  width: 140,
-                  height: 44,
-                  child: OutlinedButton(
-                    onPressed: _handleMessage,
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                        color: Theme.of(context).colorScheme.outline,
-                        width: 1.5,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      backgroundColor: Theme.of(context).colorScheme.surface,
-                      foregroundColor: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    child: const Text(
-                      'Message',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Only show tabs if the profile is not private or if the user follows this profile
-          if (!isPrivateProfile || isFollowingUser) ...[
-            Container(
-              color: Theme.of(context).colorScheme.surface,
-              child: TabBar(
-                controller: _tabController,
-                indicatorColor: Theme.of(context).colorScheme.onSurface,
-                tabs: const [
-                  Tab(icon: Icon(Icons.grid_on)),
-                  Tab(icon: Icon(Icons.description)),
-                  Tab(icon: Icon(Icons.person_pin)),
-                ],
+                    );
+                  } else {
+                    print("Header - Cannot navigate: invalid post ID");
+                  }
+                },
               ),
-            ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  AlbumArtPostsTab(
-                    username: profile!.username,
-                    fullName: profile!.fullName,
-                    posts: postCount,
-                    followers: profile!.followers.length,
-                    following: profile!.following.length,
-                    albumImages: albumImages,
-                    description: profile!.bio,
-                    showGrid: true,
-                    profileImage: profile!.profileImage,
-                    postsList: posts,
-                    onPostTap: (postId) async {
-                      // Add debug print
-                      print("Tapped post ID: $postId");
-
-                      // Debug the post that was tapped
-                      final int index = posts.indexWhere((post) {
-                        if (post is Map<String, dynamic>) {
-                          return post['id'] == postId || post['_id'] == postId;
-                        } else if (post.runtimeType
-                            .toString()
-                            .contains('Post')) {
-                          // Handle if it's a Post object
-                          return post.id == postId;
-                        }
-                        return false;
-                      });
-
-                      if (index != -1) {
-                        print("Found post at index: $index");
-                        final post = posts[index];
-                        print(
-                            "Post data: ${post is Map ? post['id'] : 'object'}");
-                      } else {
-                        print("Post not found in list!");
-                      }
-
-                      // Ensure postId is valid and convert if needed
-                      if (postId.isNotEmpty) {
-                        // Ensure post ID is being passed correctly
-                        final String validPostId = postId.toString();
-                        print("Navigating to post ID: $validPostId");
-
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ProfileFeedScreen(
-                              userId: widget.userId,
-                              initialPostId: validPostId,
-                            ),
-                          ),
-                        );
-                        refreshTabNotifier.value = true;
-                      }
-                    },
-                    refreshNotifier: refreshTabNotifier,
-                  ),
-                  ThoughtPostsTab(userId: widget.userId),
-                  const TaggedPostsTab(),
-                ],
-              ),
-            ),
-          ] else
-            // Show private account message when profile is private and user doesn't follow
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+              // Add Follow and Message buttons for other users
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.lock,
-                      color: Theme.of(context).colorScheme.onSurface,
-                      size: 64,
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'This Account is Private',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                    SizedBox(
+                      width: 140,
+                      height: 44,
+                      child: ElevatedButton(
+                        onPressed: isLoadingFollow ? null : _handleFollow,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isFollowingUser
+                              ? Theme.of(context).colorScheme.surface
+                              : const Color(0xFFA855F7), // Purple for follow
+                          foregroundColor: isFollowingUser
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: isFollowingUser
+                                ? BorderSide(
+                                    color:
+                                        Theme.of(context).colorScheme.outline)
+                                : BorderSide.none,
+                          ),
+                        ),
+                        child: isLoadingFollow
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    isFollowingUser
+                                        ? Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                        : Colors.white,
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                isFollowingUser ? 'Following' : 'Follow',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Follow this account to see their posts',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontSize: 16,
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      width: 140,
+                      height: 44,
+                      child: OutlinedButton(
+                        onPressed: _handleMessage,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: Theme.of(context).colorScheme.outline,
+                            width: 1.5,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          backgroundColor:
+                              Theme.of(context).colorScheme.surface,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onSurface,
+                        ),
+                        child: const Text(
+                          'Message',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 24),
                   ],
                 ),
               ),
-            ),
-        ],
+
+              // Only show tabs if the profile is not private or if the user follows this profile
+              if (!isPrivateProfile || isFollowingUser) ...[
+                Container(
+                  color: Theme.of(context).colorScheme.surface,
+                  child: SizedBox(
+                    height: 50,
+                    child: TabBar(
+                      controller: _tabController,
+                      indicatorColor: Theme.of(context).colorScheme.onSurface,
+                      indicatorWeight: 2,
+                      labelPadding: const EdgeInsets.symmetric(
+                          horizontal: 0, vertical: 2),
+                      // Use explicit gray tones so the active tab icon is consistently gray
+                      labelColor: Colors.grey[700],
+                      unselectedLabelColor: Colors.grey[500],
+                      labelStyle: const TextStyle(fontSize: 12),
+                      unselectedLabelStyle: const TextStyle(fontSize: 12),
+                      tabs: const [
+                        Tab(icon: Icon(Icons.grid_on, size: 20)),
+                        Tab(icon: Icon(Icons.description, size: 20)),
+                        Tab(icon: Icon(Icons.person_pin, size: 20)),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  height: MediaQuery.of(context).size.height - 320,
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      AlbumArtPostsTab(
+                        username: profile!.username,
+                        fullName: profile!.fullName,
+                        posts: postCount,
+                        followers: profile!.followers.length,
+                        following: profile!.following.length,
+                        albumImages: albumImages,
+                        description: profile!.bio,
+                        showGrid: true,
+                        profileImage: profile!.profileImage,
+                        postsList: posts,
+                        isLoading: posts.isEmpty,
+                        onPostTap: (postId) async {
+                          // Add debug print
+                          print("Tapped post ID: $postId");
+
+                          // Debug the post that was tapped
+                          final int index = posts.indexWhere((post) {
+                            if (post is Map<String, dynamic>) {
+                              return post['id'] == postId ||
+                                  post['_id'] == postId;
+                            } else if (post.runtimeType
+                                .toString()
+                                .contains('Post')) {
+                              // Handle if it's a Post object
+                              return post.id == postId;
+                            }
+                            return false;
+                          });
+
+                          if (index != -1) {
+                            print("Found post at index: $index");
+                            final post = posts[index];
+                            print(
+                                "Post data: ${post is Map ? post['id'] : 'object'}");
+                          } else {
+                            print("Post not found in list!");
+                          }
+
+                          // Ensure postId is valid and convert if needed
+                          if (postId.isNotEmpty) {
+                            // Ensure post ID is being passed correctly
+                            final String validPostId = postId.toString();
+                            print("Navigating to post ID: $validPostId");
+
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ProfileFeedScreen(
+                                  userId: widget.userId,
+                                  initialPostId: validPostId,
+                                ),
+                              ),
+                            );
+                            refreshTabNotifier.value = true;
+                          }
+                        },
+                        refreshNotifier: refreshTabNotifier,
+                      ),
+                      ThoughtPostsTab(
+                          userId: widget.userId,
+                          refreshNotifier: refreshTabNotifier),
+                      const TaggedPostsTab(),
+                    ],
+                  ),
+                ),
+              ] else
+                // Show private account message when profile is private and user doesn't follow
+                SizedBox(
+                  height: MediaQuery.of(context).size.height - 300,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.lock,
+                          color: Theme.of(context).colorScheme.onSurface,
+                          size: 64,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'This Account is Private',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'Follow this account to see their posts',
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -189,33 +189,105 @@ class _CommentSectionState extends State<CommentSection> with TickerProviderStat
                                 children: [
                                   Row(
                                     children: [
-                                      Text(
-                                        comment.username ?? 'Unknown user',
-                                        style: TextStyle(
-                                          color: _getTextColor(context),
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 15,
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            Text(
+                                              comment.username ?? 'Unknown user',
+                                              style: TextStyle(
+                                                color: _getTextColor(context),
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, 
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: _getSubTextColor(context).withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Text(
+                                                timeAgo(comment.createdAt),
+                                                style: TextStyle(
+                                                  color: _getSubTextColor(context),
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, 
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: _getSubTextColor(context).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          timeAgo(comment.createdAt),
-                                          style: TextStyle(
-                                            color: _getSubTextColor(context),
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500,
+                                      // Delete button - only show for comment owner
+                                      if (comment.userId == widget.currentUserId)
+                                        GestureDetector(
+                                          onTap: () async {
+                                            // Show confirmation dialog
+                                            final confirm = await showDialog<bool>(
+                                              context: context,
+                                              builder: (BuildContext context) {
+                                                return AlertDialog(
+                                                  title: const Text('Delete Comment'),
+                                                  content: const Text('Are you sure you want to delete this comment?'),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () => Navigator.of(context).pop(false),
+                                                      child: const Text('Cancel'),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed: () => Navigator.of(context).pop(true),
+                                                      style: TextButton.styleFrom(
+                                                        foregroundColor: Colors.red,
+                                                      ),
+                                                      child: const Text('Delete'),
+                                                    ),
+                                                  ],
+                                                );
+                                              },
+                                            );
+
+                                            if (confirm == true) {
+                                              final result = await widget.songPostService.deleteComment(
+                                                widget.postId,
+                                                comment.id,
+                                                context,
+                                              );
+
+                                              if (result['success'] == true) {
+                                                setState(() {
+                                                  _comments.removeAt(index);
+                                                });
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('Comment deleted successfully'),
+                                                    backgroundColor: Color(0xFF8B5CF6),
+                                                    duration: Duration(seconds: 2),
+                                                  ),
+                                                );
+                                              } else {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(result['message'] ?? 'Failed to delete comment'),
+                                                    backgroundColor: Colors.red,
+                                                    duration: const Duration(seconds: 2),
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            child: Icon(
+                                              Icons.delete_outline,
+                                              color: _getSubTextColor(context).withOpacity(0.7),
+                                              size: 18,
+                                            ),
                                           ),
                                         ),
-                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
@@ -226,6 +298,8 @@ class _CommentSectionState extends State<CommentSection> with TickerProviderStat
                                       fontSize: 14,
                                       height: 1.4,
                                     ),
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),

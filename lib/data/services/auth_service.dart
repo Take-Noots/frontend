@@ -17,6 +17,19 @@ class AuthService {
   Future<void> initialize() async {
     try {
       await _tokenManager.initialize();
+
+      // Try to refresh token before allowing the app to consider user authenticated
+      _tokenManager.onRefreshFailed = () async {
+        // If refresh fails, show a message then ensure user is logged out via authProvider
+        try {
+          // Prefer to show a friendly message; AuthProvider doesn't have direct UI hooks so
+          // we rely on the app to display messages when authProvider.isAuthenticated changes.
+          await authProvider.logout();
+        } catch (_) {}
+      };
+
+      // Attempt refresh if needed so router auth checks don't redirect prematurely
+      await _tokenManager.refreshIfNeeded();
     } catch (e) {
       debugPrint('Error initializing AuthService: $e');
       rethrow;

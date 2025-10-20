@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
+import '../../core/constants/app_constants.dart';
 class NotificationService {
-  static const String baseUrl = 'http://localhost:3000/notifications';
-  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  
+  // Initialize secure storage
+  static const _secureStorage = FlutterSecureStorage();
+  static final String baseUrl = AppConstants.baseUrl + '/notifications';
 
   // Get authorization headers with Bearer token
   Future<Map<String, String>> _getAuthHeaders() async {
@@ -40,7 +42,9 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to retrieve notifications',
+          'message': errorData['message'] ??
+              errorData['error'] ??
+              'Failed to retrieve notifications',
         };
       }
     } catch (e) {
@@ -72,7 +76,9 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to get unread count',
+          'message': errorData['message'] ??
+              errorData['error'] ??
+              'Failed to get unread count',
         };
       }
     } catch (e) {
@@ -104,7 +110,9 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to mark as read',
+          'message': errorData['message'] ??
+              errorData['error'] ??
+              'Failed to mark as read',
         };
       }
     } catch (e) {
@@ -136,7 +144,9 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to mark all as read',
+          'message': errorData['message'] ??
+              errorData['error'] ??
+              'Failed to mark all as read',
         };
       }
     } catch (e) {
@@ -185,7 +195,9 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to delete notification',
+          'message': errorData['message'] ??
+              errorData['error'] ??
+              'Failed to delete notification',
         };
       }
     } catch (e) {
