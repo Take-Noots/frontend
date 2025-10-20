@@ -54,14 +54,14 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
       );
 
       if (result['success']) {
-       
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(result['message']),
               backgroundColor: AppColors.primaryPurple,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(10),
               duration: const Duration(seconds: 2),
             ),
@@ -77,7 +77,8 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
               content: Text(result['message']),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(10),
               duration: const Duration(seconds: 2),
             ),
@@ -91,7 +92,8 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
             content: Text('Error: $e'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
@@ -141,69 +143,98 @@ class _CreateNewNootPageState extends State<CreateNewNootPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Create New Noot')),
-      body: Column(
-        children: [
-          if (albumImage != null && albumImage.isNotEmpty)
-            SizedBox(
-              width: double.infinity,
-              height: MediaQuery.of(context).size.height * 0.45,
-              child: Center(
-                child: Image.network(albumImage,
-                    fit: BoxFit.cover,
-                    width: 500,
-                    height: 400,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const Icon(Icons.music_note, size: 100)),
+      // Use SafeArea + scroll view and add bottom padding to account for
+      // persistent bottom music player or system insets to avoid overflow.
+      body: SafeArea(
+        child: LayoutBuilder(builder: (context, constraints) {
+          // account for keyboard and system bottom padding and give extra
+          // space for a bottom music player (approx. 80px)
+          final double viewInsetsBottom =
+              MediaQuery.of(context).viewInsets.bottom;
+          final double paddingBottom = MediaQuery.of(context).padding.bottom;
+          final double bottomBuffer = 80.0; // space for music player
+          final double bottomPadding =
+              viewInsetsBottom + paddingBottom + bottomBuffer;
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.only(bottom: bottomPadding),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight -
+                      MediaQuery.of(context).padding.top),
+              child: IntrinsicHeight(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (albumImage != null && albumImage.isNotEmpty)
+                      SizedBox(
+                        width: double.infinity,
+                        height: MediaQuery.of(context).size.height * 0.45,
+                        child: Center(
+                          child: Image.network(albumImage,
+                              fit: BoxFit.cover,
+                              width: 500,
+                              height: 400,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.music_note, size: 100)),
+                        ),
+                      )
+                    else
+                      Container(
+                        color: Colors.grey[300],
+                        width: double.infinity,
+                        height: MediaQuery.of(context).size.height * 0.35,
+                        child: const Center(
+                            child: Text('No Image',
+                                style: TextStyle(fontSize: 18))),
+                      ),
+                    const SizedBox(height: 24),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 24),
+                      child: TextField(
+                        controller: _captionController,
+                        maxLines: 3,
+                        cursorColor: Colors.grey,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          hintText: 'Caption',
+                          hintStyle:
+                              TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: Text(
+                          '$songName  •  $artists',
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    //Preview and Share buttons
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: PreviewShareButtonRow(
+                        onPreview: _showPreview,
+                        onShare: _createPost,
+                        isLoading: _isLoading,
+                        shareText: 'Post',
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            )
-          else
-            Container(
-              color: Colors.grey[300],
-              width: double.infinity,
-              height: MediaQuery.of(context).size.height * 0.35,
-              child: const Center(
-                  child: Text('No Image', style: TextStyle(fontSize: 18))),
             ),
-          const SizedBox(height: 24),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-            child: TextField(
-              controller: _captionController,
-              maxLines: 3,
-              cursorColor: Colors.grey,
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: 'Caption',
-                hintStyle: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-              style: const TextStyle(fontSize: 18),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Center(
-              child: Text(
-                '$songName  •  $artists',
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-          const Spacer(),
-          //Preview and Share buttons
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: PreviewShareButtonRow(
-              onPreview: _showPreview,
-              onShare: _createPost,
-              isLoading: _isLoading,
-              shareText: 'Post',
-            ),
-          ),
-        ],
+          );
+        }),
       ),
     );
   }

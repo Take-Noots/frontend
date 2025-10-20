@@ -5,6 +5,9 @@ import '../../../../../data/models/post_model.dart' as data_model;
 import '../../../../../data/models/feed_item.dart';
 import '../../../../../data/services/song_post_service.dart';
 import '../../../../../data/services/profile_service.dart';
+import '../../../../../data/services/thoughts_service.dart';
+import '../../../../../data/services/auth_service.dart';
+import '../../../../../data/models/thoughts_model.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 import '../../../../widgets/song_post/comment.dart';
@@ -17,13 +20,17 @@ import '../../user_profiles.dart';
 class SavedPostsFeedScreen extends StatefulWidget {
   final String userId;
   final List<String> savedPostIds;
+  final List<String> savedThoughtsIds;
   final String? initialPostId;
+  final int initialTabIndex;
 
   const SavedPostsFeedScreen({
     Key? key,
     required this.userId,
     required this.savedPostIds,
+    this.savedThoughtsIds = const [],
     this.initialPostId,
+    this.initialTabIndex = 0,
   }) : super(key: key);
 
   @override
@@ -32,13 +39,21 @@ class SavedPostsFeedScreen extends StatefulWidget {
 
 class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
   List<data_model.Post> _posts = [];
+  List<ThoughtsPost> _thoughtsPosts = [];
   bool _isLoading = true;
+  bool _isLoadingThoughts = true;
   String? _error;
+  String? _errorThoughts;
   int _initialIndex = 0;
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener =
       ItemPositionsListener.create();
+  final ItemScrollController _thoughtsItemScrollController =
+      ItemScrollController();
+  final ItemPositionsListener _thoughtsItemPositionsListener =
+      ItemPositionsListener.create();
   final SongPostService _songPostService = SongPostService();
+  final ThoughtsService _thoughtsService = ThoughtsService();
   bool _isPlaying = false;
   String? _currentlyPlayingTrackId;
   String? _currentUserId;
@@ -60,6 +75,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
     }
 
     await _loadSavedPosts();
+    await _loadSavedThoughts();
   }
 
   Future<void> _loadSavedPosts() async {
@@ -82,8 +98,9 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
         final posts =
             (postsResult['posts'] as List).map<data_model.Post>((json) {
           final post = data_model.Post.fromJson(json);
+          // Check if current user has liked this post
           post.likedByMe =
-              (json['likedBy'] as List<dynamic>?)?.contains(widget.userId) ??
+              (json['likedBy'] as List<dynamic>?)?.contains(_currentUserId) ??
                   false;
           return post;
         }).toList();
@@ -171,7 +188,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.75,
+        height: MediaQuery.of(context).size.height * 0.5,
         child: CommentSection(
           comments: post.comments,
           onAddComment: (text) async {
@@ -237,7 +254,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
 
   Future<void> _playTrack(data_model.Post post) async {
     try {
-      final authService = Provider.of<dynamic>(context, listen: false);
+      final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
       final response = await dio.post(
         '/spotify/player/post/play',
@@ -258,7 +275,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
 
   Future<void> _pausePlayback() async {
     try {
-      final authService = Provider.of<dynamic>(context, listen: false);
+      final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
       final response = await dio.put('/spotify/player/post/pause');
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -306,7 +323,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
         isFollowing = _followingStatus[post.userId]!;
       } else {
         try {
-          final authService = Provider.of<dynamic>(context, listen: false);
+          final authService = Provider.of<AuthService>(context, listen: false);
           final profileService = ProfileService(authService: authService);
           final followingList =
               await profileService.getFollowingListWithDetails(_currentUserId!);
@@ -590,7 +607,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
     }
 
     try {
-      final authService = Provider.of<dynamic>(context, listen: false);
+      final authService = Provider.of<AuthService>(context, listen: false);
       final profileService = ProfileService(authService: authService);
       final result =
           await profileService.followUser(_currentUserId!, targetUserId);
@@ -655,7 +672,7 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
     }
 
     try {
-      final authService = Provider.of<dynamic>(context, listen: false);
+      final authService = Provider.of<AuthService>(context, listen: false);
       final profileService = ProfileService(authService: authService);
       final result =
           await profileService.unfollowUser(_currentUserId!, targetUserId);
@@ -764,14 +781,308 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
           );
   }
 
+  Future<void> _loadSavedThoughts() async {
+    setState(() {
+      _isLoadingThoughts = true;
+      _errorThoughts = null;
+    });
+    try {
+      if (widget.savedThoughtsIds.isEmpty) {
+        setState(() {
+          _thoughtsPosts = [];
+          _isLoadingThoughts = false;
+        });
+        return;
+      }
+
+      final thoughtsResult = await _thoughtsService.getThoughtsPostsByIds(
+          widget.savedThoughtsIds, context);
+      if (thoughtsResult['success'] == true) {
+        final posts =
+            (thoughtsResult['posts'] as List).map<ThoughtsPost>((json) {
+          final post = ThoughtsPost.fromJson(json);
+          // Ensure likedBy is properly initialized
+          if (json['likedBy'] != null && json['likedBy'] is List) {
+            post.likedBy = List<String>.from(json['likedBy']);
+          }
+          // Update likes count to match likedBy array length
+          post.likes = post.likedBy.length;
+          return post;
+        }).toList();
+
+        setState(() {
+          _thoughtsPosts = posts;
+          _isLoadingThoughts = false;
+        });
+      } else {
+        setState(() {
+          _errorThoughts = 'Failed to load saved thoughts';
+          _isLoadingThoughts = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorThoughts = 'Failed to load thoughts: $e';
+        _isLoadingThoughts = false;
+      });
+    }
+  }
+
+  void _handleThoughtLike(ThoughtsPost post) async {
+    // Guard against null user ID
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to like posts')),
+      );
+      return;
+    }
+
+    // Optimistically update UI
+    final wasLiked = post.likedBy.contains(_currentUserId);
+    setState(() {
+      if (wasLiked) {
+        post.likedBy.remove(_currentUserId);
+        post.likes--;
+      } else {
+        post.likedBy.add(_currentUserId!);
+        post.likes++;
+      }
+    });
+
+    // Call API
+    final result = await _thoughtsService.likeThoughts(post.id, context);
+
+    // Update with backend data or revert on failure
+    if (result['success'] == true && result['data'] != null) {
+      // Use the actual data from backend to ensure consistency
+      final backendData = result['data'];
+      setState(() {
+        if (backendData['likedBy'] != null) {
+          post.likedBy = List<String>.from(backendData['likedBy']);
+        }
+        post.likes = backendData['likes'] ?? post.likedBy.length;
+      });
+    } else if (result['success'] != true) {
+      // Revert on failure
+      setState(() {
+        if (wasLiked) {
+          post.likedBy.add(_currentUserId!);
+          post.likes++;
+        } else {
+          post.likedBy.remove(_currentUserId);
+          post.likes--;
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Failed to like thought')),
+      );
+    }
+  }
+
+  void _handleThoughtComment(ThoughtsPost post) {
+    // Guard against null user ID
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to comment')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.5,
+        child: CommentSection(
+          comments: post.comments
+              .map((c) => data_model.Comment(
+                    id: c.id,
+                    userId: c.userId,
+                    username: c.username ?? 'Anonymous',
+                    text: c.text,
+                    createdAt: c.createdAt,
+                    likes: c.likes,
+                    likedBy: c.likedBy,
+                  ))
+              .toList(),
+          onAddComment: (text) async {
+            final result = await _thoughtsService.addComment(
+                post.id, _currentUserId!, text, context);
+            if (result['success'] == true && result['data'] != null) {
+              final updatedComments =
+                  (result['data']['comments'] as List<dynamic>)
+                      .map((c) => ThoughtsComment.fromJson(c))
+                      .toList();
+              if (mounted) {
+                setState(() {
+                  post.comments = updatedComments;
+                });
+              }
+              return post.comments
+                  .map((c) => data_model.Comment(
+                        id: c.id,
+                        userId: c.userId,
+                        username: c.username ?? 'Anonymous',
+                        text: c.text,
+                        createdAt: c.createdAt,
+                        likes: c.likes,
+                        likedBy: c.likedBy,
+                      ))
+                  .toList();
+            } else {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content:
+                          Text(result['message'] ?? 'Failed to add comment')),
+                );
+              }
+              return post.comments
+                  .map((c) => data_model.Comment(
+                        id: c.id,
+                        userId: c.userId,
+                        username: c.username ?? 'Anonymous',
+                        text: c.text,
+                        createdAt: c.createdAt,
+                        likes: c.likes,
+                        likedBy: c.likedBy,
+                      ))
+                  .toList();
+            }
+          },
+          postId: post.id,
+          currentUserId: _currentUserId!,
+          songPostService: _songPostService,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleThoughtPlay(ThoughtsPost post) async {
+    print('[DEBUG] SavedPosts: _handleThoughtPlay called for post: ${post.id}');
+    print('[DEBUG] SavedPosts: trackId = ${post.trackId}');
+
+    if (post.trackId == null) {
+      print('[DEBUG] SavedPosts: trackId is null, returning early');
+      return;
+    }
+
+    final thoughtsTrackId = post.trackId;
+    if (_currentlyPlayingTrackId == thoughtsTrackId && _isPlaying) {
+      print('[DEBUG] SavedPosts: Pausing current track');
+      setState(() {
+        _isPlaying = false;
+      });
+      try {
+        await _pausePlayback();
+      } catch (e) {
+        print('[DEBUG] SavedPosts: Pause Error: $e');
+        setState(() {
+          _isPlaying = true;
+        });
+      }
+    } else {
+      print('[DEBUG] SavedPosts: Playing track: $thoughtsTrackId');
+      setState(() {
+        _currentlyPlayingTrackId = thoughtsTrackId;
+        _isPlaying = true;
+      });
+      try {
+        await _playTrackById(post.trackId!);
+      } catch (e) {
+        print('[DEBUG] SavedPosts: PlayTrack Error: $e');
+        setState(() {
+          _isPlaying = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _playTrackById(String trackId) async {
+    print('[DEBUG] SavedPosts: _playTrackById called with trackId: $trackId');
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+      print('[DEBUG] SavedPosts: Sending play request to Spotify API');
+      final response = await dio.post(
+        '/spotify/player/post/play',
+        data: {'track_id': trackId},
+      );
+      print(
+          '[DEBUG] SavedPosts: Spotify API response code: ${response.statusCode}');
+      if (response.statusCode == 200 ||
+          response.statusCode == 202 ||
+          response.statusCode == 204) {
+        setState(() {
+          _currentlyPlayingTrackId = trackId;
+          _isPlaying = true;
+        });
+        print('[DEBUG] SavedPosts: Track playing successfully');
+      }
+    } catch (e) {
+      print('[DEBUG] SavedPosts: _playTrackById Error: $e');
+    }
+  }
+
   Widget _buildThoughtsTab() {
-    return const Center(child: Text('Saved thought posts — coming soon'));
+    if (_isLoadingThoughts) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_errorThoughts != null) {
+      return Center(
+          child: Text(_errorThoughts!,
+              style:
+                  TextStyle(color: Theme.of(context).colorScheme.onSurface)));
+    }
+
+    return _thoughtsPosts.isEmpty
+        ? Center(
+            child: Text(
+              'No saved thought posts',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+          )
+        : FeedWidget(
+            feedItems: _thoughtsPosts.map((p) => FeedItem.thought(p)).toList(),
+            isLoading: false,
+            error: null,
+            onRefresh: _loadSavedThoughts,
+            onThoughtLike: (ThoughtsPost post) => _handleThoughtLike(post),
+            onThoughtComment: (ThoughtsPost post) =>
+                _handleThoughtComment(post),
+            onThoughtPlay: (ThoughtsPost post) => _handleThoughtPlay(post),
+            onThoughtHide: (ThoughtsPost post) async {
+              // When a thought is hidden from saved posts, just reload
+              await _loadSavedThoughts();
+            },
+            currentlyPlayingTrackId: _currentlyPlayingTrackId,
+            isPlaying: _isPlaying,
+            currentUserId: _currentUserId,
+            onUserTap: (String userId, String? username) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      UserProfilePage(userId: userId, username: username),
+                ),
+              );
+            },
+            itemScrollController: _thoughtsItemScrollController,
+            itemPositionsListener: _thoughtsItemPositionsListener,
+            initialIndex: 0,
+          );
   }
 
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
+      initialIndex: widget.initialTabIndex,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Saved Posts'),
@@ -791,12 +1102,21 @@ class _SavedPostsFeedScreenState extends State<SavedPostsFeedScreen> {
           ),
         ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: TabBarView(
-          children: [
-            _buildSongPostsTab(),
-            _buildThoughtsTab(),
-          ],
-        ),
+        body: Builder(builder: (context) {
+          // Ensure TabBarView children count matches the DefaultTabController length
+          var tabChildren = <Widget>[_buildSongPostsTab(), _buildThoughtsTab()];
+          const expected = 2;
+          if (tabChildren.length > expected) {
+            tabChildren = tabChildren.take(expected).toList();
+          } else if (tabChildren.length < expected) {
+            tabChildren = [
+              ...tabChildren,
+              for (var i = tabChildren.length; i < expected; i++) Container()
+            ];
+          }
+
+          return TabBarView(children: tabChildren);
+        }),
       ),
     );
   }

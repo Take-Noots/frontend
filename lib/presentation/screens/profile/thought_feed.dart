@@ -68,7 +68,7 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
     final userDataString = prefs.getString('user_data');
     final userData = userDataString != null
         ? jsonDecode(userDataString)
-        : {'id': '685fb750cc084ba7e0ef8533'}; 
+        : {'id': '685fb750cc084ba7e0ef8533'};
     _currentUserId = userData['id'];
   }
 
@@ -80,18 +80,16 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
   }
 
   void _handleLike(ThoughtsPost post) async {
-
     String? currentUserId = _currentUserId;
     if (currentUserId == null) {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
       final userData = userDataString != null
           ? jsonDecode(userDataString)
-          : {'id': '685fb750cc084ba7e0ef8533'}; 
+          : {'id': '685fb750cc084ba7e0ef8533'};
       currentUserId = userData['id'];
     }
 
-   
     if (currentUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -102,20 +100,16 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
       return;
     }
 
-   
     setState(() {
       if (post.likedBy.contains(currentUserId!)) {
-       
         post.likedBy.remove(currentUserId!);
         post.likes = (post.likes - 1).clamp(0, double.infinity).toInt();
       } else {
-       
         post.likedBy.add(currentUserId!);
         post.likes = post.likes + 1;
       }
     });
 
-    
     final result = await _thoughtsService.likeThoughts(post.id, context);
 
     // Check if the API call was successful
@@ -166,7 +160,7 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
     // print('[DEBUG] _handleComment: post.comments.length = ${post.comments.length}');
     for (int i = 0; i < post.comments.length; i++) {
       final comment = post.comments[i];
-    // print('[DEBUG] _handleComment: comment $i - id: ${comment.id}, likedBy: ${comment.likedBy}');
+      // print('[DEBUG] _handleComment: comment $i - id: ${comment.id}, likedBy: ${comment.likedBy}');
     }
 
     showModalBottomSheet(
@@ -177,17 +171,19 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.75,
+        height: MediaQuery.of(context).size.height * 0.5,
         child: CommentSection(
-          comments: post.comments.map((c) => Comment(
-            id: c.id,
-            userId: c.userId,
-            username: c.username,
-            text: c.text,
-            createdAt: c.createdAt,
-            likes: c.likes,
-            likedBy: c.likedBy,
-          )).toList(),
+          comments: post.comments
+              .map((c) => Comment(
+                    id: c.id,
+                    userId: c.userId,
+                    username: c.username,
+                    text: c.text,
+                    createdAt: c.createdAt,
+                    likes: c.likes,
+                    likedBy: c.likedBy,
+                  ))
+              .toList(),
           onAddComment: (text) async {
             final prefs = await SharedPreferences.getInstance();
             final userDataString = prefs.getString('user_data');
@@ -196,8 +192,7 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
                 : {'id': '685fb750cc084ba7e0ef8533', 'name': 'owl'};
             final result = await _songPostService.addComment(
                 post.id, userData['id'], userData['name'], text, context);
-            
-           
+
             bool isSuccess = false;
             if (result['success'] is bool) {
               isSuccess = result['success'];
@@ -206,7 +201,7 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
             } else if (result['success'] is String) {
               isSuccess = result['success'].toString().toLowerCase() == 'true';
             }
-            
+
             if (isSuccess && result['data'] != null) {
               final updatedComments =
                   (result['data']['comments'] as List<dynamic>)
@@ -215,15 +210,17 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
               setState(() {
                 post.comments = updatedComments;
               });
-              return updatedComments.map((c) => Comment(
-                id: c.id,
-                userId: c.userId,
-                username: c.username,
-                text: c.text,
-                createdAt: c.createdAt,
-                likes: c.likes,
-                likedBy: c.likedBy,
-              )).toList();
+              return updatedComments
+                  .map((c) => Comment(
+                        id: c.id,
+                        userId: c.userId,
+                        username: c.username,
+                        text: c.text,
+                        createdAt: c.createdAt,
+                        likes: c.likes,
+                        likedBy: c.likedBy,
+                      ))
+                  .toList();
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -231,15 +228,17 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
                   backgroundColor: Theme.of(context).colorScheme.error,
                 ),
               );
-              return post.comments.map((c) => Comment(
-                id: c.id,
-                userId: c.userId,
-                username: c.username,
-                text: c.text,
-                createdAt: c.createdAt,
-                likes: c.likes,
-                likedBy: c.likedBy,
-              )).toList();
+              return post.comments
+                  .map((c) => Comment(
+                        id: c.id,
+                        userId: c.userId,
+                        username: c.username,
+                        text: c.text,
+                        createdAt: c.createdAt,
+                        likes: c.likes,
+                        likedBy: c.likedBy,
+                      ))
+                  .toList();
             }
           },
           postId: post.id,
@@ -254,8 +253,7 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
     print('[DEBUG] _handlePlay called for post: ${post.id}');
     print('[DEBUG] _handlePlay songName: ${post.songName}');
     print('[DEBUG] _handlePlay artistName: ${post.artistName}');
-    
-   
+
     if (post.songName == null || post.songName!.isEmpty) {
       print('[DEBUG] _handlePlay: No song information, returning early');
       return;
@@ -294,7 +292,7 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
       final dio = authService.dio;
       final response = await dio.post(
         '/spotify/player/post/play',
-        data: {'track_id': post.trackId}, 
+        data: {'track_id': post.trackId},
       );
       if (response.statusCode == 200 ||
           response.statusCode == 202 ||
@@ -304,7 +302,8 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
           _isPlaying = true;
         });
       } else {
-        print('[DEBUG] PlayTrack: Unexpected status code: ${response.statusCode}');
+        print(
+            '[DEBUG] PlayTrack: Unexpected status code: ${response.statusCode}');
       }
     } catch (e) {
       print('[DEBUG] PlayTrack Error: $e');
@@ -325,7 +324,8 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
           _isPlaying = false;
         });
       } else {
-        print('[DEBUG] PausePlayback: Unexpected status code: ${response.statusCode}');
+        print(
+            '[DEBUG] PausePlayback: Unexpected status code: ${response.statusCode}');
       }
     } catch (e) {
       print('[DEBUG] PausePlayback Error: $e');
@@ -364,8 +364,10 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
         itemCount: _posts.length,
         itemBuilder: (context, index) {
           final post = _posts[index];
-          print('[DEBUG] ThoughtFeedScreen: Creating ThoughtsFeedCard for post: ${post.id}');
-          print('[DEBUG] ThoughtFeedScreen: onPlayPause callback is null? ${(() => _handlePlay(post)) == null}');
+          print(
+              '[DEBUG] ThoughtFeedScreen: Creating ThoughtsFeedCard for post: ${post.id}');
+          print(
+              '[DEBUG] ThoughtFeedScreen: onPlayPause callback is null? ${(() => _handlePlay(post)) == null}');
           return ThoughtsFeedCard(
             post: post,
             onLike: () => _handleLike(post),
@@ -384,7 +386,7 @@ class _ThoughtFeedScreenState extends State<ThoughtFeedScreen> {
                   _posts.removeAt(index);
                 }
               });
-              
+
               // Also call refresh callback if available
               if (widget.onRefresh != null) {
                 widget.onRefresh!();

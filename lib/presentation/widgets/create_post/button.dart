@@ -66,7 +66,7 @@ class CustomBottomBar extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: onSharePost,
                   style: _getElevatedButtonStyle(),
-                  child: const Text('Share Post'),
+                  child: const Text('Song Post'),
                 ),
               ),
               const SizedBox(width: 16),
@@ -74,7 +74,7 @@ class CustomBottomBar extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: onShareThoughts,
                   style: _getElevatedButtonStyle(),
-                  child: const Text('Share Thoughts'),
+                  child: const Text('Thoughts Post'),
                 ),
               ),
             ],

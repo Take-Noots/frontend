@@ -234,7 +234,7 @@ class _ThoughtsFeedCardState extends State<ThoughtsFeedCard> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.75,
+        height: MediaQuery.of(context).size.height * 0.5,
         child: CommentSection(
           comments: convertedComments,
           onAddComment: (text) async {
@@ -931,8 +931,10 @@ class _ThoughtsHeader extends StatelessWidget {
                   onTap: () => onUserTap?.call(post.userId, post.username),
                   child: AutoSizeText(
                     post.username ?? 'Unknown User',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black87,
                       fontWeight: FontWeight.w600,
                       fontSize: 18,
                       letterSpacing: 0.2,
@@ -957,7 +959,9 @@ class _ThoughtsHeader extends StatelessWidget {
                 padding: EdgeInsets.symmetric(horizontal: spacing * 0.67),
                 child: Icon(
                   Icons.more_vert,
-                  color: Colors.white,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black87,
                   size: iconSize * 0.92,
                 ),
               ),
@@ -1210,12 +1214,14 @@ class _ThoughtsTextContentState extends State<_ThoughtsTextContent> {
                   child: Text(
                     widget.post.text,
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black87,
                       fontSize: textFontSize,
                       height: 1.4,
                       fontWeight: FontWeight.w400,
                     ),
-                    maxLines: 5,
+                    maxLines: 4,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.left,
                   ),
@@ -1227,7 +1233,9 @@ class _ThoughtsTextContentState extends State<_ThoughtsTextContent> {
                     child: Text(
                       'see more',
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white70
+                            : Colors.black54,
                         fontSize: seeMoreFontSize,
                         decoration: TextDecoration.underline,
                       ),

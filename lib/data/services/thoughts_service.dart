@@ -166,7 +166,7 @@ class ThoughtsService {
         }
       }
     } catch (e) {
-      print('Error creating thoughts post: $e');
+      // print('Error creating thoughts post: $e');
       return {'success': false, 'message': 'Error sharing thoughts: $e'};
     }
   }
@@ -184,7 +184,7 @@ class ThoughtsService {
       final str = val.toString().toLowerCase();
       return str == 'true' || str == '1';
     } catch (e) {
-      print('isSuccess type check error: $e');
+      // print('isSuccess type check error: $e');
       return false;
     }
   }
@@ -199,7 +199,7 @@ class ThoughtsService {
         final dio = authService.dio;
 
         final response = await dio.get('/thoughts/followers/$userId');
-        print('Raw response.body: ${response.data}');
+        // print('Raw response.body: ${response.data}');
 
         if (response.statusCode == 200) {
           final decoded = response.data;
@@ -230,7 +230,7 @@ class ThoughtsService {
           Uri.parse('$baseUrl/thoughts/followers/$userId'),
           headers: {'Content-Type': 'application/json'},
         );
-        print('Raw response.body: ${response.body}');
+        // print('Raw response.body: ${response.body}');
         final decoded = jsonDecode(response.body);
         if (response.statusCode == 200) {
           if (decoded is List) {
@@ -255,7 +255,7 @@ class ThoughtsService {
         };
       }
     } catch (e) {
-      print('Error fetching follower thoughts posts: $e');
+      // print('Error fetching follower thoughts posts: $e');
       return {
         'success': false,
         'message': 'Network error: $e',
@@ -272,7 +272,7 @@ class ThoughtsService {
         final dio = authService.dio;
 
         final response = await dio.get('/thoughts/user/$userId');
-        print('Raw response.data (getUserThoughts): ${response.data}');
+        // print('Raw response.data (getUserThoughts): ${response.data}');
         
         if (response.statusCode == 200) {
           final data = response.data;
@@ -308,7 +308,7 @@ class ThoughtsService {
           Uri.parse('$baseUrl/thoughts/user/$userId'),
           headers: {'Content-Type': 'application/json'},
         );
-        print('Raw response.body (getUserThoughts): ${response.body}');
+        // print('Raw response.body (getUserThoughts): ${response.body}');
         final decoded = jsonDecode(response.body);
         if (response.statusCode == 200) {
           if (decoded is List) {
@@ -339,7 +339,7 @@ class ThoughtsService {
         }
       }
     } catch (e) {
-      print('Error fetching user thoughts posts: $e');
+      // print('Error fetching user thoughts posts: $e');
       return {
         'success': false,
         'data': [],
@@ -359,8 +359,8 @@ class ThoughtsService {
 
     // print('[DEBUG] LikeThoughts: Using authenticated Dio for post $postId');
     // print('[DEBUG] LikeThoughts: Dio baseUrl: ${dio.options.baseUrl}');
-        print(
-            '[DEBUG] LikeThoughts: AuthService token: ${authService.tokenManager.accessToken}');
+        // print(
+        //     '[DEBUG] LikeThoughts: AuthService token: ${authService.tokenManager.accessToken}');
 
         final response = await dio.post('/thoughts/$postId/like');
 
@@ -395,8 +395,8 @@ class ThoughtsService {
     } catch (e) {
     // print('[DEBUG] LikeThoughts: Error occurred: $e');
       if (e is DioException) {
-        print(
-            '[DEBUG] LikeThoughts: DioException status: ${e.response?.statusCode}');
+        // print(
+        //     '[DEBUG] LikeThoughts: DioException status: ${e.response?.statusCode}');
     // print('[DEBUG] LikeThoughts: DioException data: ${e.response?.data}');
       }
       return {
@@ -416,20 +416,20 @@ class ThoughtsService {
         final authService = Provider.of<AuthService>(context, listen: false);
         final dio = authService.dio;
 
-        print(
-            '[DEBUG] AddThoughtsComment: Using authenticated Dio for post $postId');
-        print(
-            '[DEBUG] AddThoughtsComment: Dio baseUrl: ${dio.options.baseUrl}');
-        print(
-            '[DEBUG] AddThoughtsComment: AuthService token: ${authService.tokenManager.accessToken}');
+        // print(
+        //     '[DEBUG] AddThoughtsComment: Using authenticated Dio for post $postId');
+        // print(
+        //     '[DEBUG] AddThoughtsComment: Dio baseUrl: ${dio.options.baseUrl}');
+        // print(
+        //     '[DEBUG] AddThoughtsComment: AuthService token: ${authService.tokenManager.accessToken}');
 
         final response = await dio.post('/thoughts/$postId/comments', data: {
           'userId': userId,
           'text': text,
         });
 
-        print(
-            '[DEBUG] AddThoughtsComment: Response status: ${response.statusCode}');
+        // print(
+        //     '[DEBUG] AddThoughtsComment: Response status: ${response.statusCode}');
     // print('[DEBUG] AddThoughtsComment: Response data: ${response.data}');
 
         if (response.statusCode == 200 || response.statusCode == 201) {
@@ -442,8 +442,8 @@ class ThoughtsService {
         }
       } else {
         // Fallback to http for backward compatibility
-        print(
-            '[DEBUG] AddThoughtsComment: Using fallback http for post $postId');
+        // print(
+        //     '[DEBUG] AddThoughtsComment: Using fallback http for post $postId');
         final response = await http.post(
           Uri.parse('$baseUrl/thoughts/$postId/comments'),
           headers: {'Content-Type': 'application/json'},
@@ -465,10 +465,10 @@ class ThoughtsService {
     } catch (e) {
     // print('[DEBUG] AddThoughtsComment: Error occurred: $e');
       if (e is DioException) {
-        print(
-            '[DEBUG] AddThoughtsComment: DioException status: ${e.response?.statusCode}');
-        print(
-            '[DEBUG] AddThoughtsComment: DioException data: ${e.response?.data}');
+        // print(
+        //     '[DEBUG] AddThoughtsComment: DioException status: ${e.response?.statusCode}');
+        // print(
+        //     '[DEBUG] AddThoughtsComment: DioException data: ${e.response?.data}');
     // print('[DEBUG] AddThoughtsComment: DioException message: ${e.message}');
     // print('[DEBUG] AddThoughtsComment: DioException type: ${e.type}');
 
@@ -506,18 +506,18 @@ class ThoughtsService {
         final authService = Provider.of<AuthService>(context, listen: false);
         final dio = authService.dio;
 
-        print(
-            '[DEBUG] LikeThoughtsComment: Using authenticated Dio for post $postId, comment $commentId');
-        print(
-            '[DEBUG] LikeThoughtsComment: Dio baseUrl: ${dio.options.baseUrl}');
-        print(
-            '[DEBUG] LikeThoughtsComment: AuthService token: ${authService.tokenManager.accessToken}');
+        // print(
+        //     '[DEBUG] LikeThoughtsComment: Using authenticated Dio for post $postId, comment $commentId');
+        // print(
+        //     '[DEBUG] LikeThoughtsComment: Dio baseUrl: ${dio.options.baseUrl}');
+        // print(
+        //     '[DEBUG] LikeThoughtsComment: AuthService token: ${authService.tokenManager.accessToken}');
 
         final response =
             await dio.post('/thoughts/$postId/comments/$commentId/like');
 
-        print(
-            '[DEBUG] LikeThoughtsComment: Response status: ${response.statusCode}');
+        // print(
+        //     '[DEBUG] LikeThoughtsComment: Response status: ${response.statusCode}');
     // print('[DEBUG] LikeThoughtsComment: Response data: ${response.data}');
 
         if (response.statusCode == 200 || response.statusCode == 201) {
@@ -530,8 +530,8 @@ class ThoughtsService {
         }
       } else {
         // Fallback to http for backward compatibility
-        print(
-            '[DEBUG] LikeThoughtsComment: Using fallback http for post $postId, comment $commentId');
+        // print(
+        //     '[DEBUG] LikeThoughtsComment: Using fallback http for post $postId, comment $commentId');
         final response = await http.post(
           Uri.parse('$baseUrl/thoughts/$postId/comments/$commentId/like'),
           headers: {'Content-Type': 'application/json'},
@@ -549,11 +549,60 @@ class ThoughtsService {
     } catch (e) {
     // print('[DEBUG] LikeThoughtsComment: Error occurred: $e');
       if (e is DioException) {
-        print(
-            '[DEBUG] LikeThoughtsComment: DioException status: ${e.response?.statusCode}');
-        print(
-            '[DEBUG] LikeThoughtsComment: DioException data: ${e.response?.data}');
+        // print(
+        //     '[DEBUG] LikeThoughtsComment: DioException status: ${e.response?.statusCode}');
+        // print(
+        //     '[DEBUG] LikeThoughtsComment: DioException data: ${e.response?.data}');
       }
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteComment(
+      String postId, String commentId,
+      [BuildContext? context]) async {
+    try {
+      if (context != null) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        final dio = authService.dio;
+
+        final response =
+            await dio.delete('/thoughts/$postId/comments/$commentId');
+
+        if (response.statusCode == 200 || response.statusCode == 204) {
+          return response.data ?? {'success': true};
+        } else {
+          return {
+            'success': false,
+            'message': response.data['message'] ?? 'Failed to delete comment',
+          };
+        }
+      } else {
+        // Fallback to http for backward compatibility
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('auth_token');
+        
+        final response = await http.delete(
+          Uri.parse('$baseUrl/thoughts/$postId/comments/$commentId'),
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+        );
+
+        if (response.statusCode == 200 || response.statusCode == 204) {
+          return jsonDecode(response.body);
+        } else {
+          return {
+            'success': false,
+            'message': 'Failed to delete comment',
+          };
+        }
+      }
+    } catch (e) {
       return {
         'success': false,
         'message': 'Network error: $e',
@@ -570,13 +619,13 @@ class ThoughtsService {
         final authService = Provider.of<AuthService>(context, listen: false);
         final dio = authService.dio;
 
-        print(
-            '[DEBUG] GetThoughtsComments: Using authenticated Dio for post $postId');
+        // print(
+        //     '[DEBUG] GetThoughtsComments: Using authenticated Dio for post $postId');
 
         final response = await dio.get('/thoughts/$postId');
 
-        print(
-            '[DEBUG] GetThoughtsComments: Response status: ${response.statusCode}');
+        // print(
+        //     '[DEBUG] GetThoughtsComments: Response status: ${response.statusCode}');
     // print('[DEBUG] GetThoughtsComments: Response data: ${response.data}');
 
         if (response.statusCode == 200) {
@@ -967,6 +1016,118 @@ class ThoughtsService {
       return {
         'success': false,
         'savedPosts': [],
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  // Get hidden thoughts posts by user ID
+  Future<Map<String, dynamic>> getHiddenThoughtsByUserId(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/thoughts/user/$userId/hidden'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+
+        // The backend may return either a list directly or a wrapper { success, data }
+        dynamic payload = decoded;
+        if (decoded is Map && decoded.containsKey('data')) {
+          payload = decoded['data'];
+        }
+
+        // Normalize to plain Dart structures and ensure we have a list
+        final normalized = jsonDecode(jsonEncode(payload));
+        if (normalized is List) {
+          return {
+            'success': true,
+            'data': normalized,
+          };
+        } else if (normalized is Map) {
+          return {
+            'success': true,
+            'data': [normalized],
+          };
+        }
+        return {
+          'success': false,
+          'message': 'Unexpected data format',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to fetch hidden thoughts posts',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  // Unhide thoughts post
+  Future<Map<String, dynamic>> unhideThought(String postId) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/thoughts/$postId/unhide'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': data['success'] ?? true,
+          'message': data['message'] ?? 'Thought unhidden successfully',
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['error'] ??
+              errorData['message'] ??
+              'Failed to unhide thought',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  // Get thoughts posts by IDs
+  Future<Map<String, dynamic>> getThoughtsPostsByIds(
+      List<String> ids, BuildContext context) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      final response = await dio.post('/thoughts/by-ids', data: {'ids': ids});
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data;
+        return {
+          'success': true,
+          'posts': data['posts'] ?? [],
+        };
+      } else {
+        return {
+          'success': false,
+          'posts': [],
+          'message': 'Failed to get thoughts posts',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'posts': [],
         'message': 'Network error: $e',
       };
     }

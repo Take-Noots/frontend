@@ -11,8 +11,10 @@ import '../thought_feed.dart';
 class ThoughtPostsTab extends StatefulWidget {
   final List<dynamic>? postsList;
   final String? userId;
+  final ValueNotifier<bool>? refreshNotifier;
 
-  const ThoughtPostsTab({Key? key, this.postsList, this.userId})
+  const ThoughtPostsTab(
+      {Key? key, this.postsList, this.userId, this.refreshNotifier})
       : super(key: key);
 
   @override
@@ -59,29 +61,45 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
             'ThoughtPostsTab: loaded ${_posts.length} thought posts from provided list');
         _isLoading = false;
       } else {
-         
-          // print(
-          //     'ThoughtPostsTab: provided postsList does not contain thought posts; will fetch by userId');
+        // print(
+        //     'ThoughtPostsTab: provided postsList does not contain thought posts; will fetch by userId');
         _fetchPosts();
       }
     } else {
       _fetchPosts();
     }
+    widget.refreshNotifier?.addListener(_onRefresh);
+  }
+
+  @override
+  void dispose() {
+    widget.refreshNotifier?.removeListener(_onRefresh);
+    // Cancel any ongoing operations
+    _isLoading = false;
+    super.dispose();
+  }
+
+  void _onRefresh() {
+    _fetchPosts();
   }
 
   Future<void> _fetchPosts() async {
     if (widget.userId == null) {
       print('ThoughtPostsTab: _fetchPosts called but userId is null');
+      if (!mounted) return;
       setState(() => _isLoading = false);
       return;
     }
     try {
-      
       var result = await _service.getUserThoughts(widget.userId!, context);
+      if (!mounted) return; // Check after async call
+
       //print('ThoughtPostsTab: raw getUserThoughts result: $result');
       if (!(result['success'] == true && result['data'] != null)) {
-        print('ThoughtPostsTab: getUserThoughts returned no data or failed, falling back to followers endpoint');
+        print(
+            'ThoughtPostsTab: getUserThoughts returned no data or failed, falling back to followers endpoint');
         result = await _service.getFollowerThoughts(widget.userId!);
+        if (!mounted) return; // Check after async call
         //print('ThoughtPostsTab: raw getFollowerThoughts result: $result');
       }
 
@@ -98,6 +116,7 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
             .where((p) => p.isHidden == 0 && p.isDeleted == 0)
             .toList();
         //print('ThoughtPostsTab: parsed ${posts.length} visible thought posts');
+        if (!mounted) return;
         setState(() {
           _posts = posts;
           _isLoading = false;
@@ -107,6 +126,7 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
     } catch (e) {
       print('ThoughtPostsTab: Error fetching thought posts: $e');
     }
+    if (!mounted) return;
     setState(() {
       _posts = [];
       _isLoading = false;
@@ -118,32 +138,42 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
     print('[DEBUG] ThoughtPostsTab._handlePlay called for post: ${post.id}');
     print('[DEBUG] ThoughtPostsTab._handlePlay songName: ${post.songName}');
     print('[DEBUG] ThoughtPostsTab._handlePlay trackId: ${post.trackId}');
-    
+
     // Only play if the post has song information and trackId
-    if (post.songName == null || post.songName!.isEmpty || post.trackId == null || post.trackId!.isEmpty) {
-      print('[DEBUG] ThoughtPostsTab._handlePlay: No song information or trackId, returning early');
+    if (post.songName == null ||
+        post.songName!.isEmpty ||
+        post.trackId == null ||
+        post.trackId!.isEmpty) {
+      print(
+          '[DEBUG] ThoughtPostsTab._handlePlay: No song information or trackId, returning early');
       return;
     }
 
     if (_currentlyPlayingTrackId == post.trackId && _isPlaying) {
+      if (!mounted) return;
       setState(() {
         _isPlaying = false;
       });
       try {
         await _pausePlayback();
+        if (!mounted) return;
       } catch (e) {
+        if (!mounted) return;
         setState(() {
           _isPlaying = true;
         });
       }
     } else {
+      if (!mounted) return;
       setState(() {
         _currentlyPlayingTrackId = post.trackId;
         _isPlaying = true;
       });
       try {
         await _playTrack(post);
+        if (!mounted) return;
       } catch (e) {
+        if (!mounted) return;
         setState(() {
           _isPlaying = false;
           _currentlyPlayingTrackId = null;
@@ -158,20 +188,25 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
       final dio = authService.dio;
       final response = await dio.post(
         '/spotify/player/post/play',
-        data: {'track_id': post.trackId}, 
+        data: {'track_id': post.trackId},
       );
+      if (!mounted) return;
+
       if (response.statusCode == 200 ||
           response.statusCode == 202 ||
           response.statusCode == 204) {
+        if (!mounted) return;
         setState(() {
           _currentlyPlayingTrackId = post.trackId;
           _isPlaying = true;
         });
       } else {
-        print('[DEBUG] ThoughtPostsTab.PlayTrack: Unexpected status code: ${response.statusCode}');
+        print(
+            '[DEBUG] ThoughtPostsTab.PlayTrack: Unexpected status code: ${response.statusCode}');
       }
     } catch (e) {
       print('[DEBUG] ThoughtPostsTab.PlayTrack Error: $e');
+      if (!mounted) return;
       setState(() {
         _isPlaying = false;
         _currentlyPlayingTrackId = null;
@@ -184,13 +219,17 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
       final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
       final response = await dio.put('/spotify/player/post/pause');
+      if (!mounted) return;
+
       if (response.statusCode == 200 || response.statusCode == 204) {
+        if (!mounted) return;
         setState(() {
           _isPlaying = false;
         });
       }
     } catch (e) {
       print('[DEBUG] ThoughtPostsTab.PausePlayback Error: $e');
+      if (!mounted) return;
       setState(() {
         _isPlaying = true;
       });
@@ -224,9 +263,7 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
                     posts: _posts,
                     userId: widget.userId,
                     initialPostId: post.id,
-                    onRefresh: () {
-                      
-                    },
+                    onRefresh: () {},
                   ),
                 ),
               ).then((_) {
@@ -237,19 +274,21 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
               children: [
                 // The thoughts feed card
                 ThoughtsFeedCard(
-              post: post,
-              showCoverImage: false,
-              onLike: () {
-                // liking handled elsewhere; left as no-op
-              },
-              onComment: () {
-                // navigate to comment view if desired
-              },
+                  post: post,
+                  showCoverImage: false,
+                  onLike: () {
+                    // liking handled elsewhere; left as no-op
+                  },
+                  onComment: () {
+                    // navigate to comment view if desired
+                  },
                   onPlayPause: () {
-                    print('[DEBUG] ThoughtPostsTab: onPlayPause callback called for post: ${post.id}');
+                    print(
+                        '[DEBUG] ThoughtPostsTab: onPlayPause callback called for post: ${post.id}');
                     _handlePlay(post);
                   },
-                  isPlaying: _isPlaying && _currentlyPlayingTrackId == post.trackId,
+                  isPlaying:
+                      _isPlaying && _currentlyPlayingTrackId == post.trackId,
                   isCurrentTrack: _currentlyPlayingTrackId == post.trackId,
                   onPostUpdated: (updatedPost) {
                     _fetchPosts();
@@ -291,12 +330,14 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).brightness == Brightness.dark
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? Colors.white.withOpacity(0.1)
                                   : Colors.black.withOpacity(0.05),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: Theme.of(context).brightness == Brightness.dark
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
                                     ? Colors.white.withOpacity(0.2)
                                     : Colors.black.withOpacity(0.1),
                                 width: 1,
@@ -308,7 +349,8 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
                                 Icon(
                                   Icons.touch_app_rounded,
                                   size: 16,
-                                  color: Theme.of(context).brightness == Brightness.dark
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
                                       ? Colors.white70
                                       : Colors.black54,
                                 ),
@@ -316,7 +358,8 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
                                 Text(
                                   '',
                                   style: TextStyle(
-                                    color: Theme.of(context).brightness == Brightness.dark
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
                                         ? Colors.white70
                                         : Colors.black54,
                                     fontSize: 13,
