@@ -4,6 +4,7 @@ class AppRoutes {
   static const String login = '/login';
   static const String signup = '/signup';
   static const String username = '/username';
+  static const String terms = '/terms';
   static const String linkSpotify = '/link-spotify';
 
   // Main app routes (inside shell)
