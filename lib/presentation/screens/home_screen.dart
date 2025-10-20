@@ -686,18 +686,18 @@ class _HomeScreenState extends State<HomeScreen> {
         throw Exception('Track ID is missing');
         }
         
-      // Play the track
-      final playResponse = await dio.post(
-        '/spotify/player/post/play',
-        data: {'track_id': trackId},
-      );
-      
-      // Accept any 2xx status code as success
+        // Play the track
+        final playResponse = await dio.post(
+          '/spotify/player/post/play',
+          data: {'track_id': trackId},
+        );
+        
+        // Accept any 2xx status code as success
       if (playResponse.statusCode != null &&
           playResponse.statusCode! >= 200 &&
           playResponse.statusCode! < 300) {
         // Successfully started playing track
-      } else {
+        } else {
         throw Exception(
             'Failed to play track - Status: ${playResponse.statusCode}');
       }

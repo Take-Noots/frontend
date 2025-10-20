@@ -33,7 +33,7 @@ class SongPostService {
 
         if (currentUserId == null) {
           final prefs = await SharedPreferences
-              .getInstance(); //if user id not in the AuthProvider, get it from SharedPreferences(AuthProvider not ready yet)
+              .getInstance(); //if user id not in the AuthProvider, get it from SharedPreferences
           final userDataString = prefs.getString('user_data');
           if (userDataString != null) {
             final userData = jsonDecode(userDataString);

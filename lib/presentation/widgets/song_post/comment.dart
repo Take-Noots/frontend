@@ -226,6 +226,8 @@ class _CommentSectionState extends State<CommentSection> with TickerProviderStat
                                       fontSize: 14,
                                       height: 1.4,
                                     ),
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
