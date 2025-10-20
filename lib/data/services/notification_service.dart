@@ -12,6 +12,8 @@ class NotificationService {
   // Get authorization headers with Bearer token
   Future<Map<String, String>> _getAuthHeaders() async {
     final token = await _secureStorage.read(key: 'access_token');
+    print('🔍 [NotificationService] Token retrieved: ${token != null ? "Found (${token!.length} chars)" : "Not found"}');
+
     return {
       'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
@@ -25,11 +27,18 @@ class NotificationService {
   }) async {
     try {
       final headers = await _getAuthHeaders();
+      print('🔍 [NotificationService] Requesting notifications with headers: ${headers.keys}');
+
+      final url = '$baseUrl/my-notifications?page=$page&limit=$limit';
+      print('🔍 [NotificationService] URL: $url');
 
       final response = await http.get(
-        Uri.parse('$baseUrl/my-notifications?page=$page&limit=$limit'),
+        Uri.parse(url),
         headers: headers,
       );
+
+      print('🔍 [NotificationService] Response status: ${response.statusCode}');
+      print('🔍 [NotificationService] Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -38,6 +47,10 @@ class NotificationService {
           'data': data['data'], // The new endpoint returns data wrapped in a 'data' field
           'message': 'Notifications retrieved successfully',
         };
+      } else if (response.statusCode == 401) {
+        print('🔄 [NotificationService] JWT auth failed, trying fallback method');
+        // Fallback to old method if JWT auth fails
+        return await _getUserNotificationsFallback(page: page, limit: limit);
       } else {
         final errorData = jsonDecode(response.body);
         return {
@@ -48,6 +61,7 @@ class NotificationService {
         };
       }
     } catch (e) {
+      print('❌ [NotificationService] Error: $e');
       return {
         'success': false,
         'message': 'Network error: $e',
@@ -204,6 +218,61 @@ class NotificationService {
       return {
         'success': false,
         'message': 'Network error: $e',
+      };
+    }
+  }
+
+  // Fallback method using the old approach
+  Future<Map<String, dynamic>> _getUserNotificationsFallback({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      print('🔄 [NotificationService] Using fallback method');
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+
+      if (userDataString == null) {
+        print('❌ [NotificationService] No user data found in SharedPreferences');
+        return {
+          'success': false,
+          'message': 'User not logged in.',
+        };
+      }
+
+      final userData = jsonDecode(userDataString);
+      final userId = userData['id'];
+      print('🔍 [NotificationService] Using fallback with userId: $userId');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/$userId?page=$page&limit=$limit'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔍 [NotificationService] Fallback response status: ${response.statusCode}');
+      print('🔍 [NotificationService] Fallback response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': data['data'],
+          'message': 'Notifications retrieved successfully (fallback)',
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to retrieve notifications (fallback)',
+        };
+      }
+    } catch (e) {
+      print('❌ [NotificationService] Fallback error: $e');
+      return {
+        'success': false,
+        'message': 'Network error in fallback: $e',
       };
     }
   }
