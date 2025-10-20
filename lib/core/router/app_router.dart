@@ -5,6 +5,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/signup_screen.dart';
 import '../../presentation/screens/auth/username_screen.dart';
+import '../../presentation/screens/auth/terms_screen.dart';
 import '../../presentation/screens/auth/link_spotify_screen.dart';
 import '../../presentation/screens/home_screen.dart';
 import '../../presentation/screens/search/search_feed_screen.dart';
@@ -54,7 +55,8 @@ class AppRouter {
 
       final isGoingToAuth = state.matchedLocation.startsWith('/login') ||
           state.matchedLocation.startsWith('/signup') ||
-          state.matchedLocation.startsWith('/username');
+          state.matchedLocation.startsWith('/username') ||
+          state.matchedLocation.startsWith('/terms');
 
       final isGoingToLinkSpotify =
           state.matchedLocation.startsWith('/link-spotify');
@@ -91,6 +93,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.username,
         builder: (context, state) => const UsernameScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.terms,
+        builder: (context, state) => const TermsScreen(),
       ),
       GoRoute(
         path: AppRoutes.linkSpotify,

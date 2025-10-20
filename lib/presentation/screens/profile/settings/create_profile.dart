@@ -4,9 +4,11 @@ import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/constants/app_constants.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/router/route_names.dart';
 import '../../../../data/services/profile_service.dart';
-import 'edit_profile.dart'; // Import the EditProfilePage
 
 class CreateProfilePage extends StatefulWidget {
   const CreateProfilePage({Key? key}) : super(key: key);
@@ -19,6 +21,7 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
   final _formKey = GlobalKey<FormState>();
   String bio = '';
   String profileImage = '';
+  String username = '';
   String fullName = '';
   String userType = 'public'; // Default user type
   bool isLoading = false;
@@ -51,6 +54,7 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
       'bio': bio,
       'profileImage': profileImage,
       'fullName': fullName,
+      'username': username,
       'userType': userType, // Include user type in the creation
     });
     setState(() {
@@ -73,10 +77,10 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
                       fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.pushReplacementNamed(context, '/profile');
+                  Navigator.of(context).pop(); // Close dialog
+                  context.go(AppRoutes.home); // Navigate to home using router
                 },
-                child: const Text('Go to Profile'),
+                child: const Text('Go to Home'),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -86,12 +90,9 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
                       fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const EditProfilePage()),
-                  );
+                  Navigator.of(context).pop(); // Close dialog
+                  context.go(AppRoutes
+                      .editProfile); // Navigate to edit profile using router
                 },
                 child: const Text('Edit Profile'),
               ),
@@ -249,6 +250,27 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
           key: _formKey,
           child: ListView(
             children: [
+              const SizedBox(height: 16),
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Username',
+                  labelStyle: TextStyle(color: Colors.white),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+                onChanged: (value) => username = value.trim(),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9._]')),
+                  LengthLimitingTextInputFormatter(30),
+                ],
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) return 'Username is required';
+                  final valid = RegExp(r'^[A-Za-z0-9._]{1,30}$').hasMatch(value.trim());
+                  return valid ? null : 'Use letters, numbers, periods and underscores only (1-30 chars)';
+                },
+              ),
               const SizedBox(height: 16),
               GestureDetector(
                 onTap: _uploading ? null : _pickAndUploadImage,
