@@ -35,8 +35,10 @@ class ExploreFeed extends StatelessWidget {
               ? Image.network(
                   img,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.broken_image),
+                  errorBuilder: (context, error, stackTrace) => Image.network(
+                    'https://picsum.photos/seed/picsum/200/300',
+                    fit: BoxFit.cover,
+                  ),
                 )
               : Image.asset(
                   img,
