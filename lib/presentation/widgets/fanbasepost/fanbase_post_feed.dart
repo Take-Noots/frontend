@@ -251,8 +251,9 @@ class _FanbasePostFeedWidgetState extends State<FanbasePostFeedWidget> {
     }).toList();
 
     return Container(
-      margin:
-          EdgeInsets.symmetric(horizontal: horizontalMargin, vertical: 12.0),
+      margin: EdgeInsets.symmetric(
+          horizontal: horizontalMargin,
+          vertical: 0.0), 
       child: Column(
         children: [
           AspectRatio(
@@ -269,7 +270,8 @@ class _FanbasePostFeedWidgetState extends State<FanbasePostFeedWidget> {
                       child: CustomPaint(
                         painter: PostShape(
                           // backgroundColor: backgroundColor,
-                          backgroundColor: isDark ? Color(0xFF212121) : Colors.grey[600]!,
+                          backgroundColor:
+                              isDark ? Color(0xFF212121) : Colors.grey[600]!,
                           margin: painterMargin,
                         ),
                         child: Container(),

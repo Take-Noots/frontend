@@ -476,4 +476,93 @@ class FanbasePostService {
       throw Exception('Failed to delete post: $e');
     }
   }
+
+
+  static Future<void> deleteComment(
+    String postId,
+    String commentId,
+    BuildContext context, {
+    required String fanbaseId,
+  }) async {
+    try {
+      print(
+          '[DEBUG] Attempting to delete comment: $commentId from post: $postId in fanbase: $fanbaseId');
+
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      print(
+          '[DEBUG] Sending DELETE request to: /fanbase/$fanbaseId/posts/$postId/comment/$commentId');
+      final response = await dio
+          .delete('/fanbase/$fanbaseId/posts/$postId/comment/$commentId');
+
+      print('[DEBUG] Delete response status: ${response.statusCode}');
+      print('[DEBUG] Delete response data type: ${response.data.runtimeType}');
+      print('[DEBUG] Delete response data: ${response.data}');
+
+      if (response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          response.statusCode == 204) {
+        print('[DEBUG] Comment deleted successfully');
+        return;
+      } else {
+        throw Exception('Failed to delete comment: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      print('[ERROR] DioException in deleteComment: ${e.message}');
+      print('[ERROR] Response status: ${e.response?.statusCode}');
+      print('[ERROR] Response data: ${e.response?.data}');
+
+      final errorMessage = e.response?.data?['message'] ?? e.message;
+      throw Exception('Failed to delete comment: $errorMessage');
+    } catch (e) {
+      print('[ERROR] Unexpected error in deleteComment: $e');
+      throw Exception('Failed to delete comment: $e');
+    }
+  }
+
+  static Future<void> deleteSubComment(
+    String postId,
+    String commentId,
+    String subCommentId,
+    BuildContext context, {
+    required String fanbaseId,
+  }) async {
+    try {
+      print(
+          '[DEBUG] Attempting to delete sub-comment: $subCommentId from comment: $commentId in post: $postId in fanbase: $fanbaseId');
+
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      print(
+          '[DEBUG] Sending DELETE request to: /fanbase/$fanbaseId/posts/$postId/comment/$commentId/subcomment/$subCommentId');
+      final response = await dio.delete(
+          '/fanbase/$fanbaseId/posts/$postId/comment/$commentId/subcomment/$subCommentId');
+
+      print('[DEBUG] Delete response status: ${response.statusCode}');
+      print('[DEBUG] Delete response data type: ${response.data.runtimeType}');
+      print('[DEBUG] Delete response data: ${response.data}');
+
+      if (response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          response.statusCode == 204) {
+        print('[DEBUG] Sub-comment deleted successfully');
+        return;
+      } else {
+        throw Exception(
+            'Failed to delete sub-comment: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      print('[ERROR] DioException in deleteSubComment: ${e.message}');
+      print('[ERROR] Response status: ${e.response?.statusCode}');
+      print('[ERROR] Response data: ${e.response?.data}');
+
+      final errorMessage = e.response?.data?['message'] ?? e.message;
+      throw Exception('Failed to delete sub-comment: $errorMessage');
+    } catch (e) {
+      print('[ERROR] Unexpected error in deleteSubComment: $e');
+      throw Exception('Failed to delete sub-comment: $e');
+    }
+  }
 }
