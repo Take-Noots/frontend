@@ -12,7 +12,7 @@ import 'auth_service.dart';
 class ThoughtsService {
   final String baseUrl = AppConstants.baseUrl;
 
-  // Create a new thoughts post
+
   Future<Map<String, dynamic>> createThoughts({
     String? text,
     String? thoughtsText,
@@ -24,7 +24,7 @@ class ThoughtsService {
     String? fanbaseID,
     BuildContext? context,
   }) async {
-    // Support both 'text' and 'thoughtsText' parameter names
+    
     final postText = thoughtsText ?? text;
 
     if (postText == null || postText.isEmpty) {
@@ -34,16 +34,16 @@ class ThoughtsService {
       };
     }
     try {
-      // If context is provided, use AuthService with Dio for authenticated requests
+      
       if (context != null) {
         final authService = Provider.of<AuthService>(context, listen: false);
         final dio = authService.dio;
 
-        // Get user ID from AuthProvider or SharedPreferences
+        
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         String? currentUserId = authProvider.user?.id;
 
-        // Fallback to SharedPreferences if AuthProvider doesn't have user ID
+       
         if (currentUserId == null) {
           final prefs = await SharedPreferences.getInstance();
           final userDataString = prefs.getString('user_data');
