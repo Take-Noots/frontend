@@ -14,6 +14,10 @@ class OptionsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSpotifyLinked =
+        Provider.of<AuthProvider>(context, listen: false).isSpotifyLinked;
+    debugPrint('🔍 Options page - isSpotifyLinked: $isSpotifyLinked');
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Options',
@@ -105,7 +109,7 @@ class OptionsPage extends StatelessWidget {
           ),
           Divider(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.54)),
-          Provider.of<AuthProvider>(context, listen: false).isSpotifyLinked
+          !Provider.of<AuthProvider>(context, listen: false).isSpotifyLinked
               ? ListTile(
                   leading: Icon(Icons.account_circle,
                       color: Theme.of(context).colorScheme.onSurface),
@@ -113,6 +117,7 @@ class OptionsPage extends StatelessWidget {
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface)),
                   onTap: () {
+                    debugPrint('🔍 Navigating to Spotify link page');
                     context.go(AppRoutes.linkSpotify);
                   },
                 )
@@ -124,8 +129,7 @@ class OptionsPage extends StatelessWidget {
                 style: TextStyle(color: Theme.of(context).colorScheme.error)),
             onTap: () async {
               await Provider.of<AuthProvider>(context, listen: false).logout();
-              Navigator.of(context)
-                  .pushNamedAndRemoveUntil('/login', (route) => false);
+              context.go(AppRoutes.login);
             },
           ),
         ],
