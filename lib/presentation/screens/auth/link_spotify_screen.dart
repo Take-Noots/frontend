@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:Noot/data/services/auth_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../../../core/constants/app_constants.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -50,7 +51,7 @@ class LinkSpotifyScreen extends StatelessWidget {
     try {
       if (kIsWeb) {
         // On web, use openSpotifyAuth from conditional import
-        final backendUrl = 'http://localhost:3000/spotify/login/alt';
+        final backendUrl = '${AppConstants.baseUrl}/spotify/login/alt';
         openSpotifyAuth(backendUrl);
         // Check authentication and profile before redirecting
         if (context.mounted) {

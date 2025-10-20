@@ -3,6 +3,21 @@ import 'package:dio/dio.dart';
 import '../../core/constants/app_constants.dart';
 
 class RequestService {
+  static Future<List<Map<String, dynamic>>> getRequestsForUser(
+      String userId) async {
+    try {
+      final response = await _dio.get('$_baseUrl/request/for/$userId');
+      if (response.statusCode == 200 && response.data is List) {
+        return List<Map<String, dynamic>>.from(response.data);
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print('Error fetching requests for user: $e');
+      return [];
+    }
+  }
+
   static final Dio _dio = Dio();
   static String get _baseUrl => AppConstants.baseUrl;
 

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 // import 'dart:math';
 import '../../../data/services/profile_service.dart';
+import '../../../data/services/request_service.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/chat_service.dart';
 import '../../../data/models/profile_model.dart';
@@ -13,11 +14,12 @@ import '../../widgets/loading_screens/chat_loading_screen.dart';
 import '../../widgets/loading_screens/profile_loading_screen.dart';
 import 'tabs/album_art_posts_tab.dart';
 import 'tabs/thought_posts_tab.dart';
-import 'tabs/tagged_posts_tab.dart';
+// tagged posts tab removed to simplify tabs
 import 'my_profile.dart';
 import 'followers_list_wrapper.dart';
 import 'following_list_wrapper.dart';
 import 'profile_feed_screen.dart'; // Add this import for navigation
+import '../../../core/styles/app_colors.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String userId;
@@ -49,7 +51,7 @@ class _UserProfilePageState extends State<UserProfilePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _getLoggedUserIdAndFetch();
   }
 
@@ -71,25 +73,20 @@ class _UserProfilePageState extends State<UserProfilePage>
     setState(() {
       isLoading = true;
     });
+
     final profileService = ProfileService();
     final profileResult = await profileService.getUserProfile(widget.userId);
     final postsResult = await profileService.getUserPosts(widget.userId);
-
-    // Convert raw post data to proper objects with IDs
     final formattedPosts = postsResult.map((post) {
-      // Make sure each post has an id property
       if (post is Map<String, dynamic> &&
           !post.containsKey('id') &&
           post.containsKey('_id')) {
-        post['id'] = post['_id']; // Ensure id exists if only _id is present
+        post['id'] = post['_id'];
       }
       return post;
     }).toList();
-
     final albumImagesResult =
         await profileService.getUserAlbumImages(widget.userId);
-
-    // --- Fetch post count from backend ---
     final postCountResult =
         await profileService.getUserPostCount(widget.userId);
     int fetchedPostCount = 0;
@@ -97,35 +94,36 @@ class _UserProfilePageState extends State<UserProfilePage>
       fetchedPostCount = postCountResult['postCount'];
     }
 
+    bool requested = false;
+    try {
+      final requests = await RequestService.getRequestsForUser(widget.userId);
+      debugPrint(
+          'getRequestsForUser for this profile: $requests, loggedUserId: $loggedUserId');
+      if (loggedUserId != null) {
+        for (final req in requests) {
+          if (req['requestSendUserId']?.toString() == loggedUserId &&
+              req['requestReceiveUserId']?.toString() == widget.userId &&
+              req['respond'] == 'pending') {
+            requested = true;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking follow requests: $e');
+    }
+
     if (profileResult['success'] == true && profileResult['data'] != null) {
       final profileData = ProfileModel.fromJson(profileResult['data']);
-
-      // Check if profile is private
       final bool isPrivate = profileData.userType == 'private';
-
-      // Check if logged user follows this user
       bool follows = false;
       if (loggedUserId != null &&
           profileData.followers.contains(loggedUserId)) {
         follows = true;
       }
-
-      // TODO: backend should indicate if a follow request exists; as a fallback, check for a pendingRequests field
-      bool requested = false;
-      try {
-        if (profileResult['data'] != null &&
-            profileResult['data']['pendingRequests'] is List) {
-          final pending = (profileResult['data']['pendingRequests'] as List)
-              .map((e) => e.toString())
-              .toList();
-          if (loggedUserId != null && pending.contains(loggedUserId))
-            requested = true;
-        }
-      } catch (_) {}
-
       setState(() {
         profile = profileData;
-        posts = formattedPosts; // Use the formatted posts
+        posts = formattedPosts;
         albumImages = albumImagesResult;
         postCount = fetchedPostCount;
         isPrivateProfile = isPrivate;
@@ -134,7 +132,6 @@ class _UserProfilePageState extends State<UserProfilePage>
         isLoading = false;
       });
 
-      // If this is the logged user's own profile, redirect to my profile page
       if (widget.userId == loggedUserId) {
         Navigator.pushReplacement(
           context,
@@ -143,8 +140,6 @@ class _UserProfilePageState extends State<UserProfilePage>
         );
         return;
       }
-
-      // If highlightPostId is provided, navigate to the profile feed to show that post
       if (widget.highlightPostId != null) {
         Future.microtask(() {
           Navigator.push(
@@ -240,6 +235,12 @@ class _UserProfilePageState extends State<UserProfilePage>
           isFollowingUser = !isFollowingUser;
           // Clear any pending request flag when following
           if (isFollowingUser) isRequested = false;
+          // If we just unfollowed a previously confirmed follow, ensure any pending/request flags are cleared
+          if (!isFollowingUser) {
+            isRequested = false;
+            // Optionally refresh profile data to get latest follower/following lists
+            Future.microtask(() => _fetchProfileData());
+          }
           isLoadingFollow = false;
         });
       } else {
@@ -472,13 +473,13 @@ class _UserProfilePageState extends State<UserProfilePage>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: isFollowingUser
                               ? Theme.of(context).colorScheme.surface
-                              : const Color(0xFFA855F7), // Purple for follow
+                              : AppColors.primaryPurple,
                           foregroundColor: isFollowingUser
                               ? Theme.of(context).colorScheme.onSurface
                               : Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(18),
                             side: isFollowingUser
                                 ? BorderSide(
                                     color:
@@ -524,7 +525,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                             width: 1.5,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(18),
                           ),
                           backgroundColor:
                               Theme.of(context).colorScheme.surface,
@@ -564,7 +565,6 @@ class _UserProfilePageState extends State<UserProfilePage>
                       tabs: const [
                         Tab(icon: Icon(Icons.grid_on, size: 20)),
                         Tab(icon: Icon(Icons.description, size: 20)),
-                        Tab(icon: Icon(Icons.person_pin, size: 20)),
                       ],
                     ),
                   ),
@@ -636,7 +636,6 @@ class _UserProfilePageState extends State<UserProfilePage>
                       ThoughtPostsTab(
                           userId: widget.userId,
                           refreshNotifier: refreshTabNotifier),
-                      const TaggedPostsTab(),
                     ],
                   ),
                 ),

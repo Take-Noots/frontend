@@ -22,6 +22,7 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/profile_provider.dart';
 import '../../../data/services/profile_service.dart';
 import '../../../core/router/route_names.dart';
+import '../../../core/styles/app_colors.dart';
 
 class NormalUserProfilePage extends StatefulWidget {
   static const routeName = '/profile/normal';
@@ -659,7 +660,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                   children: [
                     // Edit Profile Button
                     SizedBox(
-                      width: 160,
+                      height: 44,
                       child: OutlinedButton.icon(
                         onPressed: () async {
                           final result = await Navigator.push(
@@ -674,28 +675,42 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                           }
                         },
                         icon: Icon(Icons.edit,
-                            color: Theme.of(context).colorScheme.onSurface),
+                            size: 18,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? AppColors.textPrimary
+                                    : AppColors.primaryPurple),
                         label: Text(
                           'Edit Profile',
                           style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface),
+                              fontSize: 14,
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? AppColors.textPrimary
+                                  : AppColors.primaryPurple),
                         ),
                         style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(140, 40),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
                           side: BorderSide(
-                              color: Theme.of(context).colorScheme.onSurface),
-                          backgroundColor: Colors.transparent,
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? AppColors.textPrimary
+                                  : AppColors.primaryPurple),
+                          backgroundColor:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.transparent
+                                  : AppColors.backgroundLight,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(18),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
-                    // If this user is private, show Follow Requests button
                     if (profile?.userType == 'private')
                       SizedBox(
-                        width: 140,
+                        height: 44,
                         child: ElevatedButton.icon(
                           onPressed: () {
                             Navigator.push(
@@ -706,13 +721,17 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                               ),
                             );
                           },
-                          icon: const Icon(Icons.person_add_alt_1),
+                          // icon: const Icon(Icons.person_add_alt_1, size: 18),
                           label: const Text('Follow Requests'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.surface,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.onSurface,
+                            minimumSize: const Size(140, 40),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            backgroundColor: AppColors.primaryPurple,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            elevation: 2,
                           ),
                         ),
                       ),
