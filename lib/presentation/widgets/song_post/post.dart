@@ -195,10 +195,9 @@ class _TrackDetailWidgetState extends State<TrackDetailWidget> {
   }
 
   Widget _buildCaptionText(Color captionColor) {
-    const int maxChars = 50; // Limit for showing "see more"
     final caption = widget.caption!;
 
-    if (caption.length <= maxChars || _showFullCaption) {
+    if (_showFullCaption) {
       return Text(
         caption,
         style: TextStyle(
@@ -209,36 +208,55 @@ class _TrackDetailWidgetState extends State<TrackDetailWidget> {
         textAlign: TextAlign.left,
       );
     } else {
+      // Check if caption is long enough to need "see more"
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: caption,
+          style: TextStyle(
+            color: captionColor,
+            fontSize: 10,
+            fontWeight: FontWeight.w300,
+          ),
+        ),
+        maxLines: 3,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: 300); // Approximate width
+
+      final isOverflowing = textPainter.didExceedMaxLines;
+
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Text(
-              '${caption.substring(0, maxChars)}...',
+              caption,
               style: TextStyle(
                 color: captionColor,
                 fontSize: 10,
                 fontWeight: FontWeight.w300,
               ),
               textAlign: TextAlign.left,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                _showFullCaption = true;
-              });
-            },
-            child: const Text(
-              'see more',
-              style: TextStyle(
-                color: Colors.purple,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                decoration: TextDecoration.underline,
+          if (isOverflowing)
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showFullCaption = true;
+                });
+              },
+              child: const Text(
+                'see more',
+                style: TextStyle(
+                  color: Colors.purple,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  decoration: TextDecoration.underline,
+                ),
               ),
             ),
-          ),
         ],
       );
     }

@@ -19,7 +19,6 @@ import 'tabs/artist/concerts_tab.dart'; // Create this for artist features
 import 'tabs/artist/upcoming_tab.dart'; // Create this for artist features
 import 'tabs/artist/insights_tab.dart'; // Create this for artist features
 import 'tabs/business/ads_tab.dart'; // Create this for business features
-import 'tabs/business/ad_insights_tab.dart'; // Create this for business features
 import '../../widgets/loading_screens/profile_loading_screen.dart';
 
 import '../../../data/models/profile_model.dart';
@@ -144,7 +143,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
       int tabCount = 3;
       if (userType == 'artist')
         tabCount = 5;
-      else if (userType == 'business') tabCount = 4;
+      else if (userType == 'business') tabCount = 3;
       if (_tabController == null || _tabController!.length != tabCount) {
         _tabController?.dispose();
         _tabController = TabController(length: tabCount, vsync: this);
@@ -224,7 +223,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
     int tabCount = 3;
     if (userType == 'artist')
       tabCount = 5;
-    else if (userType == 'business') tabCount = 4;
+    else if (userType == 'business') tabCount = 3;
     if (_tabController == null || _tabController!.length != tabCount) {
       _tabController?.dispose();
       _tabController = TabController(length: tabCount, vsync: this);
@@ -275,7 +274,6 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
       return const [
         Tab(icon: Icon(Icons.grid_on), text: "Posts"),
         Tab(icon: Icon(Icons.campaign), text: "Advertisements"),
-        Tab(icon: Icon(Icons.analytics), text: "Ad Insights"),
         Tab(icon: Icon(Icons.description), text: "Description"),
         Tab(icon: Icon(Icons.person_pin), text: "Tagged"),
       ];
@@ -359,9 +357,6 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           refreshNotifier: refreshTabNotifier,
         ),
         BusinessAdsTab(
-            userId: userId!,
-            refreshNotifier: refreshTabNotifier), // Implement this tab
-        BusinessAdInsightsTab(
             userId: userId!,
             refreshNotifier: refreshTabNotifier), // Implement this tab
         ThoughtPostsTab(
