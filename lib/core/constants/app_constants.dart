@@ -8,7 +8,7 @@ class AppConstants {
       return 'http://localhost:3000';
     } else {
       // Running on Android/iOS (mobile)
-      // return 'https://unthreshed-eugenic-edgar.ngrok-free.dhttps://developer.spotify.com/documentation/web-api/concepts/rate-limitsev';
+      // return 'https://unthreshed-eugenic-edgar.ngrok-free.dev';
       return 'https://jeremiah-unphotographable-basely.ngrok-free.dev';
     }
   }
