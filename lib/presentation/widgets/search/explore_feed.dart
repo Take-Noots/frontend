@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class ExploreFeed extends StatefulWidget {
-  final List<String> imageUrls;
+  final List<Map<String, String>> imageUrls;
 
   const ExploreFeed({Key? key, required this.imageUrls}) : super(key: key);
 
@@ -10,7 +10,7 @@ class ExploreFeed extends StatefulWidget {
 }
 
 class _ExploreFeedState extends State<ExploreFeed> {
-  late List<String> _validImages;
+  late List<Map<String, String>> _validImages;
   final Set<String> _failedImages = {};
 
   @override
@@ -30,7 +30,7 @@ class _ExploreFeedState extends State<ExploreFeed> {
 
   void _removeInvalidImageAtIndex(int index) {
     if (index >= 0 && index < _validImages.length) {
-      final img = _validImages[index];
+      final img = _validImages[index]['albumImage']!;
       if (!_failedImages.contains(img)) {
         _failedImages.add(img);
         setState(() {
@@ -60,7 +60,8 @@ class _ExploreFeedState extends State<ExploreFeed> {
       ),
       itemCount: _validImages.length,
       itemBuilder: (context, index) {
-        final img = _validImages[index];
+        final imgData = _validImages[index];
+        final img = imgData['albumImage']!;
         final isNetwork = img.startsWith('http');
         return GestureDetector(
           onTap: () {
@@ -68,7 +69,7 @@ class _ExploreFeedState extends State<ExploreFeed> {
             showDialog(
               context: context,
               barrierDismissible: true,
-              builder: (context) => PostDetailDialog(imageUrl: img),
+              builder: (context) => PostDetailDialog(imageUrl: img, postId: imgData['id']!),
             );
           },
           child: isNetwork
@@ -102,8 +103,9 @@ class _ExploreFeedState extends State<ExploreFeed> {
 // post details. Keeps UI-only dummy data as requested.
 class PostDetailDialog extends StatelessWidget {
   final String imageUrl;
+  final String postId;
 
-  const PostDetailDialog({Key? key, required this.imageUrl}) : super(key: key);
+  const PostDetailDialog({Key? key, required this.imageUrl, required this.postId}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -163,6 +165,11 @@ class PostDetailDialog extends StatelessWidget {
                   const SizedBox(height: 8),
                   const Text('Song Title — Artist Name',
                       style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Post ID: $postId',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                   const SizedBox(height: 6),
                   const Text(
                     'This is a dummy caption shown for the explore post detail. Replace with real content when integrating.',
