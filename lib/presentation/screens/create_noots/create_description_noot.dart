@@ -33,19 +33,19 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
   // Loading state for sharing thoughts
   bool _isShareLoading = false;
   
-  // Search results from Spotify API - cover image
+
   Map<String, dynamic>? _searchResults;
   
   // Debounce timer for search input
   Timer? _debounce;
   
-  // Show image search interface
+
   bool _showImageSearch = false;
   
-  // Selected cover image URL
+
   String? _selectedCoverImage;
 
-  // Selected song and artist
+  
   String? _selectedSongName;
   String? _selectedArtistName;
   String? _selectedTrackId;
@@ -64,7 +64,7 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
     super.dispose();
   }
 
-  //waits for 500ms after user stops typing, then searches for songs
+  
   void _onSearchChanged() {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
@@ -144,7 +144,7 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
     });
 
     try {
-      // Create thoughts post service
+      
       final thoughtsService = ThoughtsService();
       
       // Call API to create thoughts post

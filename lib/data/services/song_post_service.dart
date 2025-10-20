@@ -48,14 +48,14 @@ class SongPostService {
           };
         }
 
-        // Extract background color from album image
+     
         String? backgroundColor;
         if (albumImage != null && albumImage.isNotEmpty) {
           backgroundColor =
               await ColorExtractor.extractBackgroundColor(albumImage);
         }
 
-        // use default color
+      
         if (backgroundColor == null && context != null) {
           backgroundColor = ColorExtractor.getDefaultBackgroundColor(context);
         }
