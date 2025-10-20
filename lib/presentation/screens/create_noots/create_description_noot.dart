@@ -601,6 +601,8 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
         ),
       ),
       bottomNavigationBar: CustomBottomBar(
+        isSongPostActive: false,
+        isThoughtsPostActive: true, 
         onSharePost: () {
           // Navigate to song post creation page
           Navigator.pushReplacement(
@@ -611,7 +613,7 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
           );
         },
         onShareThoughts: () {
-          // Already on thoughts page 
+         
         },
       ),
     );

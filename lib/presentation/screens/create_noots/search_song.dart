@@ -273,6 +273,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
         child: _buildSharePostInterface(colorScheme, theme),
       ),
       bottomNavigationBar: CustomBottomBar(
+        isSongPostActive: true, 
+        isThoughtsPostActive: false,
         onSharePost: () {
           // Already on search song page - do nothing
         },
