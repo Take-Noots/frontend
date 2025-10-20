@@ -1,73 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:flutter_svg/svg.dart';
+// import 'package:flutter_svg/svg.dart';
 import '../../../screens/fanbasePost/fanbasePost_screen.dart';
 import 'post_options_menu.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../../../../data/services/profile_service.dart'; // Add this import
+import '../../../../data/services/profile_service.dart';
 
 // ========== HeaderWidget ==========
 class HeaderWidget extends StatelessWidget {
   final String? username;
   final String? userId;
   final String? currentUserId;
+  final String? fanbaseOwnerId;
   final String? userImage;
   final String? trackId;
   final VoidCallback? onUsernameTap;
   final VoidCallback? onMoreOptions;
-  final VoidCallback? onPlayPause; // Add play/pause callback
+  final VoidCallback? onPlayPause;
   final bool isOwnPost;
-  final bool isPlaying; // Add playing state
-  final bool isCurrentTrack; // Add current track state
+  final bool isPlaying;
+  final bool isCurrentTrack;
+  final String? postId; // Add postId
+  final String? fanbaseId; // Add fanbaseId
 
   const HeaderWidget({
     super.key,
     this.username,
     this.userId,
     this.currentUserId,
+    this.fanbaseOwnerId,
     this.userImage,
     this.trackId,
     this.onUsernameTap,
     this.onMoreOptions,
-    this.onPlayPause, // Add to constructor
+    this.onPlayPause,
     this.isOwnPost = false,
-    this.isPlaying = false, // Add to constructor
-    this.isCurrentTrack = false, // Add to constructor
+    this.isPlaying = false,
+    this.isCurrentTrack = false,
+    this.postId, // Add to constructor
+    this.fanbaseId, // Add to constructor
   });
 
   @override
   Widget build(BuildContext context) {
-    // return Container(
-    //   height: 50, // Fixed height for consistency
-    //   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-    //   child: Row(
-    //     children: [
-    //       // User details section
-    //       Expanded(
-    //         child: UserDetailWidget(
-    //           username: username,
-    //           userId: userId,
-    //           currentUserId: currentUserId,
-    //           userImage: userImage,
-    //           onUsernameTap: onUsernameTap,
-    //           onMoreOptions: onMoreOptions,
-    //           isOwnPost: isOwnPost,
-    //         ),
-    //       ),
-    //       const SizedBox(width: 12),
-    //       // Spotify control pill
-    //       SongControlWidget(
-    //         trackId: trackId,
-    //         isPlaying: isPlaying,
-    //         isCurrentTrack: isCurrentTrack,
-    //         onPlayPause: onPlayPause,
-    //       ),
-    //     ],
-    //   ),
-    // );
-
     return Expanded(
-      // flex: 100,
       child: Row(
         children: [
           Expanded(
@@ -75,20 +51,16 @@ class HeaderWidget extends StatelessWidget {
               username: username,
               userId: userId,
               currentUserId: currentUserId,
+              fanbaseOwnerId: fanbaseOwnerId,
               userImage: userImage,
               onUsernameTap: onUsernameTap,
               onMoreOptions: onMoreOptions,
               isOwnPost: isOwnPost,
+              postId: postId, // Pass it down
+              fanbaseId: fanbaseId, // Pass it down
             ),
           ),
           const SizedBox(width: 12),
-          // Spotify control pill
-          // SongControlWidget(
-          //   trackId: trackId,
-          //   isPlaying: isPlaying,
-          //   isCurrentTrack: isCurrentTrack,
-          //   onPlayPause: onPlayPause,
-          // ),
         ],
       ),
     );
@@ -96,84 +68,84 @@ class HeaderWidget extends StatelessWidget {
 }
 
 // ========== SongControlWidget ==========
-class SongControlWidget extends StatefulWidget {
-  final String? trackId;
-  final bool isPlaying;
-  final bool isCurrentTrack;
-  final VoidCallback? onPlayPause;
+// class SongControlWidget extends StatefulWidget {
+//   final String? trackId;
+//   final bool isPlaying;
+//   final bool isCurrentTrack;
+//   final VoidCallback? onPlayPause;
 
-  const SongControlWidget({
-    super.key,
-    this.trackId,
-    this.isPlaying = false,
-    this.isCurrentTrack = false,
-    this.onPlayPause,
-  });
+//   const SongControlWidget({
+//     super.key,
+//     this.trackId,
+//     this.isPlaying = false,
+//     this.isCurrentTrack = false,
+//     this.onPlayPause,
+//   });
 
-  @override
-  State<SongControlWidget> createState() => _SongControlWidgetState();
-}
+//   @override
+//   State<SongControlWidget> createState() => _SongControlWidgetState();
+// }
 
-class _SongControlWidgetState extends State<SongControlWidget> {
-  @override
-  Widget build(BuildContext context) {
-    // final parentWidth = MediaQuery.of(context).size.width;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final pillColor = isDark ? Colors.grey[900] : Colors.white;
-    final iconColor = isDark ? Colors.white : Colors.black;
-    final spotifyAsset = isDark
-        ? 'assets/icons/icons-spotify-dark.svg'
-        : 'assets/icons/icons-spotify-light.svg';
+// class _SongControlWidgetState extends State<SongControlWidget> {
+//   @override
+//   Widget build(BuildContext context) {
+//     // final parentWidth = MediaQuery.of(context).size.width;
+//     final isDark = Theme.of(context).brightness == Brightness.dark;
+//     final pillColor = isDark ? Colors.grey[900] : Colors.white;
+//     final iconColor = isDark ? Colors.white : Colors.black;
+//     final spotifyAsset = isDark
+//         ? 'assets/icons/icons-spotify-dark.svg'
+//         : 'assets/icons/icons-spotify-light.svg';
 
-    return Container(
-      height: 30, // Fixed compact height
-      width: 80, // Fixed width for pill shape
-      decoration: BoxDecoration(
-        color: pillColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(18.0),
-          topRight: Radius.circular(18.0),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // Spotify icon
-          SizedBox(
-            width: 20,
-            height: 20,
-            child: SvgPicture.asset(
-              spotifyAsset,
-              fit: BoxFit.contain,
-            ),
-          ),
-          // Play/Pause button
-          if (widget.onPlayPause != null)
-            GestureDetector(
-              onTap: widget.onPlayPause,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                child: Icon(
-                  widget.isCurrentTrack && widget.isPlaying
-                      ? LucideIcons.pause
-                      : LucideIcons.play,
-                  color: iconColor,
-                  size: 20,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
+//     return Container(
+//       height: 30, // Fixed compact height
+//       width: 80, // Fixed width for pill shape
+//       decoration: BoxDecoration(
+//         color: pillColor,
+//         borderRadius: const BorderRadius.only(
+//           topLeft: Radius.circular(18.0),
+//           topRight: Radius.circular(18.0),
+//         ),
+//         boxShadow: [
+//           BoxShadow(
+//             color: Colors.black.withOpacity(0.1),
+//             blurRadius: 4,
+//             offset: const Offset(0, 2),
+//           ),
+//         ],
+//       ),
+//       child: Row(
+//         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+//         children: [
+//           // Spotify icon
+//           SizedBox(
+//             width: 20,
+//             height: 20,
+//             child: SvgPicture.asset(
+//               spotifyAsset,
+//               fit: BoxFit.contain,
+//             ),
+//           ),
+//           // Play/Pause button
+//           if (widget.onPlayPause != null)
+//             GestureDetector(
+//               onTap: widget.onPlayPause,
+//               child: Container(
+//                 padding: const EdgeInsets.all(4),
+//                 child: Icon(
+//                   widget.isCurrentTrack && widget.isPlaying
+//                       ? LucideIcons.pause
+//                       : LucideIcons.play,
+//                   color: iconColor,
+//                   size: 20,
+//                 ),
+//               ),
+//             ),
+//         ],
+//       ),
+//     );
+//   }
+// }
 
 // ========== UserDetailWidget ==========
 class UserDetailWidget extends StatefulWidget {
@@ -181,10 +153,13 @@ class UserDetailWidget extends StatefulWidget {
   final String? username;
   final String? userId;
   final String? currentUserId;
+  final String? fanbaseOwnerId;
   final String? userImage;
   final VoidCallback? onUsernameTap;
   final VoidCallback? onMoreOptions;
   final bool isOwnPost;
+  final String? postId; // Add postId parameter
+  final String? fanbaseId; // Add fanbaseId parameter
 
   const UserDetailWidget({
     super.key,
@@ -192,10 +167,13 @@ class UserDetailWidget extends StatefulWidget {
     this.username,
     this.userId,
     this.currentUserId,
+    this.fanbaseOwnerId,
     this.userImage,
     this.onUsernameTap,
     this.onMoreOptions,
     this.isOwnPost = false,
+    this.postId, // Add to constructor
+    this.fanbaseId, // Add to constructor
   });
 
   @override
@@ -215,7 +193,6 @@ class _UserDetailWidgetState extends State<UserDetailWidget> {
   @override
   void didUpdateWidget(UserDetailWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Refetch if userId changes
     if (oldWidget.userId != widget.userId) {
       _fetchProfileImage();
     }
@@ -325,24 +302,7 @@ class _UserDetailWidgetState extends State<UserDetailWidget> {
         ),
         // Options button
         GestureDetector(
-          onTap: () {
-            if (widget.onMoreOptions != null) {
-              widget.onMoreOptions!();
-            } else {
-              PostOptionsMenu.show(
-                context,
-                postUserId: widget.userId,
-                currentUserId: widget.currentUserId,
-                isOwnPost: widget.isOwnPost,
-                onReport: () =>
-                    print('Report pressed for user: ${widget.username}'),
-                onDelete: widget.isOwnPost
-                    ? () => print(
-                        'Delete post pressed for user: ${widget.username}')
-                    : null,
-              );
-            }
-          },
+          onTap: widget.onMoreOptions, // ← JUST USE THIS, no fallback needed
           child: Container(
             padding: const EdgeInsets.all(4),
             child: Icon(

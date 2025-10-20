@@ -1,19 +1,17 @@
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
-// import 'dart:convert';
 import 'auth_service.dart';
 
-class FanbaseReportService {
-  /// Reports a fanbase with a specific reason
+class FanbasePostReportService {
+  /// Reports a fanbase post with a specific reason
   ///
-  /// [reportedFanbaseId] - The ID of the fanbase being reported
-  /// [reportedUserId] - The ID of the fanbase creator (owner)
+  /// [reportedPostId] - The ID of the post being reported
+  /// [reportedUserId] - The ID of the post creator
   /// [reason] - The reason for reporting (e.g., 'Spam', 'Inappropriate content')
   /// [description] - Optional additional details about the report
-  static Future<Map<String, dynamic>> reportFanbase({
-    required String reportedFanbaseId,
+  static Future<Map<String, dynamic>> reportPost({
+    required String reportedPostId,
     required String reportedUserId,
     required String reason,
     String? description,
@@ -23,17 +21,15 @@ class FanbaseReportService {
       final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
 
-      // Use the working post-reports endpoint
-      // We'll use reportedPostId to store the fanbase ID
-      // and add a special prefix or marker in the reason to identify it as a fanbase report
       final reportData = {
         'reportedUserId': reportedUserId,
-        'reportedPostId': reportedFanbaseId, // Store fanbase ID here
-        'reason':
-            'FANBASE: $reason${description != null && description.isNotEmpty ? ' - $description' : ''}',
+        'reportedPostId': reportedPostId,
+        'reason': description != null && description.isNotEmpty
+            ? '$reason - $description'
+            : reason,
       };
 
-      print('Sending fanbase report data: $reportData'); // Debug log
+      print('Sending post report data: $reportData'); // Debug log
 
       final response = await dio.post('/post-reports', data: reportData);
 
@@ -51,7 +47,7 @@ class FanbaseReportService {
         };
       }
     } on DioException catch (e) {
-      print('DioException: ${e.response?.data}'); // Debug log
+      print('DioException in reportPost: ${e.response?.data}'); // Debug log
       final errorMessage = e.response?.data?['message'] ??
           e.response?.data?.toString() ??
           e.message;
@@ -60,29 +56,13 @@ class FanbaseReportService {
         'message': 'Failed to submit report: $errorMessage',
       };
     } catch (e) {
-      print('General exception: $e'); // Debug log
+      print('General exception in reportPost: $e'); // Debug log
       return {
         'success': false,
         'message': 'Failed to submit report: $e',
       };
     }
   }
-
-  /// Maps user-friendly reason to backend category
-  // static String _mapReasonToCategory(String reason) {
-  //   switch (reason.toLowerCase()) {
-  //     case 'spam':
-  //       return 'spam';
-  //     case 'inappropriate content':
-  //       return 'inappropriate';
-  //     case 'harmful or abusive':
-  //       return 'harassment';
-  //     case 'intellectual property violation':
-  //       return 'copyright';
-  //     default:
-  //       return 'other';
-  //   }
-  // }
 
   /// Gets all reports submitted by the current user
   static Future<Map<String, dynamic>> getMyReports(
