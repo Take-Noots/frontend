@@ -948,46 +948,54 @@ class _FanbaseDetailScreenState extends State<FanbaseDetailScreen> {
                 ),
               ),
               // const SizedBox(height: ),
-              if (_selectedTabIndex == 0)
-                Expanded(
-                  child: FanbaseDetailsFeed(
-                    key: ValueKey(_postFeedKey),
-                    fanbase: _fanbase!,
-                    posts: _fanbasePosts,
-                    isLoading: _isLoading,
-                    error: _error,
-                    onRefresh: _loadFanbasePosts,
-                    onLike: _handleLike,
-                    onComment: _handleComment,
-                    onPlay: _handlePlay,
-                    onShare: _handleShare,
-                    onPostOptions: _handlePostOptions,
-                    currentlyPlayingTrackId: _currentlyPlayingTrackId,
-                    isPlaying: _isPlaying,
-                    currentUserId: userId,
-                    onUserTap: (String userId) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => UserProfilePage(userId: userId),
-                        ),
-                      );
-                    },
-                  ),
-                )
-              else
-                aboutTabContent,
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Center(
-                  child: Text(
-                    'Members: ${_fanbase!.joinedUserIds.length}',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ),
+              Expanded(
+                child: _selectedTabIndex == 0
+                    ? FanbaseDetailsFeed(
+                        key: ValueKey(_postFeedKey),
+                        fanbase: _fanbase!,
+                        posts: _fanbasePosts,
+                        isLoading: _isLoading,
+                        error: _error,
+                        onRefresh: _loadFanbasePosts,
+                        onLike: _handleLike,
+                        onComment: _handleComment,
+                        onPlay: _handlePlay,
+                        onShare: _handleShare,
+                        onPostOptions: _handlePostOptions,
+                        currentlyPlayingTrackId: _currentlyPlayingTrackId,
+                        isPlaying: _isPlaying,
+                        currentUserId: userId,
+                        onUserTap: (String userId) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  UserProfilePage(userId: userId),
+                            ),
+                          );
+                        },
+                      )
+                    : Column(
+                        children: [
+                          Expanded(child: aboutTabContent),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Center(
+                              child: Text(
+                                'Members: ${_fanbase!.joinedUserIds.length}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
               ),
             ],
           );

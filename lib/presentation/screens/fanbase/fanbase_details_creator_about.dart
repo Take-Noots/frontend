@@ -43,16 +43,16 @@ class _FanbaseDetailsCreatorAboutState
   Future<void> removeRuleAt(int index) async {
     final confirm = await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black
-          .withOpacity(0.7),
+      barrierColor: Colors.black.withOpacity(0.7),
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.primary ,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         title: const Text('Remove Rule'),
         content: Text('Are you sure you want to remove rule ${index + 1}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel',
+            child: Text(
+              'Cancel',
               style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
             ),
           ),
@@ -138,9 +138,12 @@ class _FanbaseDetailsCreatorAboutState
                             color: Theme.of(context).colorScheme.onPrimary),
                         label: const Text('Add Rule'),
                         style: TextButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                          side: BorderSide(color: Theme.of(context).colorScheme.onPrimary),
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onPrimary,
+                          side: BorderSide(
+                              color: Theme.of(context).colorScheme.onPrimary),
                         ),
                         onPressed: () {
                           setDialogState(() {
@@ -202,7 +205,8 @@ class _FanbaseDetailsCreatorAboutState
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
+      // ✅ Change from Padding to SingleChildScrollView
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,7 +256,9 @@ class _FanbaseDetailsCreatorAboutState
           ),
           const SizedBox(height: 16),
           loading
-              ? const CircularProgressIndicator()
+              ? const Center(
+                  child:
+                      CircularProgressIndicator()) // ✅ Center the loading indicator
               : rules.isEmpty
                   ? const Text('No rules set yet.')
                   : Column(

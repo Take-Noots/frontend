@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
+import 'dart:typed_data'; // ✅ Add this for Uint8List
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -326,7 +326,7 @@ class _FanbasePageState extends State<FanbasePage>
   void _showCreateFanbaseSheet() {
     final nameController = TextEditingController();
     final topicController = TextEditingController();
-    File? selectedImage;
+    XFile? selectedImage; // ✅ Change from File? to XFile?
     String? uploadedImageUrl;
     String? nameErrorText;
 
@@ -357,8 +357,8 @@ class _FanbasePageState extends State<FanbasePage>
                     if (pickedFile == null) return;
 
                     setModalState(() {
-                      selectedImage = File(pickedFile.path);
-                      uploadedImageUrl = null; // Not needed anymore
+                      selectedImage = pickedFile; // ✅ Store XFile directly
+                      uploadedImageUrl = null;
                     });
 
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -430,34 +430,42 @@ class _FanbasePageState extends State<FanbasePage>
                         // Image selection section with upload indicator
                         GestureDetector(
                           onTap: _showImageSourceDialog,
-                          child: Stack(
-                            children: [
-                              CircleAvatar(
-                                radius: 48,
-                                backgroundColor: Colors.grey[300],
-                                backgroundImage: selectedImage != null
-                                    ? FileImage(selectedImage!)
-                                    : (uploadedImageUrl != null
-                                        ? NetworkImage(uploadedImageUrl!)
-                                        : const NetworkImage(
-                                            'https://developers.elementor.com/docs/assets/img/elementor-placeholder-image.png',
-                                          )) as ImageProvider,
-                              ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor:
-                                      Theme.of(context).colorScheme.surface,
-                                  child: Icon(Icons.camera_alt,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface,
-                                      size: 18),
-                                ),
-                              ),
-                            ],
+                          child: FutureBuilder<Uint8List?>(
+                            // ✅ Use FutureBuilder to read bytes
+                            future: selectedImage?.readAsBytes(),
+                            builder: (context, snapshot) {
+                              return Stack(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 48,
+                                    backgroundColor: Colors.grey[300],
+                                    backgroundImage: snapshot.hasData &&
+                                            snapshot.data != null
+                                        ? MemoryImage(snapshot
+                                            .data!) // ✅ Use MemoryImage for bytes
+                                        : (uploadedImageUrl != null
+                                            ? NetworkImage(uploadedImageUrl!)
+                                            : const NetworkImage(
+                                                'https://developers.elementor.com/docs/assets/img/elementor-placeholder-image.png',
+                                              )) as ImageProvider,
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: CircleAvatar(
+                                      radius: 16,
+                                      backgroundColor:
+                                          Theme.of(context).colorScheme.surface,
+                                      child: Icon(Icons.camera_alt,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
+                                          size: 18),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -592,7 +600,8 @@ class _FanbasePageState extends State<FanbasePage>
                                       name,
                                       topic,
                                       context,
-                                      imageFile: selectedImage,
+                                      imageFile:
+                                          selectedImage, // ✅ Pass XFile directly
                                     );
                                     if (!context.mounted) return;
                                     Navigator.pop(context);

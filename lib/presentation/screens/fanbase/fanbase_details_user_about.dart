@@ -40,7 +40,8 @@ class _FanbaseDetailsUserAboutState extends State<FanbaseDetailsUserAbout> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
+      // ✅ Wrap everything in SingleChildScrollView
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,7 +75,7 @@ class _FanbaseDetailsUserAboutState extends State<FanbaseDetailsUserAbout> {
                   ?.copyWith(color: Colors.grey)),
           const SizedBox(height: 16),
           loading
-              ? const CircularProgressIndicator()
+              ? const Center(child: CircularProgressIndicator())
               : rules.isEmpty
                   ? const Text('No rules set for this fanbase.')
                   : Column(
