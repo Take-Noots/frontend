@@ -561,6 +561,55 @@ class ThoughtsService {
     }
   }
 
+  Future<Map<String, dynamic>> deleteComment(
+      String postId, String commentId,
+      [BuildContext? context]) async {
+    try {
+      if (context != null) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        final dio = authService.dio;
+
+        final response =
+            await dio.delete('/thoughts/$postId/comments/$commentId');
+
+        if (response.statusCode == 200 || response.statusCode == 204) {
+          return response.data ?? {'success': true};
+        } else {
+          return {
+            'success': false,
+            'message': response.data['message'] ?? 'Failed to delete comment',
+          };
+        }
+      } else {
+        // Fallback to http for backward compatibility
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('auth_token');
+        
+        final response = await http.delete(
+          Uri.parse('$baseUrl/thoughts/$postId/comments/$commentId'),
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+        );
+
+        if (response.statusCode == 200 || response.statusCode == 204) {
+          return jsonDecode(response.body);
+        } else {
+          return {
+            'success': false,
+            'message': 'Failed to delete comment',
+          };
+        }
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
   // Get comments for a thoughts post
   Future<Map<String, dynamic>> getComments(String postId,
       [BuildContext? context]) async {
