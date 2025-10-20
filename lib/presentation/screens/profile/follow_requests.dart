@@ -189,7 +189,7 @@ class _FollowRequestsPageState extends State<FollowRequestsPage> {
                           children: [
                             // Compact Reject button: uses an outlined style on light background
                             SizedBox(
-                              height: 44,
+                              height: 36,
                               child: OutlinedButton(
                                 // disable button when any action on this request is processing
                                 onPressed: processing
@@ -248,7 +248,7 @@ class _FollowRequestsPageState extends State<FollowRequestsPage> {
 
                             // Compact Accept button: filled purple pill
                             SizedBox(
-                              height: 44,
+                              height: 36,
                               child: ElevatedButton(
                                 // disable while any action for this request is processing
                                 onPressed: processing
