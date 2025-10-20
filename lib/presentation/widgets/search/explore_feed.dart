@@ -1,13 +1,46 @@
 import 'package:flutter/material.dart';
 
-class ExploreFeed extends StatelessWidget {
+class ExploreFeed extends StatefulWidget {
   final List<String> imageUrls;
 
   const ExploreFeed({Key? key, required this.imageUrls}) : super(key: key);
 
   @override
+  State<ExploreFeed> createState() => _ExploreFeedState();
+}
+
+class _ExploreFeedState extends State<ExploreFeed> {
+  late List<String> _validImages;
+  final Set<String> _failedImages = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _validImages = List.from(widget.imageUrls);
+  }
+
+  @override
+  void didUpdateWidget(covariant ExploreFeed oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageUrls != widget.imageUrls) {
+      _validImages = List.from(widget.imageUrls);
+      _failedImages.clear();
+    }
+  }
+
+  void _removeInvalidImageAtIndex(int index) {
+    if (index >= 0 && index < _validImages.length) {
+      final img = _validImages[index];
+      _failedImages.add(img);
+      setState(() {
+        _validImages.removeAt(index);
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (imageUrls.isEmpty) {
+    if (_validImages.isEmpty) {
       return Center(
         child: Text(
           'No posts to explore.',
@@ -23,9 +56,9 @@ class ExploreFeed extends StatelessWidget {
         crossAxisSpacing: 4,
         childAspectRatio: 0.8,
       ),
-      itemCount: imageUrls.length,
+      itemCount: _validImages.length,
       itemBuilder: (context, index) {
-        final img = imageUrls[index];
+        final img = _validImages[index];
         final isNetwork = img.startsWith('http');
         return GestureDetector(
           onTap: () {
@@ -40,16 +73,22 @@ class ExploreFeed extends StatelessWidget {
               ? Image.network(
                   img,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Image.network(
-                    'https://picsum.photos/seed/picsum/200/300',
-                    fit: BoxFit.cover,
-                  ),
+                  errorBuilder: (context, error, stackTrace) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _removeInvalidImageAtIndex(index);
+                    });
+                    return const SizedBox.shrink();
+                  },
                 )
               : Image.asset(
                   img,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.broken_image),
+                  errorBuilder: (context, error, stackTrace) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _removeInvalidImageAtIndex(index);
+                    });
+                    return const SizedBox.shrink();
+                  },
                 ),
         );
       },
@@ -88,11 +127,8 @@ class PostDetailDialog extends StatelessWidget {
                       imageUrl,
                       fit: BoxFit.contain,
                       width: double.infinity,
-                      errorBuilder: (context, error, stackTrace) => Image.network(
-                        'https://picsum.photos/seed/picsum/600/800',
-                        fit: BoxFit.contain,
-                        width: double.infinity,
-                      ),
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.broken_image, size: 100, color: Colors.white),
                     )
                   : Image.asset(
                       imageUrl,

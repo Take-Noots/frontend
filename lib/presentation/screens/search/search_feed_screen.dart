@@ -80,11 +80,11 @@ class _SearchFeedScreenState extends State<SearchFeedScreen> {
     try {
       final results = await _searchService.search(''); // Empty query to get all
       final songPosts = (results['songPosts'] ?? []) as List;
-      // If backend supports sorting, you should add sort there. Otherwise, sort here if date is available.
+      // Filter out posts without valid albumImage and map to image URLs
       setState(() {
         _exploreImages = songPosts
-            .map<String>(
-                (post) => post['albumImage'] ?? 'assets/images/song.png')
+            .where((post) => post['albumImage'] != null && post['albumImage'].toString().trim().isNotEmpty)
+            .map<String>((post) => post['albumImage'] as String)
             .toList();
       });
     } catch (e) {
