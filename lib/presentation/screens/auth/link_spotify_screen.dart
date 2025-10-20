@@ -6,6 +6,7 @@ import 'package:Noot/data/services/auth_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/router/route_names.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../widgets/auth/custom_button.dart';
 // Conditional import for openSpotifyAuth
 import 'link_spotify_mobile.dart'
@@ -20,6 +21,16 @@ class LinkSpotifyScreen extends StatelessWidget {
         // On web, use openSpotifyAuth from conditional import
         final backendUrl = 'http://localhost:3000/spotify/login/alt';
         openSpotifyAuth(backendUrl);
+        // Check authentication before redirecting
+        if (context.mounted) {
+          final authProvider =
+              Provider.of<AuthProvider>(context, listen: false);
+          if (authProvider.isAuthenticated) {
+            context.go(AppRoutes.home);
+          } else {
+            context.go(AppRoutes.login);
+          }
+        }
         return;
       }
       final authService = Provider.of<AuthService>(context, listen: false);
@@ -34,6 +45,16 @@ class LinkSpotifyScreen extends StatelessWidget {
           if (await canLaunchUrl(Uri.parse(url))) {
             await launchUrl(Uri.parse(url),
                 mode: LaunchMode.externalApplication);
+            // Check authentication before redirecting
+            if (context.mounted) {
+              final authProvider =
+                  Provider.of<AuthProvider>(context, listen: false);
+              if (authProvider.isAuthenticated) {
+                context.go(AppRoutes.home);
+              } else {
+                context.go(AppRoutes.login);
+              }
+            }
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -45,6 +66,16 @@ class LinkSpotifyScreen extends StatelessWidget {
         final url = response.headers['location']!.first;
         if (await canLaunchUrl(Uri.parse(url))) {
           await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+          // Check authentication before redirecting
+          if (context.mounted) {
+            final authProvider =
+                Provider.of<AuthProvider>(context, listen: false);
+            if (authProvider.isAuthenticated) {
+              context.go(AppRoutes.home);
+            } else {
+              context.go(AppRoutes.login);
+            }
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -131,7 +162,14 @@ class LinkSpotifyScreen extends StatelessWidget {
                 Center(
                   child: ElevatedButton(
                     onPressed: () {
-                      context.go(AppRoutes.home);
+                      // Check authentication before redirecting
+                      final authProvider =
+                          Provider.of<AuthProvider>(context, listen: false);
+                      if (authProvider.isAuthenticated) {
+                        context.go(AppRoutes.home);
+                      } else {
+                        context.go(AppRoutes.login);
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
