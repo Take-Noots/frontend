@@ -201,9 +201,11 @@ class _ShowAllPostsScreenState extends State<ShowAllPostsScreen> {
                 post.albumImage!,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.music_note, size: 64, color: Colors.grey),
+                  return Image.network(
+                    'https://picsum.photos/seed/picsum/200/300',
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
                   );
                 },
               ),

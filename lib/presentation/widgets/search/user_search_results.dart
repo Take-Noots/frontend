@@ -45,6 +45,8 @@ class UserSearchResults extends StatelessWidget {
         final isNetworkImage = userImage.startsWith('http');
         final userId = user['id'] ?? user['userId'] ?? '';
 
+        print('User ${user['name']}: userImage = "$userImage", isNetworkImage = $isNetworkImage');
+
         return ListTile(
           leading: CircleAvatar(
             backgroundImage: isNetworkImage
