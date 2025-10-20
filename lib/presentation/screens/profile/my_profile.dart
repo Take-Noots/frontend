@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart'; // Uncomment this
 import 'dart:convert'; // Uncomment this
 import 'tabs/album_art_posts_tab.dart';
 import 'tabs/thought_posts_tab.dart';
-import 'tabs/tagged_posts_tab.dart';
 
 import 'settings/create_profile.dart';
 import 'settings/edit_profile.dart';
@@ -14,16 +13,13 @@ import 'followers_list_wrapper.dart';
 import 'following_list_wrapper.dart';
 import 'profile_feed_screen.dart';
 import './user_profiles.dart';
-import 'tabs/artist/new_releases_tab.dart'; // Create this for artist features
-import 'tabs/artist/concerts_tab.dart'; // Create this for artist features
-import 'tabs/artist/upcoming_tab.dart'; // Create this for artist features
-import 'tabs/artist/insights_tab.dart'; // Create this for artist features
-import 'tabs/business/ads_tab.dart'; // Create this for business features
+import 'tabs/business/ads_tab.dart';
 import '../../widgets/loading_screens/profile_loading_screen.dart';
 
 import '../../../data/models/profile_model.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/profile_provider.dart';
+import '../../../data/services/profile_service.dart';
 import '../../../core/router/route_names.dart';
 
 class NormalUserProfilePage extends StatefulWidget {
@@ -56,7 +52,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _tabScrollController.addListener(() {
       if (_tabScrollController.offset < 0) {
         _tabScrollController.jumpTo(0);
@@ -140,9 +136,9 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
         existingCache.isValid) {
       // Update TabController based on cached profile
       final userType = existingCache.profile?.userType ?? 'public';
-      int tabCount = 3;
+      int tabCount = 2; // Default for normal users
       if (userType == 'artist')
-        tabCount = 5;
+        tabCount = 3;
       else if (userType == 'business') tabCount = 3;
       if (_tabController == null || _tabController!.length != tabCount) {
         _tabController?.dispose();
@@ -194,18 +190,41 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
       return;
     }
 
-    if (cachedProfile.hasError && cachedProfile.isProfileNotFound) {
-      if (mounted) {
-        setState(() {
-          profile = null;
-          profileNotFound = true;
-          isLoading = false;
-        });
-      }
-      return;
-    }
-
     if (cachedProfile.hasError) {
+      // If provider already marked it as not found, reflect that
+      if (cachedProfile.isProfileNotFound) {
+        if (mounted) {
+          setState(() {
+            profile = null;
+            profileNotFound = true;
+            isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // Otherwise we may have a different error (network/server). Try a
+      // lightweight existence check using ProfileService.getUserProfile to
+      // distinguish 'Profile not found' from other failures. This helps show
+      // the Create Profile button when the backend explicitly reports absence.
+      try {
+        final profileService = ProfileService();
+        final result = await profileService.getUserProfile(userId!);
+        if (result['message'] == 'Profile not found') {
+          if (mounted) {
+            setState(() {
+              profile = null;
+              profileNotFound = true;
+              isLoading = false;
+            });
+          }
+          return;
+        }
+      } catch (e) {
+        // ignore - we'll fall back to showing a generic error
+      }
+
+      // Fallback for other errors
       if (mounted) {
         setState(() {
           profile = null;
@@ -220,9 +239,9 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
     // AlbumArtPostsTab can handle raw JSON, so skip expensive fromJson conversion
 
     final userType = cachedProfile.profile?.userType ?? 'public';
-    int tabCount = 3;
+    int tabCount = 2; // Default for normal users
     if (userType == 'artist')
-      tabCount = 5;
+      tabCount = 3;
     else if (userType == 'business') tabCount = 3;
     if (_tabController == null || _tabController!.length != tabCount) {
       _tabController?.dispose();
@@ -261,27 +280,29 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
 
   // Helper to get tabs based on user type
   List<Tab> getProfileTabs() {
+    // Use smaller icon sizes to fit the reduced TabBar height
+    const double iconSize = 20.0;
+
     if (userType == 'artist') {
-      return const [
-        Tab(icon: Icon(Icons.grid_on), text: "Posts"),
-        Tab(icon: Icon(Icons.music_note), text: "New Releases"),
-        Tab(icon: Icon(Icons.description), text: "Description"),
-        Tab(icon: Icon(Icons.event), text: "Concerts"),
-        Tab(icon: Icon(Icons.upcoming), text: "Upcoming"),
-        Tab(icon: Icon(Icons.person_pin), text: "Tagged"),
+      return [
+        const Tab(icon: Icon(Icons.grid_on, size: iconSize), text: "Posts"),
+        const Tab(
+            icon: Icon(Icons.campaign, size: iconSize), text: "Advertisements"),
+        const Tab(
+            icon: Icon(Icons.description, size: iconSize), text: "Description"),
       ];
     } else if (userType == 'business') {
-      return const [
-        Tab(icon: Icon(Icons.grid_on), text: "Posts"),
-        Tab(icon: Icon(Icons.campaign), text: "Advertisements"),
-        Tab(icon: Icon(Icons.description), text: "Description"),
-        Tab(icon: Icon(Icons.person_pin), text: "Tagged"),
+      return [
+        const Tab(icon: Icon(Icons.grid_on, size: iconSize), text: "Posts"),
+        const Tab(
+            icon: Icon(Icons.campaign, size: iconSize), text: "Advertisements"),
+        const Tab(
+            icon: Icon(Icons.description, size: iconSize), text: "Description"),
       ];
     } else {
       return const [
-        Tab(icon: Icon(Icons.grid_on)),
-        Tab(icon: Icon(Icons.description)),
-        Tab(icon: Icon(Icons.person_pin)),
+        Tab(icon: Icon(Icons.grid_on, size: iconSize)),
+        Tab(icon: Icon(Icons.description, size: iconSize)),
       ];
     }
   }
@@ -317,15 +338,11 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           },
           refreshNotifier: refreshTabNotifier,
         ),
-        ArtistNewReleasesTab(userId: userId!), // Implement this tab
+        BusinessAdsTab(userId: userId!, refreshNotifier: refreshTabNotifier),
         ThoughtPostsTab(
             postsList: thoughtPosts,
             userId: userId,
             refreshNotifier: refreshTabNotifier),
-        ArtistConcertsTab(userId: userId!), // Implement this tab
-        ArtistUpcomingTab(userId: userId!), // Implement this tab
-        // ArtistInsightsTab(userId: userId!),
-        const TaggedPostsTab(),
       ];
     } else if (userType == 'business') {
       return [
@@ -356,14 +373,11 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           },
           refreshNotifier: refreshTabNotifier,
         ),
-        BusinessAdsTab(
-            userId: userId!,
-            refreshNotifier: refreshTabNotifier), // Implement this tab
+        BusinessAdsTab(userId: userId!, refreshNotifier: refreshTabNotifier),
         ThoughtPostsTab(
             postsList: thoughtPosts,
             userId: userId,
             refreshNotifier: refreshTabNotifier),
-        const TaggedPostsTab(),
       ];
     } else {
       return [
@@ -398,7 +412,6 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
             postsList: thoughtPosts,
             userId: userId,
             refreshNotifier: refreshTabNotifier),
-        const TaggedPostsTab(),
       ];
     }
   }
@@ -412,18 +425,47 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
 
   @override
   Widget build(BuildContext context) {
+    // Helper to build a consistent AppBar with settings icon so it's
+    // always present even on loading/error screens.
+    AppBar _buildAppBar(String title) {
+      return AppBar(
+        title: Text(title),
+        centerTitle: true,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OptionsPage(),
+                ),
+              );
+            },
+          ),
+        ],
+      );
+    }
+
     // ⚡ Show loading screen only if we have NO profile data at all
     // If we have profile data (even if loading posts), show the profile with header
     if (isLoading && profile == null) {
-      return ProfileLoadingScreen(
-        title: username ?? 'My Profile',
-        showSkeleton: true,
-        isMyProfile: true,
+      // Ensure settings icon is visible even on the loading skeleton.
+      return Scaffold(
+        appBar: _buildAppBar(username ?? 'My Profile'),
+        body: ProfileLoadingScreen(
+          title: username ?? 'My Profile',
+          showSkeleton: true,
+          isMyProfile: true,
+        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       );
     }
 
     if (userId == null) {
       return Scaffold(
+        appBar: _buildAppBar('Profile'),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: Text(
@@ -436,6 +478,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
 
     if (profile == null && profileNotFound) {
       return Scaffold(
+        appBar: _buildAppBar('Profile'),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Column(
           children: [
@@ -448,24 +491,29 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                     fontSize: 18),
               ),
             ),
-            SizedBox(
-              width: 160,
-              child: OutlinedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const CreateProfilePage()),
-                  );
-                },
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(
-                      color: Theme.of(context).colorScheme.onSurface),
-                ),
-                child: Text(
-                  'Create Profile',
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: SizedBox(
+                width: 220,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const CreateProfilePage()),
+                    );
+                  },
+                  icon: const Icon(Icons.add_circle_outline),
+                  label: const Text('Create Profile'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14.0, horizontal: 12.0),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0)),
+                  ),
                 ),
               ),
             ),
@@ -476,6 +524,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
 
     if (profile == null) {
       return Scaffold(
+        appBar: _buildAppBar('Profile'),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
             child: Text('Failed to load profile',
@@ -601,46 +650,13 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                   );
                 },
               ),
-              // --- Add Insights and Edit Profile Buttons aligned horizontally ---
+              // --- Edit Profile Button ---
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Insights Button (left side)
-                    if (userType == 'artist')
-                      SizedBox(
-                        width: 160,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ArtistInsightsTab(userId: userId!),
-                              ),
-                            );
-                          },
-                          icon: Icon(Icons.insights,
-                              color: Theme.of(context).colorScheme.onSurface),
-                          label: Text(
-                            'Insights',
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                                color: Theme.of(context).colorScheme.onSurface),
-                            backgroundColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    if (userType == 'artist') const SizedBox(width: 12),
-                    // Edit Profile Button (right side)
+                    // Edit Profile Button
                     SizedBox(
                       width: 160,
                       child: OutlinedButton.icon(
@@ -683,20 +699,27 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                 width: MediaQuery.of(context).size.width,
                 padding: EdgeInsets.zero,
                 margin: EdgeInsets.zero,
-                child: TabBar(
-                  controller: _tabController,
-                  indicatorColor: Theme.of(context).colorScheme.onSurface,
-                  isScrollable: false,
-                  labelPadding: const EdgeInsets.symmetric(horizontal: 0),
-                  labelColor: Theme.of(context).colorScheme.onSurface,
-                  unselectedLabelColor:
-                      Theme.of(context).colorScheme.onSurfaceVariant,
-                  tabs: getProfileTabs(),
+                child: SizedBox(
+                  height: 50,
+                  child: TabBar(
+                    controller: _tabController,
+                    indicatorColor: Theme.of(context).colorScheme.onSurface,
+                    indicatorWeight: 2,
+                    isScrollable: false,
+                    labelPadding:
+                        const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+                    // Use explicit gray tones so the active tab icon is consistently gray
+                    labelColor: Colors.grey[700],
+                    unselectedLabelColor: Colors.grey[500],
+                    labelStyle: const TextStyle(fontSize: 12),
+                    unselectedLabelStyle: const TextStyle(fontSize: 12),
+                    tabs: getProfileTabs(),
+                  ),
                 ),
               ),
               // TabBarView for posts - Make sure each tab view is scrollable
               SizedBox(
-                height: 400, // Fixed height for TabBarView inside ScrollView
+                height: MediaQuery.of(context).size.height - 320,
                 child: profile != null && _tabController != null
                     ? TabBarView(
                         physics:

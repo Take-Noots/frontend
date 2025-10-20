@@ -118,7 +118,6 @@ class _FeedWidgetState extends State<FeedWidget> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     if (widget.isLoading) {
@@ -163,7 +162,7 @@ class _FeedWidgetState extends State<FeedWidget> {
             Icon(Icons.music_note, color: Colors.white, size: 48),
             SizedBox(height: 16),
             Text('No posts yet', style: TextStyle(fontSize: 18)),
-            Text('Be the first to share your favorite music or thoughts!'),
+            Text('Follow users to view posts or thoughts!'),
           ],
         ),
       );
@@ -232,7 +231,7 @@ class _FeedWidgetState extends State<FeedWidget> {
     const postAspectRatio = 490 / 595;
 
     // Use stored background color from database, or default if not available
-    final backgroundColor = post.backgroundColor != null 
+    final backgroundColor = post.backgroundColor != null
         ? Color(int.parse(post.backgroundColor!.replaceFirst('#', '0xFF')))
         : _defaultColor;
 

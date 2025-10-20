@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'dart:convert'; // ✅ Add this import
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // ✅ Add this import
 import '../../../data/services/fanbase_post_service.dart';
 import '../../../data/services/auth_service.dart';
 import 'fanbasePost_screen_comments.dart';
@@ -26,6 +28,10 @@ class PostDetailPage extends StatefulWidget {
   final String description;
   final String username;
   final String userImage;
+
+  // User identification for permissions
+  final String? postCreatorId; // ✅ Add post creator ID
+  final String? fanbaseOwnerId; // ✅ Add fanbase owner ID
 
   // Post state
   final bool isLiked;
@@ -54,6 +60,8 @@ class PostDetailPage extends StatefulWidget {
     required this.isCurrentTrack,
     required this.backgroundColor,
     required this.fanbaseId,
+    this.postCreatorId, // ✅ Add to constructor
+    this.fanbaseOwnerId, // ✅ Add to constructor
     this.likesCount = 0,
     this.commentsCount = 0,
   });
@@ -71,6 +79,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
   // Add these state variables for music playback
   String? _currentlyPlayingTrackId;
   bool _isPlaying = false;
+  String? _currentUserId; // ✅ Add current user ID
 
   @override
   void initState() {
@@ -79,12 +88,32 @@ class _PostDetailPageState extends State<PostDetailPage> {
     // Initialize playback state based on widget properties
     _currentlyPlayingTrackId = widget.isPlaying ? widget.trackId : null;
     _isPlaying = widget.isPlaying && widget.isCurrentTrack;
+    _loadCurrentUserId(); // ✅ Load current user ID
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() {});
       }
     });
+  }
+
+  // ✅ Update method to use SharedPreferences
+  Future<void> _loadCurrentUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        if (mounted) {
+          setState(() {
+            _currentUserId = userData['id'];
+          });
+          print('[DEBUG] Current user ID loaded: $_currentUserId');
+        }
+      }
+    } catch (e) {
+      print('[ERROR] Failed to load current user ID: $e');
+    }
   }
 
   /// Refreshes the page by fetching updated post data
@@ -366,8 +395,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
               left: 10,
               right: 10,
               top: 16,
-              bottom:
-                  bottomPadding, // Add enough padding for input bar + nav bar
+              bottom: bottomPadding,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,6 +413,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   fanbaseId: widget.fanbaseId,
                   comments: _comments,
                   onCommentAdded: _refreshPost,
+                  currentUserId: _currentUserId, // ✅ Pass current user ID
+                  postCreatorId: widget.postCreatorId, // ✅ Pass post creator ID
+                  fanbaseOwnerId:
+                      widget.fanbaseOwnerId, // ✅ Pass fanbase owner ID
                 ),
               ],
             ),

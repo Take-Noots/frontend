@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'dart:ui';
 import '../../../../data/services/thoughts_service.dart';
-import '../../../../data/services/auth_service.dart';
 import '../../../../data/models/thoughts_model.dart';
-import '../../../widgets/thoughts/thoughts_feed_card.dart';
-import '../../../widgets/loading_screens/common_loading.dart';
+import '../../../widgets/loading_screens/profile_grid_skeleton.dart';
 import '../thought_feed.dart';
 
 class ThoughtPostsTab extends StatefulWidget {
@@ -25,8 +21,6 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
   final ThoughtsService _service = ThoughtsService();
   List<ThoughtsPost> _posts = [];
   bool _isLoading = true;
-  bool _isPlaying = false;
-  String? _currentlyPlayingTrackId;
 
   @override
   void initState() {
@@ -133,114 +127,46 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
     });
   }
 
-  // Play/pause functionality for thoughts posts with songs
-  Future<void> _handlePlay(ThoughtsPost post) async {
-    print('[DEBUG] ThoughtPostsTab._handlePlay called for post: ${post.id}');
-    print('[DEBUG] ThoughtPostsTab._handlePlay songName: ${post.songName}');
-    print('[DEBUG] ThoughtPostsTab._handlePlay trackId: ${post.trackId}');
-
-    // Only play if the post has song information and trackId
-    if (post.songName == null ||
-        post.songName!.isEmpty ||
-        post.trackId == null ||
-        post.trackId!.isEmpty) {
-      print(
-          '[DEBUG] ThoughtPostsTab._handlePlay: No song information or trackId, returning early');
-      return;
-    }
-
-    if (_currentlyPlayingTrackId == post.trackId && _isPlaying) {
-      if (!mounted) return;
-      setState(() {
-        _isPlaying = false;
-      });
+  // Helper to build a colored background for thought posts when there's no cover image.
+  Widget _buildThoughtsColorBackground(ThoughtsPost thought, ThemeData theme) {
+    Color backgroundColor = const Color(0xFF2D1B69); // Default purple
+    if (thought.backgroundColor != null) {
       try {
-        await _pausePlayback();
-        if (!mounted) return;
+        backgroundColor = Color(
+            int.parse(thought.backgroundColor!.replaceFirst('#', '0xFF')));
       } catch (e) {
-        if (!mounted) return;
-        setState(() {
-          _isPlaying = true;
-        });
-      }
-    } else {
-      if (!mounted) return;
-      setState(() {
-        _currentlyPlayingTrackId = post.trackId;
-        _isPlaying = true;
-      });
-      try {
-        await _playTrack(post);
-        if (!mounted) return;
-      } catch (e) {
-        if (!mounted) return;
-        setState(() {
-          _isPlaying = false;
-          _currentlyPlayingTrackId = null;
-        });
+        // Use default color if parsing fails
       }
     }
-  }
 
-  Future<void> _playTrack(ThoughtsPost post) async {
-    try {
-      final authService = Provider.of<AuthService>(context, listen: false);
-      final dio = authService.dio;
-      final response = await dio.post(
-        '/spotify/player/post/play',
-        data: {'track_id': post.trackId},
-      );
-      if (!mounted) return;
-
-      if (response.statusCode == 200 ||
-          response.statusCode == 202 ||
-          response.statusCode == 204) {
-        if (!mounted) return;
-        setState(() {
-          _currentlyPlayingTrackId = post.trackId;
-          _isPlaying = true;
-        });
-      } else {
-        print(
-            '[DEBUG] ThoughtPostsTab.PlayTrack: Unexpected status code: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('[DEBUG] ThoughtPostsTab.PlayTrack Error: $e');
-      if (!mounted) return;
-      setState(() {
-        _isPlaying = false;
-        _currentlyPlayingTrackId = null;
-      });
-    }
-  }
-
-  Future<void> _pausePlayback() async {
-    try {
-      final authService = Provider.of<AuthService>(context, listen: false);
-      final dio = authService.dio;
-      final response = await dio.put('/spotify/player/post/pause');
-      if (!mounted) return;
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        if (!mounted) return;
-        setState(() {
-          _isPlaying = false;
-        });
-      }
-    } catch (e) {
-      print('[DEBUG] ThoughtPostsTab.PausePlayback Error: $e');
-      if (!mounted) return;
-      setState(() {
-        _isPlaying = true;
-      });
-    }
+    return Container(
+      color: backgroundColor,
+      width: double.infinity,
+      height: double.infinity,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            thought.text.length > 50
+                ? '${thought.text.substring(0, 50)}...'
+                : thought.text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading)
-      return Center(
-          child: CommonLoading.purple(message: "Loading thoughts..."));
+    if (_isLoading) return const ProfileGridSkeleton();
 
     if (_posts.isEmpty) {
       print('ThoughtPostsTab: build - no posts to show');
@@ -250,135 +176,95 @@ class _ThoughtPostsTabState extends State<ThoughtPostsTab> {
       );
     }
 
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      child: Column(
-        children: _posts.map((post) {
-          return InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ThoughtFeedScreen(
-                    posts: _posts,
-                    userId: widget.userId,
-                    initialPostId: post.id,
-                    onRefresh: () {},
-                  ),
+    // Show thought posts in a 3-column grid similar to saved_posts.dart
+    final theme = Theme.of(context);
+    return GridView.builder(
+      padding: const EdgeInsets.all(2),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 2,
+        crossAxisSpacing: 2,
+        childAspectRatio: 1,
+      ),
+      itemCount: _posts.length,
+      itemBuilder: (context, index) {
+        final post = _posts[index];
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ThoughtFeedScreen(
+                  posts: _posts,
+                  userId: widget.userId,
+                  initialPostId: post.id,
+                  onRefresh: () {},
                 ),
-              ).then((_) {
-                _fetchPosts();
-              });
-            },
-            child: Stack(
-              children: [
-                // The thoughts feed card
-                ThoughtsFeedCard(
-                  post: post,
-                  showCoverImage: false,
-                  onLike: () {
-                    // liking handled elsewhere; left as no-op
-                  },
-                  onComment: () {
-                    // navigate to comment view if desired
-                  },
-                  onPlayPause: () {
-                    print(
-                        '[DEBUG] ThoughtPostsTab: onPlayPause callback called for post: ${post.id}');
-                    _handlePlay(post);
-                  },
-                  isPlaying:
-                      _isPlaying && _currentlyPlayingTrackId == post.trackId,
-                  isCurrentTrack: _currentlyPlayingTrackId == post.trackId,
-                  onPostUpdated: (updatedPost) {
-                    _fetchPosts();
-                  },
-                  onUserTap: (String userId, String? username) {},
-                ),
-                // Blurred overlay for interaction buttons area
+              ),
+            ).then((_) {
+              _fetchPosts();
+            });
+          },
+          child: Stack(
+            children: [
+              // If the thought has a cover image show it, otherwise colored background
+              post.coverImage != null && post.coverImage!.isNotEmpty
+                  ? Image.network(
+                      post.coverImage!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (context, error, stackTrace) =>
+                          _buildThoughtsColorBackground(post, theme),
+                    )
+                  : _buildThoughtsColorBackground(post, theme),
+
+              // Overlay like/comment counts similar to saved_posts
+              if (post.likes > 0 || post.comments.isNotEmpty)
                 Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: ClipRRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        height: 80,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              (Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.black
-                                      : Colors.white)
-                                  .withOpacity(0.3),
-                              (Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.black
-                                      : Colors.white)
-                                  .withOpacity(0.6),
+                  bottom: 4,
+                  left: 4,
+                  right: 4,
+                  child: Container(
+                    color: Colors.black54,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        if (post.likes > 0)
+                          Row(
+                            children: [
+                              const Icon(Icons.favorite,
+                                  color: Colors.purple, size: 16),
+                              const SizedBox(width: 2),
+                              Text('${post.likes}',
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 12)),
+                            ],
+                          )
+                        else
+                          const Icon(Icons.favorite_border,
+                              color: Colors.white, size: 16),
+                        if (post.comments.isNotEmpty)
+                          Row(
+                            children: [
+                              const Icon(Icons.comment,
+                                  color: Colors.white, size: 16),
+                              const SizedBox(width: 2),
+                              Text('${post.comments.length}',
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 12)),
                             ],
                           ),
-                        ),
-                        child: Center(
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white.withOpacity(0.1)
-                                  : Colors.black.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white.withOpacity(0.2)
-                                    : Colors.black.withOpacity(0.1),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.touch_app_rounded,
-                                  size: 16,
-                                  color: Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.white70
-                                      : Colors.black54,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '',
-                                  style: TextStyle(
-                                    color: Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.white70
-                                        : Colors.black54,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
