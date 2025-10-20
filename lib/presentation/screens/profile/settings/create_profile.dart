@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/router/route_names.dart';
 import '../../../../data/services/profile_service.dart';
-import 'edit_profile.dart'; // Import the EditProfilePage
 
 class CreateProfilePage extends StatefulWidget {
   const CreateProfilePage({Key? key}) : super(key: key);
@@ -69,10 +70,10 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
                       fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.pushReplacementNamed(context, '/profile');
+                  Navigator.of(context).pop(); // Close dialog
+                  context.go(AppRoutes.home); // Navigate to home using router
                 },
-                child: const Text('Go to Profile'),
+                child: const Text('Go to Home'),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -82,12 +83,9 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
                       fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const EditProfilePage()),
-                  );
+                  Navigator.of(context).pop(); // Close dialog
+                  context.go(AppRoutes
+                      .editProfile); // Navigate to edit profile using router
                 },
                 child: const Text('Edit Profile'),
               ),

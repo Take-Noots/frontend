@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../data/services/profile_service.dart';
 import '../../widgets/auth/custom_button.dart';
 // Conditional import for openSpotifyAuth
 import 'link_spotify_mobile.dart'
@@ -15,18 +16,48 @@ import 'link_spotify_mobile.dart'
 class LinkSpotifyScreen extends StatelessWidget {
   const LinkSpotifyScreen({Key? key}) : super(key: key);
 
+  /// Check if user has a profile and navigate accordingly
+  Future<void> _checkProfileAndNavigate(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.user?.id;
+
+    if (userId != null) {
+      try {
+        final profileService = ProfileService();
+        final profileResult = await profileService.getUserProfile(userId);
+
+        if (context.mounted) {
+          if (profileResult['success'] == false ||
+              profileResult['data'] == null) {
+            // No profile exists, go to create profile
+            context.go(AppRoutes.createProfile);
+            return;
+          }
+        }
+      } catch (e) {
+        // If error checking profile, still allow navigation to home
+        print('[DEBUG] Error checking profile: $e');
+      }
+    }
+
+    // Profile exists or couldn't check, continue to home
+    if (context.mounted) {
+      context.go(AppRoutes.home);
+    }
+  }
+
   Future<void> _handleLinkSpotify(BuildContext context) async {
     try {
       if (kIsWeb) {
         // On web, use openSpotifyAuth from conditional import
         final backendUrl = 'http://localhost:3000/spotify/login/alt';
         openSpotifyAuth(backendUrl);
-        // Check authentication before redirecting
+        // Check authentication and profile before redirecting
         if (context.mounted) {
           final authProvider =
               Provider.of<AuthProvider>(context, listen: false);
           if (authProvider.isAuthenticated) {
-            context.go(AppRoutes.home);
+            await _checkProfileAndNavigate(context);
           } else {
             context.go(AppRoutes.login);
           }
@@ -45,12 +76,12 @@ class LinkSpotifyScreen extends StatelessWidget {
           if (await canLaunchUrl(Uri.parse(url))) {
             await launchUrl(Uri.parse(url),
                 mode: LaunchMode.externalApplication);
-            // Check authentication before redirecting
+            // Check authentication and profile before redirecting
             if (context.mounted) {
               final authProvider =
                   Provider.of<AuthProvider>(context, listen: false);
               if (authProvider.isAuthenticated) {
-                context.go(AppRoutes.home);
+                await _checkProfileAndNavigate(context);
               } else {
                 context.go(AppRoutes.login);
               }
@@ -66,12 +97,12 @@ class LinkSpotifyScreen extends StatelessWidget {
         final url = response.headers['location']!.first;
         if (await canLaunchUrl(Uri.parse(url))) {
           await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-          // Check authentication before redirecting
+          // Check authentication and profile before redirecting
           if (context.mounted) {
             final authProvider =
                 Provider.of<AuthProvider>(context, listen: false);
             if (authProvider.isAuthenticated) {
-              context.go(AppRoutes.home);
+              await _checkProfileAndNavigate(context);
             } else {
               context.go(AppRoutes.login);
             }
@@ -161,12 +192,12 @@ class LinkSpotifyScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 Center(
                   child: ElevatedButton(
-                    onPressed: () {
-                      // Check authentication before redirecting
+                    onPressed: () async {
+                      // Check authentication and profile before redirecting
                       final authProvider =
                           Provider.of<AuthProvider>(context, listen: false);
                       if (authProvider.isAuthenticated) {
-                        context.go(AppRoutes.home);
+                        await _checkProfileAndNavigate(context);
                       } else {
                         context.go(AppRoutes.login);
                       }
