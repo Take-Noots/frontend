@@ -458,6 +458,7 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
           title: username ?? 'My Profile',
           showSkeleton: true,
           isMyProfile: true,
+          showAppBar: false, // avoid nested AppBar inside the body
         ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       );

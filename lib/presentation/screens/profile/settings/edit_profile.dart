@@ -429,7 +429,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     children: [
                       CircleAvatar(
                         radius: 48,
-                        backgroundImage: NetworkImage(profileImage),
+                        backgroundImage: (() {
+                          // If profileImage is empty or looks like an asset path, use AssetImage
+                          if (profileImage.isEmpty) {
+                            return const AssetImage('assets/hehe.png');
+                          }
+                          // simple heuristic: treat http/https as network image
+                          if (profileImage.startsWith('http')) {
+                            return NetworkImage(profileImage);
+                          }
+                          // fallback to asset image for local paths
+                          return AssetImage(profileImage);
+                        })() as ImageProvider,
                       ),
                       if (_uploading)
                         Positioned.fill(
