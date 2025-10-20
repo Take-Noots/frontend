@@ -63,7 +63,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _fullNameController.addListener(_onFieldChanged);
   }
 
-
   void _onFieldChanged() {
     setState(() {}); // Rebuild to update button state
   }
@@ -371,7 +370,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Username invalid. Use letters, numbers, periods and underscores only (1-30 chars).')),
+          const SnackBar(
+              content: Text(
+                  'Username invalid. Use letters, numbers, periods and underscores only (1-30 chars).')),
         );
       }
       return;
@@ -450,7 +451,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         backgroundImage: (() {
                           // If profileImage is empty or looks like an asset path, use AssetImage
                           if (profileImage.isEmpty) {
-                            return const AssetImage('assets/hehe.png');
+                            return const AssetImage('assets/images/hehe.png');
                           }
                           // simple heuristic: treat http/https as network image
                           if (profileImage.startsWith('http')) {

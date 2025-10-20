@@ -6,9 +6,13 @@ import 'package:dio/dio.dart';
 import '../../../../core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/router/route_names.dart';
+import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/providers/profile_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../../../data/services/profile_service.dart';
+import 'edit_profile.dart';
 
 class CreateProfilePage extends StatefulWidget {
   const CreateProfilePage({Key? key}) : super(key: key);
@@ -22,6 +26,8 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
   String bio = '';
   String profileImage = '';
   String username = '';
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _fullNameController = TextEditingController();
   String fullName = '';
   String userType = 'public'; // Default user type
   bool isLoading = false;
@@ -35,7 +41,11 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
   ];
 
   Future<void> _submitProfile() async {
+    // Ensure form validators pass (fullName and username required; bio optional)
     if (!_formKey.currentState!.validate()) return;
+    // Pull latest values from controllers to ensure we send current text
+    username = _usernameController.text.trim();
+    fullName = _fullNameController.text.trim();
     setState(() {
       isLoading = true;
     });
@@ -49,56 +59,76 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
       return;
     }
     final profileService = ProfileService();
-    final result = await profileService.createProfile({
-      'userId': userId,
-      'bio': bio,
-      'profileImage': profileImage,
-      'fullName': fullName,
-      'username': username,
-      'userType': userType, // Include user type in the creation
-    });
-    setState(() {
-      isLoading = false;
-    });
-    if (result['success'] == true) {
-      if (mounted) {
-        showDialog(
+    // Check if a profile already exists for this userId
+    try {
+      final existing = await profileService.getUserProfile(userId);
+      if (existing['success'] == true && existing['data'] != null) {
+        // Profile exists - ask user to edit instead
+        if (!mounted) return;
+        final goEdit = await showDialog<bool>(
           context: context,
-          barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: const Text('Profile Created'),
-            content: const Text('Your profile was created successfully!'),
+            title: const Text('Profile already exists'),
+            content: const Text(
+                'A profile already exists for this account. Would you like to edit it instead?'),
             actions: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  textStyle: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  context.go(AppRoutes.home); // Navigate to home using router
-                },
-                child: const Text('Go to Home'),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  textStyle: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  context.go(AppRoutes
-                      .editProfile); // Navigate to edit profile using router
-                },
+                onPressed: () => Navigator.of(context).pop(true),
                 child: const Text('Edit Profile'),
               ),
             ],
           ),
         );
+        if (goEdit == true) {
+          // Navigate to EditProfilePage
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const EditProfilePage()),
+          );
+          return;
+        } else {
+          // Do not create duplicate; simply return
+          return;
+        }
+      }
+    } catch (e) {
+      // If the check fails, proceed with create - server may be down
+      print('[DEBUG] Error checking existing profile: $e');
+    }
+    final payload = {
+      'userId': userId,
+      'bio': bio,
+      'fullName': fullName,
+      'username': username,
+      'userType': userType,
+    };
+    if (profileImage.isNotEmpty) payload['profileImage'] = profileImage;
+    final result = await profileService.createProfile(payload);
+    setState(() {
+      isLoading = false;
+    });
+    if (result['success'] == true) {
+      if (mounted) {
+        // Force refresh of the profile cache then navigate to My Profile
+        try {
+          final profileProvider =
+              Provider.of<ProfileProvider>(context, listen: false);
+          final authProvider =
+              Provider.of<AuthProvider>(context, listen: false);
+          final uid = authProvider.user?.id;
+          if (uid != null) {
+            await profileProvider.refreshProfile(uid, context: context);
+          }
+        } catch (e) {
+          // ignore - proceed to navigation
+        }
+        // Navigate to Home after successful creation
+        context.go(AppRoutes.home);
       }
     } else {
       if (mounted) {
@@ -112,6 +142,48 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
 
   final ImagePicker _imagePicker = ImagePicker();
   bool _uploading = false;
+  bool _usernamePrefilled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _prefillUsername();
+  }
+
+  Future<void> _prefillUsername() async {
+    // Try AuthProvider first, then SharedPreferences as fallback
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final nameOrUsername =
+          authProvider.user == null ? null : (authProvider.user!.name);
+      if (nameOrUsername != null && nameOrUsername.isNotEmpty) {
+        setState(() {
+          username = nameOrUsername;
+          _usernameController.text = username;
+          _usernamePrefilled = true;
+        });
+        return;
+      }
+
+      // Fallback to SharedPreferences 'user_data'
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        final spUsername =
+            userData['username'] as String? ?? userData['name'] as String?;
+        if (spUsername != null && spUsername.isNotEmpty) {
+          setState(() {
+            username = spUsername;
+            _usernameController.text = username;
+            _usernamePrefilled = true;
+          });
+        }
+      }
+    } catch (e) {
+      // ignore - leave username editable/empty
+    }
+  }
 
   Future<void> _pickAndUploadImage() async {
     try {
@@ -250,27 +322,7 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
           key: _formKey,
           child: ListView(
             children: [
-              const SizedBox(height: 16),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Username',
-                  labelStyle: TextStyle(color: Colors.white),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
-                ),
-                style: const TextStyle(color: Colors.white),
-                onChanged: (value) => username = value.trim(),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9._]')),
-                  LengthLimitingTextInputFormatter(30),
-                ],
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) return 'Username is required';
-                  final valid = RegExp(r'^[A-Za-z0-9._]{1,30}$').hasMatch(value.trim());
-                  return valid ? null : 'Use letters, numbers, periods and underscores only (1-30 chars)';
-                },
-              ),
+              // top duplicate username field removed; prefilled username field below retained
               const SizedBox(height: 16),
               GestureDetector(
                 onTap: _uploading ? null : _pickAndUploadImage,
@@ -280,7 +332,7 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
                       radius: 48,
                       backgroundImage: (() {
                         if (profileImage.isEmpty) {
-                          return const AssetImage('assets/hehe.png');
+                          return const AssetImage('assets/images/hehe.png');
                         }
                         if (profileImage.startsWith('http')) {
                           return NetworkImage(profileImage);
@@ -319,6 +371,7 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                controller: _fullNameController,
                 decoration: const InputDecoration(
                   labelText: 'Full Name',
                   labelStyle: TextStyle(color: Colors.white),
@@ -343,23 +396,38 @@ class _CreateProfilePageState extends State<CreateProfilePage> {
                 ),
                 style: const TextStyle(color: Colors.white),
                 onChanged: (value) => bio = value,
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? 'Bio is required'
-                    : null,
+                // Bio is optional per request - allow empty
+                validator: (value) => null,
               ),
               const SizedBox(height: 16),
+              // Removed Profile Image URL field per request
+              const SizedBox(height: 8),
+              // Username field: prefilled from AuthProvider or SharedPreferences
               TextFormField(
+                controller: _usernameController,
                 decoration: const InputDecoration(
-                  labelText: 'Profile Image URL',
+                  labelText: 'Username',
                   labelStyle: TextStyle(color: Colors.white),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.white),
                   ),
                 ),
                 style: const TextStyle(color: Colors.white),
-                onChanged: (value) => profileImage = value,
-                // Make profile image optional: don't force user to provide a URL
-                validator: (value) => null,
+                onChanged: (value) => username = value.trim(),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9._]')),
+                  LengthLimitingTextInputFormatter(30),
+                ],
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty)
+                    return 'Username is required';
+                  final valid =
+                      RegExp(r'^[A-Za-z0-9._]{1,30}$').hasMatch(value.trim());
+                  return valid
+                      ? null
+                      : 'Use letters, numbers, periods and underscores only (1-30 chars)';
+                },
+                readOnly: _usernamePrefilled,
               ),
               const SizedBox(height: 24),
               // Add profile type dropdown
