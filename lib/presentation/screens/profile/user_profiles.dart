@@ -42,6 +42,7 @@ class _UserProfilePageState extends State<UserProfilePage>
   int postCount = 0;
   bool isPrivateProfile = false;
   bool isFollowingUser = false;
+  bool isRequested = false;
   bool isLoadingFollow = false;
   final ValueNotifier<bool> refreshTabNotifier = ValueNotifier(false);
 
@@ -109,6 +110,19 @@ class _UserProfilePageState extends State<UserProfilePage>
         follows = true;
       }
 
+      // TODO: backend should indicate if a follow request exists; as a fallback, check for a pendingRequests field
+      bool requested = false;
+      try {
+        if (profileResult['data'] != null &&
+            profileResult['data']['pendingRequests'] is List) {
+          final pending = (profileResult['data']['pendingRequests'] as List)
+              .map((e) => e.toString())
+              .toList();
+          if (loggedUserId != null && pending.contains(loggedUserId))
+            requested = true;
+        }
+      } catch (_) {}
+
       setState(() {
         profile = profileData;
         posts = formattedPosts; // Use the formatted posts
@@ -116,6 +130,7 @@ class _UserProfilePageState extends State<UserProfilePage>
         postCount = fetchedPostCount;
         isPrivateProfile = isPrivate;
         isFollowingUser = follows;
+        isRequested = requested;
         isLoading = false;
       });
 
@@ -163,6 +178,51 @@ class _UserProfilePageState extends State<UserProfilePage>
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       final profileService = ProfileService(authService: authService);
+
+      // If profile is private and not already following/requested, send a follow request
+      if (!isFollowingUser && isPrivateProfile && !isRequested) {
+        final result = await profileService.sendFollowRequest(
+            loggedUserId!, profile!.userId);
+        if (result['success'] == true) {
+          setState(() {
+            isRequested = true;
+            isLoadingFollow = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(result['message'] ?? 'Follow request sent')));
+          return;
+        } else {
+          setState(() => isLoadingFollow = false);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content:
+                  Text(result['message'] ?? 'Failed to send follow request')));
+          return;
+        }
+      }
+
+      // If profile is private and a request is already pending, tapping should cancel the request
+      if (!isFollowingUser && isPrivateProfile && isRequested) {
+        // requester cancels their own pending request
+        final result = await profileService.cancelFollowRequest(
+            loggedUserId!, profile!.userId);
+        if (result['success'] == true) {
+          setState(() {
+            isRequested = false;
+            isLoadingFollow = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(result['message'] ?? 'Follow request canceled')));
+          return;
+        } else {
+          setState(() => isLoadingFollow = false);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(
+                  result['message'] ?? 'Failed to cancel follow request')));
+          return;
+        }
+      }
+
+      // Otherwise proceed with regular follow/unfollow
       final result = isFollowingUser
           ? await profileService.unfollowUser(loggedUserId!, profile!.userId)
           : await profileService.followUser(loggedUserId!, profile!.userId);
@@ -178,6 +238,8 @@ class _UserProfilePageState extends State<UserProfilePage>
             profile!.followers.add(loggedUserId!);
           }
           isFollowingUser = !isFollowingUser;
+          // Clear any pending request flag when following
+          if (isFollowingUser) isRequested = false;
           isLoadingFollow = false;
         });
       } else {
@@ -440,7 +502,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                 ),
                               )
                             : Text(
-                                isFollowingUser ? 'Following' : 'Follow',
+                                isFollowingUser
+                                    ? 'Following'
+                                    : (isRequested ? 'Requested' : 'Follow'),
                                 style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,

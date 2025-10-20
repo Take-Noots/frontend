@@ -15,6 +15,7 @@ import 'profile_feed_screen.dart';
 import './user_profiles.dart';
 import 'tabs/business/ads_tab.dart';
 import '../../widgets/loading_screens/profile_loading_screen.dart';
+import 'follow_requests.dart';
 
 import '../../../data/models/profile_model.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -690,6 +691,31 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                         ),
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    // If this user is private, show Follow Requests button
+                    if (profile?.userType == 'private')
+                      SizedBox(
+                        width: 140,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const FollowRequestsPage(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.person_add_alt_1),
+                          label: const Text('Follow Requests'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.surface,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
