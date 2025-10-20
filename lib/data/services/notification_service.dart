@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/constants/app_constants.dart';
 
 class NotificationService {
-  static const String baseUrl = 'http://localhost:3000/notifications';
+  // Use AppConstants.baseUrl so the environment-specific base URL is applied
+  static final String baseUrl = AppConstants.baseUrl + '/notifications';
 
   // Get all notifications for current user
   Future<Map<String, dynamic>> getUserNotifications({
@@ -13,17 +15,17 @@ class NotificationService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
       final userId = userData['id'];
-      
+
       final response = await http.get(
         Uri.parse('$baseUrl/$userId?page=$page&limit=$limit'),
         headers: {
@@ -42,7 +44,9 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to retrieve notifications',
+          'message': errorData['message'] ??
+              errorData['error'] ??
+              'Failed to retrieve notifications',
         };
       }
     } catch (e) {
@@ -58,17 +62,17 @@ class NotificationService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
       final userId = userData['id'];
-      
+
       final response = await http.get(
         Uri.parse('$baseUrl/$userId/unread-count'),
         headers: {
@@ -87,7 +91,9 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to get unread count',
+          'message': errorData['message'] ??
+              errorData['error'] ??
+              'Failed to get unread count',
         };
       }
     } catch (e) {
@@ -103,17 +109,17 @@ class NotificationService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
       final userId = userData['id'];
-      
+
       final response = await http.post(
         Uri.parse('$baseUrl/$notificationId/read'),
         headers: {
@@ -135,7 +141,9 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to mark as read',
+          'message': errorData['message'] ??
+              errorData['error'] ??
+              'Failed to mark as read',
         };
       }
     } catch (e) {
@@ -151,17 +159,17 @@ class NotificationService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
       final userId = userData['id'];
-      
+
       final response = await http.post(
         Uri.parse('$baseUrl/$userId/mark-all-read'),
         headers: {
@@ -180,7 +188,9 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to mark all as read',
+          'message': errorData['message'] ??
+              errorData['error'] ??
+              'Failed to mark all as read',
         };
       }
     } catch (e) {
@@ -196,17 +206,17 @@ class NotificationService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userDataString = prefs.getString('user_data');
-      
+
       if (userDataString == null) {
         return {
           'success': false,
           'message': 'User not logged in.',
         };
       }
-      
+
       final userData = jsonDecode(userDataString);
       final userId = userData['id'];
-      
+
       final response = await http.delete(
         Uri.parse('$baseUrl/$notificationId'),
         headers: {
@@ -228,7 +238,9 @@ class NotificationService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['message'] ?? errorData['error'] ?? 'Failed to delete notification',
+          'message': errorData['message'] ??
+              errorData['error'] ??
+              'Failed to delete notification',
         };
       }
     } catch (e) {

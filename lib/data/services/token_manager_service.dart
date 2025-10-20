@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -21,10 +22,16 @@ class TokenManagerService {
 
   // Refresh lock to prevent concurrent refresh attempts
   bool _isRefreshing = false;
+  // Completer used to allow callers to await an in-progress refresh
+  Completer<bool>? _refreshCompleter;
 
   // Retry configuration
   static const int _maxRetries = 3;
   static const Duration _retryDelay = Duration(seconds: 3);
+  // Proactive refresh settings
+  static const int _proactiveLeewaySeconds =
+      60; // refresh if token expires within 60s
+  Timer? _proactiveRefreshTimer;
 
   // Storage services
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -71,8 +78,8 @@ class TokenManagerService {
           !error.requestOptions.path.contains('/spotify/')) {
         print('[TokenManager] 401 error detected, attempting token refresh...');
 
-        // Try to refresh the JWT token with retries
-        final refreshed = await _refreshTokenWithRetry();
+        // Use single-flight refreshIfNeeded which handles concurrency
+        final refreshed = await refreshIfNeeded();
 
         if (refreshed) {
           print(
@@ -91,7 +98,10 @@ class TokenManagerService {
             return handler.next(error);
           }
         } else {
-          print('[TokenManager] Token refresh failed, logging out user');
+          print('[TokenManager] Token refresh failed, notifying listener');
+          try {
+            onRefreshFailed?.call();
+          } catch (_) {}
         }
       }
 
@@ -158,6 +168,8 @@ class TokenManagerService {
       if (accessToken != null) {
         _accessToken = accessToken;
         _authProvider.setToken(accessToken);
+        // Schedule proactive refresh now that token is loaded
+        _scheduleProactiveRefresh();
       }
     } catch (e) {
       print('Error loading token from SharedPreferences: $e');
@@ -184,6 +196,61 @@ class TokenManagerService {
 
     // Update auth provider
     _authProvider.setToken(token);
+
+    // Schedule proactive refresh when a new token is saved
+    _scheduleProactiveRefresh();
+  }
+
+  // Parse token expiry (returns expiry DateTime.utc or null)
+  DateTime? _parseTokenExpiry(String? token) {
+    if (token == null) return null;
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      String normalize(String str) {
+        var output = str.replaceAll('-', '+').replaceAll('_', '/');
+        while (output.length % 4 != 0) output += '=';
+        return output;
+      }
+
+      final raw = utf8.decode(base64Url.decode(normalize(parts[1])));
+      final Map<String, dynamic> map =
+          Map<String, dynamic>.from(jsonDecode(raw));
+      final exp = map['exp'];
+      if (exp == null) return null;
+      final expInt = exp is int ? exp : int.tryParse(exp.toString()) ?? 0;
+      return DateTime.fromMillisecondsSinceEpoch(expInt * 1000, isUtc: true);
+    } catch (e) {
+      print('[TokenManager] Error parsing token expiry: $e');
+      return null;
+    }
+  }
+
+  // Schedule a proactive refresh when token nears expiry
+  void _scheduleProactiveRefresh() {
+    try {
+      _proactiveRefreshTimer?.cancel();
+      final expiry = _parseTokenExpiry(_accessToken);
+      if (expiry == null) return;
+      final now = DateTime.now().toUtc();
+      final triggerAt =
+          expiry.subtract(Duration(seconds: _proactiveLeewaySeconds));
+      final duration =
+          triggerAt.isAfter(now) ? triggerAt.difference(now) : Duration.zero;
+      _proactiveRefreshTimer = Timer(duration, () async {
+        print('[TokenManager] Proactive refresh triggered');
+        try {
+          await refreshIfNeeded();
+        } catch (e) {
+          print('[TokenManager] Proactive refresh failed: $e');
+          try {
+            onRefreshFailed?.call();
+          } catch (_) {}
+        }
+      });
+    } catch (e) {
+      print('[TokenManager] Error scheduling proactive refresh: $e');
+    }
   }
 
   // Fallback method to save token to SharedPreferences
@@ -198,7 +265,16 @@ class TokenManagerService {
 
   // Clear tokens for logout
   Future<void> clearTokens() async {
+    // Log reason and stack for debugging
+    print('[TokenManager] clearTokens called. stack: ${StackTrace.current}');
+
     _accessToken = null;
+
+    // Cancel proactive timer
+    try {
+      _proactiveRefreshTimer?.cancel();
+      _proactiveRefreshTimer = null;
+    } catch (_) {}
 
     // Always clear from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
@@ -274,6 +350,11 @@ class TokenManagerService {
     }
 
     print('[TokenManager] All $_maxRetries refresh attempts failed');
+    // Notify any listeners that refresh failed before clearing tokens
+    try {
+      onRefreshFailed?.call();
+    } catch (_) {}
+
     await clearTokens();
     return false;
   }
@@ -282,12 +363,18 @@ class TokenManagerService {
   Future<bool> refreshToken() async {
     // Prevent concurrent refresh attempts
     if (_isRefreshing) {
-      print(
-          '[At Token.Manager.Service] Refresh already in progress, skipping...');
+      // If another refresh is in progress, wait for it to complete and return its result
+      if (_refreshCompleter != null) {
+        print(
+            '[At Token.Manager.Service] Refresh already in progress, awaiting result...');
+        return _refreshCompleter!.future;
+      }
+      // Fallback: if no completer present, return false
       return false;
     }
 
     _isRefreshing = true;
+    _refreshCompleter = Completer<bool>();
     try {
       print('[At Token.Manager.Service] Attempting to refresh token...');
 
@@ -338,12 +425,36 @@ class TokenManagerService {
       }
 
       // Don't clear tokens here - let the retry logic handle it
-      // Only rethrow to allow retry logic to catch it
+      // Rethrow so retry logic can decide whether to retry or fail
       rethrow;
     } finally {
+      // Complete any awaiting callers
       _isRefreshing = false;
+      if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
+        // Determine result: if we have a token, consider it success
+        final result = _accessToken != null;
+        _refreshCompleter!.complete(result);
+      }
+      _refreshCompleter = null;
     }
   }
+
+  // Public helper to attempt a refresh if we have a token but are not authenticated
+  // Returns true if refresh succeeded, false otherwise
+  Future<bool> refreshIfNeeded() async {
+    // If we don't have a token, nothing to refresh
+    if (!hasToken) return false;
+
+    // If auth provider already considers the token valid, nothing to do
+    if (_authProvider.isAuthenticated) return true;
+
+    // Attempt refresh with retry logic
+    final refreshed = await _refreshTokenWithRetry();
+    return refreshed;
+  }
+
+  // Callback invoked when refresh ultimately fails (before tokens are cleared)
+  void Function()? onRefreshFailed;
 
   // Get authenticated Dio instance
   Dio get authenticatedDio => _dio;

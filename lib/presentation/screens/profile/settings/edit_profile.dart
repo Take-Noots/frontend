@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import 'package:provider/provider.dart';
@@ -233,30 +233,90 @@ class _EditProfilePageState extends State<EditProfilePage> {
         return;
       }
 
-      // Upload to backend
-      final file = File(pickedFile.path);
+      // Read bytes from picked file (works on web and native)
+      final bytes = await pickedFile.readAsBytes();
+
+      // Build MultipartFile from bytes so it works on web (dart:io not required)
+      final multipart = MultipartFile.fromBytes(
+        bytes,
+        filename: pickedFile.name,
+      );
+
       final formData = FormData.fromMap({
-        'profileImage': await MultipartFile.fromFile(file.path,
-            filename: 'profile_image.jpg'),
+        'profileImage': multipart,
       });
 
       final dio = Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
       final response = await dio.post('/profile/$userId/upload-profile-picture',
           data: formData);
 
+      // Accept several possible response shapes and give informative errors
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = response.data;
-        final imageUrl = data['imageUrl'];
-        if (imageUrl != null) {
+        final respData = response.data;
+        // Debug log the full response to help diagnose server issues
+        print('[DEBUG] uploadProfilePicture response: $respData');
+
+        String? imageUrl;
+
+        try {
+          if (respData is Map) {
+            // Common keys
+            imageUrl = respData['imageUrl'] as String? ??
+                respData['url'] as String? ??
+                respData['secure_url'] as String?;
+
+            // Some controllers may nest under 'data' or 'result'
+            if (imageUrl == null) {
+              if (respData['data'] is Map) {
+                final nested = respData['data'] as Map;
+                imageUrl = nested['imageUrl'] as String? ??
+                    nested['url'] as String? ??
+                    nested['secure_url'] as String?;
+              }
+              if (imageUrl == null && respData['result'] is Map) {
+                final nested = respData['result'] as Map;
+                imageUrl =
+                    nested['secure_url'] as String? ?? nested['url'] as String?;
+              }
+            }
+          } else if (respData is String) {
+            // Try to decode JSON string
+            try {
+              final parsed = jsonDecode(respData);
+              if (parsed is Map) {
+                imageUrl =
+                    parsed['imageUrl'] as String? ?? parsed['url'] as String?;
+              }
+            } catch (_) {
+              // ignore
+            }
+          }
+        } catch (e) {
+          print('[DEBUG] Error while extracting imageUrl: $e');
+        }
+
+        if (imageUrl != null && imageUrl.isNotEmpty) {
           setState(() {
-            profileImage = imageUrl;
+            profileImage = imageUrl as String;
             _uploading = false;
           });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Image uploaded successfully!')),
           );
         } else {
-          throw Exception('No image URL in response');
+          // If server provided a message, show it; otherwise show full response for debugging
+          String serverMsg = 'No image URL in response';
+          try {
+            if (respData is Map) {
+              serverMsg =
+                  respData['message']?.toString() ?? respData.toString();
+            } else {
+              serverMsg = respData.toString();
+            }
+          } catch (_) {
+            serverMsg = respData.toString();
+          }
+          throw Exception(serverMsg);
         }
       } else {
         throw Exception('Upload failed: ${response.statusMessage}');

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-// import removed, use correct import below
-import '../../../../../../data/services/song_post_service.dart';
-import '../../../../../../data/services/thoughts_service.dart';
-import '../../../../../../data/models/post_model.dart';
-import '../../../../../../data/models/thoughts_model.dart';
+// Use the same relative import style as other screens in this folder
+import '../../../../../data/services/song_post_service.dart';
+import '../../../../../data/services/thoughts_service.dart';
+import '../../../../../data/models/post_model.dart';
+import '../../../../../data/models/thoughts_model.dart';
 import 'saved_posts_feed_screen.dart';
 
 class SavedPostsPage extends StatefulWidget {
@@ -27,22 +27,52 @@ class _SavedPostsPageState extends State<SavedPostsPage> {
 
   Future<List<String>> _fetchSavedPosts() async {
     final service = SongPostService();
-    final result = await service.getSavedPosts(widget.userId, context);
-    if (result['success'] == true && result['savedPosts'] != null) {
-      List<String> ids = (result['savedPosts'] as List).cast<String>();
-      return ids;
+    try {
+      final Map<String, dynamic> result =
+          await service.getSavedPosts(widget.userId, context);
+      // Debug: print raw response for diagnosis
+      // ignore: avoid_print
+      print('[SavedPosts] getSavedPosts raw result: $result');
+
+      if (result['savedPosts'] != null && result['savedPosts'] is List) {
+        return (result['savedPosts'] as List).cast<String>();
+      }
+
+      if (result['data'] != null && result['data'] is List) {
+        return (result['data'] as List).cast<String>();
+      }
+
+      // Fallback: some endpoints may return { savedPosts: [] } or just {}
+      return [];
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[SavedPosts] Error fetching saved posts: $e\n$st');
+      return [];
     }
-    return [];
   }
 
   Future<List<String>> _fetchSavedThoughts() async {
     final service = ThoughtsService();
-    final result = await service.getSavedThoughtsPosts(widget.userId, context);
-    if (result['success'] == true && result['savedPosts'] != null) {
-      List<String> ids = (result['savedPosts'] as List).cast<String>();
-      return ids;
+    try {
+      final Map<String, dynamic> result =
+          await service.getSavedThoughtsPosts(widget.userId, context);
+      // ignore: avoid_print
+      print('[SavedPosts] getSavedThoughtsPosts raw result: $result');
+
+      if (result['savedPosts'] != null && result['savedPosts'] is List) {
+        return (result['savedPosts'] as List).cast<String>();
+      }
+
+      if (result['data'] != null && result['data'] is List) {
+        return (result['data'] as List).cast<String>();
+      }
+
+      return [];
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[SavedPosts] Error fetching saved thoughts: $e\n$st');
+      return [];
     }
-    return [];
   }
 
   Future<List<Post>> _fetchPostDetails(List<String> ids) async {
@@ -124,7 +154,7 @@ class _SavedPostsPageState extends State<SavedPostsPage> {
                           savedPostIds: postIds,
                           savedThoughtsIds: savedThoughts,
                           initialPostId: post.id,
-                          initialTabIndex: 0, 
+                          initialTabIndex: 0,
                         ),
                       ),
                     );
@@ -251,7 +281,7 @@ class _SavedPostsPageState extends State<SavedPostsPage> {
                           savedPostIds: savedSongs,
                           savedThoughtsIds: thoughtIds,
                           initialPostId: thought.id,
-                          initialTabIndex: 1, 
+                          initialTabIndex: 1,
                         ),
                       ),
                     );
@@ -259,15 +289,15 @@ class _SavedPostsPageState extends State<SavedPostsPage> {
                   child: Stack(
                     children: [
                       // Show cover image if available, otherwise show colored background
-                      thought.coverImage != null && thought.coverImage!.isNotEmpty
+                      thought.coverImage != null &&
+                              thought.coverImage!.isNotEmpty
                           ? Image.network(
                               thought.coverImage!,
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: double.infinity,
                               errorBuilder: (context, error, stackTrace) =>
-                                  _buildThoughtsColorBackground(
-                                      thought, theme),
+                                  _buildThoughtsColorBackground(thought, theme),
                             )
                           : _buildThoughtsColorBackground(thought, theme),
                       // Overlay with like/comment counts
@@ -380,12 +410,22 @@ class _SavedPostsPageState extends State<SavedPostsPage> {
           ),
         ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: TabBarView(
-          children: [
-            _buildSongPostsTab(),
-            _buildThoughtsTab(),
-          ],
-        ),
+        body: Builder(builder: (context) {
+          // Ensure TabBarView children count matches the DefaultTabController length (2)
+          var tabChildren = <Widget>[_buildSongPostsTab(), _buildThoughtsTab()];
+          const expected = 2;
+          if (tabChildren.length > expected) {
+            tabChildren = tabChildren.take(expected).toList();
+          } else if (tabChildren.length < expected) {
+            // Pad with empty containers if somehow fewer children
+            tabChildren = [
+              ...tabChildren,
+              for (var i = tabChildren.length; i < expected; i++) Container()
+            ];
+          }
+
+          return TabBarView(children: tabChildren);
+        }),
       ),
     );
   }
