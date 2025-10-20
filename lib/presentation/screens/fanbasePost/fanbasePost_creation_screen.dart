@@ -110,7 +110,8 @@ class _FanbasePostCreationScreenState extends State<FanbasePostCreationScreen> {
               content: Text('Error: ${response.statusMessage}'),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(10),
               duration: const Duration(seconds: 2),
             ),
@@ -128,7 +129,8 @@ class _FanbasePostCreationScreenState extends State<FanbasePostCreationScreen> {
             content: Text('Error searching: $e'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
@@ -148,7 +150,8 @@ class _FanbasePostCreationScreenState extends State<FanbasePostCreationScreen> {
           content: const Text('Please fill in both topic and description'),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(10),
           duration: const Duration(seconds: 2),
         ),
@@ -179,14 +182,15 @@ class _FanbasePostCreationScreenState extends State<FanbasePostCreationScreen> {
       if (mounted) {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-          content: const Text('Post created successfully!'),
-          backgroundColor: AppColors.primaryPurple,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          margin: const EdgeInsets.all(10),
-          duration: const Duration(seconds: 2),
-        ),
+          SnackBar(
+            content: const Text('Post created successfully!'),
+            backgroundColor: AppColors.primaryPurple,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(10),
+            duration: const Duration(seconds: 2),
+          ),
         );
         // Return to previous screen with created post data
         // This allows the previous screen to refresh and show the new post
@@ -200,7 +204,8 @@ class _FanbasePostCreationScreenState extends State<FanbasePostCreationScreen> {
             content: Text('Error creating post: $e'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(10),
             duration: const Duration(seconds: 2),
           ),
@@ -275,17 +280,17 @@ class _FanbasePostCreationScreenState extends State<FanbasePostCreationScreen> {
               const SizedBox(height: 24),
             ],
 
-            // Spotify song search section
-            _buildSongSearchSection(colorScheme, theme),
-
-            const SizedBox(height: 16),
-
-            // Display search results
-            if (_searchResults != null) ...[
-              _buildSearchResultsList(theme, colorScheme),
+            // Spotify song search section - ✅ Only show if no track is selected
+            if (_selectedTrack == null) ...[
+              _buildSongSearchSection(colorScheme, theme),
+              const SizedBox(height: 16),
+              // Display search results
+              if (_searchResults != null) ...[
+                _buildSearchResultsList(theme, colorScheme),
+              ],
             ],
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 15),
 
             // Main create post button
             _buildCreatePostButton(),

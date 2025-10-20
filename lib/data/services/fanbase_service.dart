@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart'; // ✅ Add this import
 import '../../core/providers/auth_provider.dart';
 import 'package:Noot/data/models/fanbase_model.dart';
 import '../models/fanbase_post_model.dart';
@@ -51,7 +52,8 @@ class FanbaseService {
 
   static Future<void> createFanbase(
       String name, String topic, BuildContext context,
-      {File? imageFile, String? imageUrl}) async {
+      {XFile? imageFile, String? imageUrl}) async {
+    // ✅ Change File? to XFile?
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final authService = Provider.of<AuthService>(context, listen: false);
@@ -65,15 +67,21 @@ class FanbaseService {
       final formData = FormData.fromMap({
         'fanbaseName': name,
         'topic': topic,
+        'rules': [], // Add empty rules array to satisfy DTO validation
       });
 
       // Add image file if provided
       if (imageFile != null) {
+        // ✅ Read bytes from XFile (works on web and native)
+        final bytes = await imageFile.readAsBytes();
+
+        // ✅ Use MultipartFile.fromBytes with proper filename
         formData.files.add(MapEntry(
           'image',
-          await MultipartFile.fromFile(
-            imageFile.path,
-            filename: imageFile.path.split('/').last,
+          MultipartFile.fromBytes(
+            bytes,
+            filename: imageFile
+                .name, // ✅ Use imageFile.name instead of path splitting
           ),
         ));
       } else if (imageUrl != null && imageUrl.isNotEmpty) {
