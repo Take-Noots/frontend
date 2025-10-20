@@ -222,11 +222,11 @@ class _CommentSectionState extends State<CommentSection> with TickerProviderStat
                                           ],
                                         ),
                                       ),
-                                      // Delete button - only show for comment owner
+                                      
                                       if (comment.userId == widget.currentUserId)
                                         GestureDetector(
                                           onTap: () async {
-                                            // Show confirmation dialog
+                                            
                                             final confirm = await showDialog<bool>(
                                               context: context,
                                               builder: (BuildContext context) {

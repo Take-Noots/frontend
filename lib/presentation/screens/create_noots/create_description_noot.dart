@@ -147,7 +147,7 @@ class _CreateDescriptionNootPageState extends State<CreateDescriptionNootPage> {
       
       final thoughtsService = ThoughtsService();
       
-      // Call API to create thoughts post
+      
       final result = await thoughtsService.createThoughts(
         thoughtsText: thoughtsText,
         coverImage: _selectedCoverImage,

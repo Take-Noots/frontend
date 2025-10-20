@@ -558,7 +558,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
                 ),
               );
               if (result == true) {
-                // Refresh the feed after successful edit
+                
                 _loadProfilePosts();
               }
             }
@@ -675,7 +675,7 @@ class _ProfileFeedScreenState extends State<ProfileFeedScreen> {
                 duration: const Duration(seconds: 2),
               ),
             );
-            _loadProfilePosts(); // Refresh posts
+            _loadProfilePosts(); 
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

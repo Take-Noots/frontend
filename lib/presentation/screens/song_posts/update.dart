@@ -59,7 +59,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
           await Future.delayed(const Duration(milliseconds: 800));
           if (mounted) {
             Navigator.of(context)
-                .pop(true); // Return true to indicate successful update
+                .pop(true);
           }
         }
       } else {

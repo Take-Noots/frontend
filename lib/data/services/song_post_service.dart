@@ -313,7 +313,7 @@ class SongPostService {
           };
         }
       } else {
-        // Fallback to http for backward compatibility
+        
         final response = await http.post(
           Uri.parse('$baseUrl/song-posts/$postId/like'),
           headers: {'Content-Type': 'application/json'},
@@ -334,7 +334,7 @@ class SongPostService {
       String postId, String userId, String username, String text,
       [BuildContext? context]) async {
     try {
-      // If context is provided, use AuthService with Dio for authenticated requests
+      
       if (context != null) {
         final authService = Provider.of<AuthService>(context, listen: false);
         final dio = authService.dio;
@@ -372,7 +372,7 @@ class SongPostService {
       String postId, String commentId, String userId,
       [BuildContext? context]) async {
     try {
-      // If context is provided, use AuthService with Dio for authenticated requests
+     
       if (context != null) {
         final authService = Provider.of<AuthService>(context, listen: false);
         final dio = authService.dio;

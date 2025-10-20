@@ -242,14 +242,13 @@ class _PostOptionsMenuState extends State<PostOptionsMenu> {
                 }
               },
             ),
-            // Follow/Unfollow option removed
-            // Show report option only for other users' posts
+           
             ListTile(
               leading: Icon(LucideIcons.flag, color: Colors.red),
               title: const Text('Report', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(context);
-                // Show report options menu
+                
                 _showReportOptions(context, widget.postUserId, widget.postId);
               },
             ),

@@ -24,9 +24,7 @@ import '../../core/styles/app_colors.dart';
 class HomeScreen extends StatefulWidget {
   final String? accessToken;
 
-  /// Whether this screen is being displayed inside the ShellScreen.
-  /// When true, navigation elements (app bar, bottom bar, music player) are not shown
-  /// as they are already provided by the ShellScreen.
+  
   final bool inShell;
 
   const HomeScreen({Key? key, this.accessToken, this.inShell = false})
@@ -40,11 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final SongPostService _songPostService = SongPostService();
   final ThoughtsService _thoughtsService = ThoughtsService();
 
-  // 🔑 REMOVED: Local feed state - now managed by FeedProvider
-  // List<FeedItem> _feedItems = [];
-  // bool _isLoading = true;
-  // bool _hasLoadedOnce = false; // Cache flag - prevents re-fetching on navigation
-  // String? _error;
+
 
   String? _currentlyPlayingTrackId;
   bool _isPlaying = false;
@@ -55,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // 🔑 Load feed through FeedProvider (handles caching automatically)
+
     _loadUserIdAndInitializeFeed();
 
     // Check for Stripe redirect query params (e.g. ?payment=success)
@@ -79,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // 🔑 Initialize user ID and load feed through provider
+  
   Future<void> _loadUserIdAndInitializeFeed() async {
     final prefs = await SharedPreferences.getInstance();
     final userDataString = prefs.getString('user_data');
@@ -92,31 +86,27 @@ class _HomeScreenState extends State<HomeScreen> {
       this.userId = userId;
     });
 
-    // 🔑 Load feed through FeedProvider (uses cache if available) - pass context for auth
+    
     final feedProvider = Provider.of<FeedProvider>(context, listen: false);
     await feedProvider.loadFeed(userId, context: context);
   }
 
-  // 🔑 Manual refresh - uses FeedProvider
+
   Future<void> _refreshFeed() async {
     final feedProvider = Provider.of<FeedProvider>(context, listen: false);
     await feedProvider.refreshFeed(context: context);
   }
 
-  // 🔑 Invalidate cache - uses FeedProvider
   void _invalidateCache() {
     final feedProvider = Provider.of<FeedProvider>(context, listen: false);
     feedProvider.invalidateCache();
   }
 
-  // Refresh posts after creating a new post
+
   Future<void> refreshPostsAfterCreation() async {
-    await _refreshFeed(); // Use the refresh method to reload
+    await _refreshFeed(); 
   }
 
-  // 🔑 REMOVED: _loadPosts() - now handled by FeedProvider
-
-  // 🔑 REMOVED: _checkSavedStatusForPosts - not needed with FeedProvider
 
   void _handleLike(data_model.Post post) async {
     String? currentUserId = userId;
@@ -197,6 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final userData = userDataString != null
                 ? jsonDecode(userDataString)
                 : {'id': '685fb750cc084ba7e0ef8533', 'name': 'owl'};
+
             final result = await _songPostService.addComment(
                 post.id, userData['id'], userData['name'], text, context);
             if (result['success'] == true) {
@@ -386,7 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final result = await _thoughtsService.likeThoughts(post.id, context);
 
       if (result['success'] == true) {
-        // 🔑 Update the post in FeedProvider
+        
         final feedProvider = Provider.of<FeedProvider>(context, listen: false);
         final itemIndex = feedProvider.feedItems
             .indexWhere((item) => item.thoughtsPost?.id == post.id);
@@ -458,7 +449,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    // Fetch latest comments from database
+   
     final commentsResult = await _thoughtsService.getComments(post.id, context);
     List<ThoughtsComment> latestComments = post.comments;
 
@@ -505,7 +496,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                 );
 
-                // Check if success - handle different response formats
+                
                 bool isSuccess = false;
                 if (result['success'] is bool) {
                   isSuccess = result['success'];
@@ -519,7 +510,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (isSuccess && result['data'] != null) {
                   List<dynamic>? commentsData;
 
-                  // Handle different response structures
+                  
                   if (result['data']['comments'] != null) {
                     commentsData = result['data']['comments'] as List<dynamic>;
                   } else if (result['data'] is List) {
@@ -551,7 +542,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                 }
 
-                // If we get here, something went wrong
+           
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(result['message'] ?? 'Failed to add comment'),
@@ -701,22 +692,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handlePostOptions(data_model.Post post) async {
-    // Check if either ID is null or empty
+   
     if (post.userId == null || post.userId!.isEmpty) {
-      // WARNING: Post userId is null or empty
+     
     }
     if (userId == null || userId!.isEmpty) {
-      // WARNING: Current userId is null or empty
+      
     }
 
     bool isUsersOwnPost = false;
     if (post.userId != null && userId != null) {
       isUsersOwnPost = post.userId == userId;
     } else {
-      // Cannot determine if post is user's own due to null IDs
+      
     }
 
-    // Check if post is saved
+    
     bool isSaved = false;
     if (userId != null) {
       try {
@@ -724,12 +715,12 @@ class _HomeScreenState extends State<HomeScreen> {
             await _songPostService.isPostSaved(userId!, post.id, context);
         isSaved = savedResult['isSaved'] ?? false;
       } catch (e) {
-        // If we can't check saved status, assume it's not saved
+       
         isSaved = false;
       }
     }
 
-    // Check if current user is following the post's author
+    
     bool isFollowing = false;
     if (userId != null && post.userId != null && userId != post.userId) {
       // Use cached following status if available, otherwise check from API
@@ -850,7 +841,7 @@ class _HomeScreenState extends State<HomeScreen> {
             duration: const Duration(seconds: 2),
           ),
         );
-        // 🔑 REMOVED: Feed update not needed for save status (handled by individual posts)
+       
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -910,7 +901,7 @@ class _HomeScreenState extends State<HomeScreen> {
             duration: const Duration(seconds: 2),
           ),
         );
-        // 🔑 REMOVED: Feed update not needed for save status (handled by individual posts)
+       
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1069,14 +1060,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 🔑 Get FeedProvider data
+
     final feedProvider = Provider.of<FeedProvider>(context);
 
     Widget content = FeedWidget(
-      feedItems: feedProvider.feedItems, // 🔑 Use provider data
+      feedItems: feedProvider.feedItems, 
       isLoading: feedProvider.isLoading,
       error: feedProvider.error,
-      onRefresh: _refreshFeed, // 🔑 Use refresh method for pull-to-refresh
+      onRefresh: _refreshFeed, 
       onSongLike: (data_model.Post post) => _handleLike(post),
       onSongComment: (data_model.Post post) => _handleComment(post),
       onSongPlay: (data_model.Post post) => _handlePlay(post),
@@ -1093,7 +1084,7 @@ class _HomeScreenState extends State<HomeScreen> {
         try {
           final result = await _thoughtsService.hidePost(post.id);
           if (result['success'] == true) {
-            // 🔑 Use FeedProvider to remove post
+          
             final feedProvider =
                 Provider.of<FeedProvider>(context, listen: false);
             feedProvider.removePost(post.id);

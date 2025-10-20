@@ -12,7 +12,7 @@ import 'auth_service.dart';
 class ThoughtsService {
   final String baseUrl = AppConstants.baseUrl;
 
-
+  // Create a new thoughts post
   Future<Map<String, dynamic>> createThoughts({
     String? text,
     String? thoughtsText,
@@ -24,7 +24,7 @@ class ThoughtsService {
     String? fanbaseID,
     BuildContext? context,
   }) async {
-    
+  
     final postText = thoughtsText ?? text;
 
     if (postText == null || postText.isEmpty) {
@@ -43,7 +43,7 @@ class ThoughtsService {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         String? currentUserId = authProvider.user?.id;
 
-       
+        
         if (currentUserId == null) {
           final prefs = await SharedPreferences.getInstance();
           final userDataString = prefs.getString('user_data');
@@ -60,13 +60,13 @@ class ThoughtsService {
           };
         }
 
-        // Extract background color from cover image
+        
         String? backgroundColor;
         if (coverImage != null && coverImage.isNotEmpty) {
           backgroundColor = await ColorExtractor.extractBackgroundColor(coverImage);
         }
         
-        // Use default color if extraction failed
+        
         if (backgroundColor == null && context != null) {
           backgroundColor = ColorExtractor.getDefaultBackgroundColor(context);
         }
