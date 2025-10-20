@@ -75,6 +75,14 @@ class _FanbasePageState extends State<FanbasePage>
     });
   }
 
+  // ✅ Add this method to switch to Creator tab after deletion
+  void _switchToCreatorTab() {
+    setState(() {
+      _selectedTabIndex = 2;
+    });
+    _tabController.animateTo(2);
+  }
+
   /// Filters fanbases based on ownership
   List<Fanbase> _filterFanbases(List<Fanbase> fanbases, int tabIndex) {
     if (_currentUserId == null) return fanbases;
@@ -213,7 +221,16 @@ class _FanbasePageState extends State<FanbasePage>
             itemBuilder: (context, index) {
               final fanbase = filteredFanbases[index];
               return FanbaseCard(
-                onJoinStateChanged: _loadFanbases,
+                onJoinStateChanged: () {
+                  _loadFanbases();
+                  // Switch to Creator tab after deletion
+                  if (_selectedTabIndex != 2) {
+                    setState(() {
+                      _selectedTabIndex = 2;
+                    });
+                    _tabController.animateTo(2);
+                  }
+                },
                 initialFanbase: fanbase,
               );
             },

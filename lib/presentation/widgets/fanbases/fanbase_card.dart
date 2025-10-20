@@ -260,9 +260,9 @@ class _FanbaseCardState extends State<FanbaseCard> {
     final theme = Theme.of(context).colorScheme;
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         if (_currentUserId != null) {
-          Navigator.of(context).push(
+          final result = await Navigator.of(context).push<Map<String, dynamic>>(
             MaterialPageRoute(
               builder: (context) => FanbaseDetailScreen(
                 fanbaseId: _fanbase.id,
@@ -270,6 +270,11 @@ class _FanbaseCardState extends State<FanbaseCard> {
               ),
             ),
           );
+
+          // If fanbase was deleted, trigger refresh
+          if (result != null && result['deleted'] == true) {
+            widget.onJoinStateChanged();
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

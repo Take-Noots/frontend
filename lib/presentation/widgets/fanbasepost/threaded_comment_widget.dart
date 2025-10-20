@@ -9,7 +9,11 @@ class ThreadedCommentWidget extends StatelessWidget {
   final bool isLast;
   final String Function(String) formatDateTime;
   final Color? lineColor;
-  final Function(String)? onLike; // ✅ Add callback for liking
+  final Function(String)? onLike;
+  final Function(String, String)? onDelete;
+  final String? currentUserId; // ✅ Add current user ID
+  final String? postCreatorId; // ✅ Add post creator ID
+  final String? fanbaseOwnerId; // ✅ Add fanbase owner ID
 
   const ThreadedCommentWidget({
     Key? key,
@@ -18,7 +22,11 @@ class ThreadedCommentWidget extends StatelessWidget {
     required this.isLast,
     required this.formatDateTime,
     this.lineColor,
-    this.onLike, // ✅ Add to constructor
+    this.onLike,
+    this.onDelete,
+    this.currentUserId,
+    this.postCreatorId,
+    this.fanbaseOwnerId,
   }) : super(key: key);
 
   @override
@@ -37,8 +45,8 @@ class ThreadedCommentWidget extends StatelessWidget {
           left: 0,
           child: CustomPaint(
             painter: CommentThreadPainter(
-              drawTop: true, // Don't draw top line for first reply
-              drawBottom: !isLast, // Don't draw bottom line for last reply
+              drawTop: true,
+              drawBottom: !isLast,
               lineColor: threadLineColor,
               strokeWidth: 2.0,
             ),
@@ -58,6 +66,14 @@ class ThreadedCommentWidget extends StatelessWidget {
     final isLiked = comment['isLiked'] ?? false;
     final likeCount = comment['likeCount'] ?? '0';
     final commentId = comment['commentId']?.toString() ?? '';
+    final parentCommentId = comment['parentCommentId']?.toString() ?? '';
+    final commentUserId = comment['userId']?.toString() ?? '';
+
+    // ✅ Check if current user can delete this subcomment
+    final canDelete = currentUserId != null &&
+        (commentUserId == currentUserId || // Subcomment owner
+            currentUserId == postCreatorId || // Post creator
+            currentUserId == fanbaseOwnerId); // Fanbase owner
 
     return Container(
       padding: const EdgeInsets.all(8),
@@ -105,29 +121,46 @@ class ThreadedCommentWidget extends StatelessWidget {
           ),
           const SizedBox(height: 4),
 
-          // Like button
+          // Like and delete buttons
           Padding(
             padding: const EdgeInsets.only(left: 15),
-            child: GestureDetector(
-              onTap: onLike != null && commentId.isNotEmpty
-                  ? () => onLike!(commentId)
-                  : null,
-              child: Row(
-                children: [
-                  Icon(
-                    isLiked ? Icons.favorite : Icons.favorite_border,
-                    size: 14,
-                    color: isLiked
-                        ? Colors.purple
-                        : Colors.grey.shade500, // Changed to purple
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: onLike != null && commentId.isNotEmpty
+                      ? () => onLike!(commentId)
+                      : null,
+                  child: Row(
+                    children: [
+                      Icon(
+                        isLiked ? Icons.favorite : Icons.favorite_border,
+                        size: 14,
+                        color: isLiked ? Colors.purple : Colors.grey.shade500,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        likeCount,
+                        style: TextStyle(
+                            fontSize: 14, color: Colors.grey.shade500),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    likeCount,
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                ),
+                const Spacer(), // Push the delete icon to the right
+                if (canDelete) // ✅ Only show delete if user has permission
+                  GestureDetector(
+                    onTap: onDelete != null &&
+                            commentId.isNotEmpty &&
+                            parentCommentId.isNotEmpty
+                        ? () => onDelete!(parentCommentId, commentId)
+                        : null,
+                    child: Icon(
+                      Icons.remove_circle_outline,
+                      size: 16,
+                      color: Colors.red.shade400,
+                    ),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
         ],
