@@ -487,6 +487,10 @@ class _UserProfilePageState extends State<UserProfilePage>
                   child: TabBar(
                     controller: _tabController,
                     indicatorColor: Theme.of(context).colorScheme.onSurface,
+                    // Make the active tab clearly visible using primary color
+                    labelColor: Theme.of(context).colorScheme.primary,
+                    unselectedLabelColor:
+                        Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.9),
                     tabs: const [
                       Tab(icon: Icon(Icons.grid_on)),
                       Tab(icon: Icon(Icons.description)),

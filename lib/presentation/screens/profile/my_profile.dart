@@ -688,9 +688,10 @@ class _NormalUserProfilePageState extends State<NormalUserProfilePage>
                   indicatorColor: Theme.of(context).colorScheme.onSurface,
                   isScrollable: false,
                   labelPadding: const EdgeInsets.symmetric(horizontal: 0),
-                  labelColor: Theme.of(context).colorScheme.onSurface,
+                  // Use primary color for active tab so icons are visible over dark backgrounds
+                  labelColor: Theme.of(context).colorScheme.primary,
                   unselectedLabelColor:
-                      Theme.of(context).colorScheme.onSurfaceVariant,
+                      Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.9),
                   tabs: getProfileTabs(),
                 ),
               ),
