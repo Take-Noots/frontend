@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../data/services/song_post_service.dart';
-import '../../../data/models/post_model.dart' as data_model;
+import '../../../data/models/post_model.dart' as PostModel;
 import '../../../core/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import '../../widgets/song_post/post.dart' as widgets;
+import '../../widgets/song_post/post.dart' as PostWidget;
 import '../../widgets/song_post/post_shape.dart';
 
 class PostDetailsScreen extends StatefulWidget {
@@ -22,7 +22,7 @@ class PostDetailsScreen extends StatefulWidget {
 
 class _PostDetailsScreenState extends State<PostDetailsScreen> {
   final SongPostService _songPostService = SongPostService();
-  data_model.Post? _post;
+  PostModel.Post? _post;
   bool _isLoading = true;
   String? _error;
   String? _currentUserId;
@@ -60,7 +60,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
 
       if (result['success'] == true && result['data'] != null) {
         setState(() {
-          _post = data_model.Post.fromJson(result['data']);
+          _post = PostModel.Post.fromJson(result['data']);
           _isLoading = false;
         });
       } else {
@@ -183,16 +183,18 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     // Define the aspect ratio for consistency (same as feed)
     const postAspectRatio = 490 / 595;
 
-    // Get default color based on theme
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final defaultColor = isDark
-        ? const Color.fromARGB(255, 17, 37, 37)
-        : const Color(0xFFF5F5F5);
+    // Get default color helper
+    Color getDefaultColor() {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      return isDark
+          ? const Color.fromARGB(255, 17, 37, 37)
+          : const Color(0xFFF5F5F5);
+    }
 
     // Use stored background color from database, or default if not available
     final backgroundColor = _post!.backgroundColor != null
         ? Color(int.parse(_post!.backgroundColor!.replaceFirst('#', '0xFF')))
-        : defaultColor;
+        : getDefaultColor();
 
     // Check if the post belongs to the current user
     final bool isOwnPost = _post!.userId != null &&
@@ -212,7 +214,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
                 child: Container(),
               ),
               // Layer for post widget
-              widgets.Post(
+              PostWidget.Post(
                 trackId: _post!.trackId ?? '',
                 songName: _post!.songName ?? '',
                 artists: _post!.artists ?? '',

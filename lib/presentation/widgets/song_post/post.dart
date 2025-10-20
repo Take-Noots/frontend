@@ -544,8 +544,9 @@ class PostArtWidget extends StatelessWidget {
                     width: double.infinity,
                     height: double.infinity,
                     errorBuilder: (context, error, stackTrace) {
-                      return Image.asset(
-                        'assets/images/song.png',
+                      // Use a stable Picsum image as a fallback when the album image fails to load
+                      return Image.network(
+                        'https://picsum.photos/seed/picsum/200/300',
                         fit: BoxFit.cover,
                         width: double.infinity,
                         height: double.infinity,
