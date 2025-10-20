@@ -721,7 +721,7 @@ class FanbasePostCommentsSectionState
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: MediaQuery.of(context).size.width * 0.04,
-        vertical: 12,
+        // vertical: 1,
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,

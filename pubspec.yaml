@@ -102,6 +102,7 @@ flutter:
     - assets/icons/icons-spotify-dark.svg # Ensure this SVG is converted to PNG if needed
     - assets/images/
     - assets/images/logo.png
+    - assets/images/logo_light.png
     - assets/images/spotify.png
     - assets/images/hehe.png
     - assets/images/profile_picture.jpg
