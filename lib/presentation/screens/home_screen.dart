@@ -1155,7 +1155,7 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
 
-    // When in shell mode, render with app bar but without bottom navigation
+    
     if (widget.inShell) {
       return Scaffold(
         appBar: NootAppBar(),
@@ -1163,7 +1163,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // LEGACY NAVIGATION SUPPORT - This code will eventually be removed
+   
     // when all screens are migrated to the ShellScreen
     return Scaffold(
       // OLD NAVIGATION: App bar will be provided by ShellScreen in the future
@@ -1194,5 +1194,13 @@ class _ThoughtsToSongPostAdapter extends SongPostService {
       [BuildContext? context]) async {
     return await _thoughtsService.likeComment(
         postId, commentId, userId, context);
+  }
+
+  @override
+  Future<Map<String, dynamic>> deleteComment(
+      String postId, String commentId,
+      [BuildContext? context]) async {
+    return await _thoughtsService.deleteComment(
+        postId, commentId, context);
   }
 }
