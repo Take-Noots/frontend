@@ -325,13 +325,19 @@ class FanbasePostService {
   // Get a specific fanbase post
   static Future<FanbasePost> getFanbasePost(
     String postId,
-    BuildContext context,
-  ) async {
+    BuildContext context, {
+    required String fanbaseId, // Make fanbaseId required instead of optional
+  }) async {
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       final dio = authService.dio;
 
-      final response = await dio.get('/fanbase/posts/$postId');
+      // Always use the fanbase-specific endpoint
+      final endpoint = '/fanbase/$fanbaseId/posts/$postId';
+
+      print('[DEBUG] Fetching post from: $endpoint');
+
+      final response = await dio.get(endpoint);
 
       if (response.statusCode == 200) {
         return FanbasePost.fromJson(response.data);
@@ -339,9 +345,135 @@ class FanbasePostService {
         throw Exception('Failed to fetch post');
       }
     } on DioException catch (e) {
+      print('[ERROR] DioException in getFanbasePost: ${e.message}');
+      print('[ERROR] Response: ${e.response?.data}');
       throw Exception('Failed to fetch post: ${e.message}');
     } catch (e) {
+      print('[ERROR] Exception in getFanbasePost: $e');
       throw Exception('Failed to fetch post: $e');
+    }
+  }
+
+  // Like/Unlike a comment
+  static Future<FanbasePost> likeComment(
+    String postId,
+    String commentId,
+    BuildContext context, {
+    String? fanbaseId,
+  }) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      String actualFanbaseId = fanbaseId ?? '';
+
+      if (actualFanbaseId.isEmpty) {
+        throw Exception('FanbaseId is required to like a comment');
+      }
+
+      print('[DEBUG] Liking comment');
+      print('[DEBUG] PostId: $postId');
+      print('[DEBUG] CommentId: $commentId');
+      print('[DEBUG] FanbaseId: $actualFanbaseId');
+
+      final response = await dio.post(
+        '/fanbase/$actualFanbaseId/posts/$postId/comment/$commentId/like',
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return FanbasePost.fromJson(response.data);
+      } else {
+        throw Exception('Failed to like comment: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data?['message'] ?? e.message;
+      throw Exception('Failed to like comment: $errorMessage');
+    } catch (e) {
+      throw Exception('Failed to like comment: $e');
+    }
+  }
+
+  // Like/Unlike a sub-comment (reply)
+  static Future<FanbasePost> likeSubComment(
+    String postId,
+    String commentId,
+    String subCommentId,
+    BuildContext context, {
+    String? fanbaseId,
+  }) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      String actualFanbaseId = fanbaseId ?? '';
+
+      if (actualFanbaseId.isEmpty) {
+        throw Exception('FanbaseId is required to like a sub-comment');
+      }
+
+      print('[DEBUG] Liking sub-comment');
+      print('[DEBUG] PostId: $postId');
+      print('[DEBUG] CommentId: $commentId');
+      print('[DEBUG] SubCommentId: $subCommentId');
+      print('[DEBUG] FanbaseId: $actualFanbaseId');
+
+      final response = await dio.post(
+        '/fanbase/$actualFanbaseId/posts/$postId/comment/$commentId/subcomment/$subCommentId/like',
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return FanbasePost.fromJson(response.data);
+      } else {
+        throw Exception(
+            'Failed to like sub-comment: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data?['message'] ?? e.message;
+      throw Exception('Failed to like sub-comment: $errorMessage');
+    } catch (e) {
+      throw Exception('Failed to like sub-comment: $e');
+    }
+  }
+
+  static Future<void> deleteFanbasePost(
+    String postId,
+    BuildContext context, {
+    required String fanbaseId,
+  }) async {
+    try {
+      print(
+          '[DEBUG] Attempting to delete post: $postId from fanbase: $fanbaseId');
+
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final dio = authService.dio;
+
+      print(
+          '[DEBUG] Sending DELETE request to: /fanbase/$fanbaseId/posts/$postId');
+      final response = await dio.delete('/fanbase/$fanbaseId/posts/$postId');
+
+      print('[DEBUG] Delete response status: ${response.statusCode}');
+      print('[DEBUG] Delete response data type: ${response.data.runtimeType}');
+      print('[DEBUG] Delete response data: ${response.data}');
+
+      // DELETE operations typically return 200, 201, or 204 (No Content)
+      if (response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          response.statusCode == 204) {
+        print('[DEBUG] Post deleted successfully');
+        return; // Don't try to parse response data
+      } else {
+        throw Exception('Failed to delete post: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      print('[ERROR] DioException in deleteFanbasePost: ${e.message}');
+      print('[ERROR] Response status: ${e.response?.statusCode}');
+      print('[ERROR] Response data: ${e.response?.data}');
+
+      final errorMessage = e.response?.data?['message'] ?? e.message;
+      throw Exception('Failed to delete post: $errorMessage');
+    } catch (e) {
+      print('[ERROR] Unexpected error in deleteFanbasePost: $e');
+      throw Exception('Failed to delete post: $e');
     }
   }
 }

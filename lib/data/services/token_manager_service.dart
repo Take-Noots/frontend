@@ -22,6 +22,10 @@ class TokenManagerService {
   // Refresh lock to prevent concurrent refresh attempts
   bool _isRefreshing = false;
 
+  // Retry configuration
+  static const int _maxRetries = 3;
+  static const Duration _retryDelay = Duration(seconds: 3);
+
   // Storage services
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final Dio _dio = Dio();
@@ -61,19 +65,33 @@ class TokenManagerService {
       }
       return handler.next(options);
     }, onError: (DioException error, handler) async {
-      // Handle 401 errors
-      if (error.response?.statusCode == 401) {
-        // Try to refresh the token
-        final refreshed = await refreshToken();
+      // Only handle 401 errors for non-Spotify API calls
+      // Spotify API 401s should not trigger JWT token refresh
+      if (error.response?.statusCode == 401 &&
+          !error.requestOptions.path.contains('/spotify/')) {
+        print('[TokenManager] 401 error detected, attempting token refresh...');
+
+        // Try to refresh the JWT token with retries
+        final refreshed = await _refreshTokenWithRetry();
 
         if (refreshed) {
+          print(
+              '[TokenManager] Token refresh successful, retrying original request');
           // Retry the original request with the new token
           final opts = error.requestOptions;
           opts.headers['Authorization'] = 'Bearer $_accessToken';
 
-          // Create new request
-          final response = await _dio.fetch(opts);
-          return handler.resolve(response);
+          try {
+            // Create new request
+            final response = await _dio.fetch(opts);
+            return handler.resolve(response);
+          } catch (retryError) {
+            print(
+                '[TokenManager] Failed to retry original request: $retryError');
+            return handler.next(error);
+          }
+        } else {
+          print('[TokenManager] Token refresh failed, logging out user');
         }
       }
 
@@ -205,6 +223,61 @@ class TokenManagerService {
   // Check if access token exists
   bool get hasToken => _accessToken != null;
 
+  // Helper method to refresh token with retry logic
+  Future<bool> _refreshTokenWithRetry() async {
+    for (int attempt = 1; attempt <= _maxRetries; attempt++) {
+      print('[TokenManager] Token refresh attempt $attempt/$_maxRetries');
+
+      try {
+        final success = await refreshToken();
+        if (success) {
+          print('[TokenManager] Token refresh succeeded on attempt $attempt');
+          return true;
+        }
+
+        // If refresh returned false (not a network error), don't retry
+        print(
+            '[TokenManager] Token refresh returned false on attempt $attempt');
+        if (attempt < _maxRetries) {
+          // Only wait if we're going to retry
+          final delay = _retryDelay * attempt; // Exponential backoff
+          print('[TokenManager] Waiting ${delay.inSeconds}s before retry...');
+          await Future.delayed(delay);
+        }
+      } catch (e) {
+        print('[TokenManager] Token refresh exception on attempt $attempt: $e');
+
+        // Check if it's a network error (should retry) or auth error (should not retry)
+        if (e is DioException) {
+          final statusCode = e.response?.statusCode;
+
+          // Don't retry on 401 (invalid token) or 403 (forbidden)
+          if (statusCode == 401 || statusCode == 403) {
+            print('[TokenManager] Auth error ($statusCode), not retrying');
+            await clearTokens();
+            return false;
+          }
+
+          // Retry on network errors or 5xx errors
+          if (attempt < _maxRetries) {
+            final delay = _retryDelay * attempt;
+            print(
+                '[TokenManager] Network/server error, retrying in ${delay.inSeconds}s...');
+            await Future.delayed(delay);
+          }
+        } else {
+          // Unknown error, don't retry
+          print('[TokenManager] Unknown error type, not retrying');
+          return false;
+        }
+      }
+    }
+
+    print('[TokenManager] All $_maxRetries refresh attempts failed');
+    await clearTokens();
+    return false;
+  }
+
   // Refresh token
   Future<bool> refreshToken() async {
     // Prevent concurrent refresh attempts
@@ -264,14 +337,9 @@ class TokenManagerService {
         print('[At Token.Manager.Service] Response data: ${e.response?.data}');
       }
 
-      // Clear tokens if refresh fails with 401
-      if (e is DioException && e.response?.statusCode == 401) {
-        print(
-            '[At Token.Manager.Service] Unauthorized (401) during refresh, clearing tokens');
-        await clearTokens();
-      }
-
-      return false;
+      // Don't clear tokens here - let the retry logic handle it
+      // Only rethrow to allow retry logic to catch it
+      rethrow;
     } finally {
       _isRefreshing = false;
     }

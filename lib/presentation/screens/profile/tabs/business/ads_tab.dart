@@ -5,11 +5,14 @@ import 'package:dio/dio.dart';
 import '../../../../../data/services/advertisement_service.dart';
 import '../../../../../data/models/advertisement_model.dart';
 import '../../../../../core/constants/app_constants.dart';
+import '../../../../../presentation/widgets/loading_screens/profile_grid_skeleton.dart';
 
 class BusinessAdsTab extends StatefulWidget {
   final String userId;
+  final ValueNotifier<bool>? refreshNotifier;
 
-  const BusinessAdsTab({Key? key, required this.userId}) : super(key: key);
+  const BusinessAdsTab({Key? key, required this.userId, this.refreshNotifier})
+      : super(key: key);
 
   @override
   State<BusinessAdsTab> createState() => _BusinessAdsTabState();
@@ -24,6 +27,17 @@ class _BusinessAdsTabState extends State<BusinessAdsTab> {
   void initState() {
     super.initState();
     _fetchAdvertisements();
+    widget.refreshNotifier?.addListener(_onRefresh);
+  }
+
+  @override
+  void dispose() {
+    widget.refreshNotifier?.removeListener(_onRefresh);
+    super.dispose();
+  }
+
+  void _onRefresh() {
+    _fetchAdvertisements();
   }
 
   Future<void> _fetchAdvertisements() async {
@@ -32,10 +46,11 @@ class _BusinessAdsTabState extends State<BusinessAdsTab> {
       errorMessage = null;
     });
 
-  // Use an unauthenticated Dio instance for public advertisement fetching
-  final dio = Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
-  final advertisementService = AdvertisementService.unauthenticated(dio);
-  final result = await advertisementService.fetchAdvertisementsByUser(widget.userId);
+    // Use an unauthenticated Dio instance for public advertisement fetching
+    final dio = Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
+    final advertisementService = AdvertisementService.unauthenticated(dio);
+    final result =
+        await advertisementService.fetchAdvertisementsByUser(widget.userId);
 
     if (result['success'] == true) {
       setState(() {
@@ -53,9 +68,7 @@ class _BusinessAdsTabState extends State<BusinessAdsTab> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const ProfileGridSkeleton();
     }
 
     if (errorMessage != null) {
@@ -132,7 +145,8 @@ class _BusinessAdsTabState extends State<BusinessAdsTab> {
                 filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
                 child: Center(
                   child: GestureDetector(
-                    onTap: () {}, // prevent taps from closing when tapping content
+                    onTap:
+                        () {}, // prevent taps from closing when tapping content
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
@@ -144,14 +158,18 @@ class _BusinessAdsTabState extends State<BusinessAdsTab> {
                           children: [
                             // Top: title
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Text(
                                       ad.title,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -172,7 +190,8 @@ class _BusinessAdsTabState extends State<BusinessAdsTab> {
                                   fit: BoxFit.cover,
                                   errorBuilder: (c, e, s) => Container(
                                     color: Colors.grey[300],
-                                    child: const Icon(Icons.broken_image, size: 48),
+                                    child: const Icon(Icons.broken_image,
+                                        size: 48),
                                   ),
                                 ),
                               ),
@@ -188,7 +207,8 @@ class _BusinessAdsTabState extends State<BusinessAdsTab> {
 
                             // Likes / comments row (basic)
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
                               child: Row(
                                 children: [
                                   IconButton(
@@ -206,7 +226,9 @@ class _BusinessAdsTabState extends State<BusinessAdsTab> {
                                     onPressed: () {
                                       // TODO: open comments view
                                       ScaffoldMessenger.of(ctx).showSnackBar(
-                                        const SnackBar(content: Text('Comments (not implemented)')),
+                                        const SnackBar(
+                                            content: Text(
+                                                'Comments (not implemented)')),
                                       );
                                     },
                                   ),
