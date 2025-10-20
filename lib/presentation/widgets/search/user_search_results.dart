@@ -56,12 +56,6 @@ class UserSearchResults extends StatelessWidget {
           title: Text(user['name'] ?? 'No name'),
           subtitle: Text(
               '@${user['name']?.toLowerCase().replaceAll(' ', '') ?? 'username'}'),
-          trailing: ElevatedButton(
-            onPressed: () {
-              // Handle follow action
-            },
-            child: const Text('Follow'),
-          ),
           onTap: userId.isNotEmpty
               ? () => onUserTap(userId, user['username'] ?? user['name'])
               : null,
