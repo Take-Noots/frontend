@@ -1163,7 +1163,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // LEGACY NAVIGATION SUPPORT - This code will eventually be removed
+   
     // when all screens are migrated to the ShellScreen
     return Scaffold(
       // OLD NAVIGATION: App bar will be provided by ShellScreen in the future
