@@ -330,6 +330,162 @@ class ProfileService {
     }
   }
 
+  // Send a follow request (for private accounts)
+  Future<Map<String, dynamic>> sendFollowRequest(
+      String requesterId, String targetUserId) async {
+    if (authService == null) {
+      return {
+        'success': false,
+        'message': 'Authentication service not available',
+      };
+    }
+
+    try {
+      final response = await authService!.dio.post(
+        '${AppConstants.baseUrl}/request/create',
+        data: {
+          'requestSendUserId': requesterId,
+          'requestReceiveUserId': targetUserId,
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': response.data['message'] ?? 'Follow request sent',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': response.data['message'] ?? 'Failed to send request',
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': e.response?.data['message'] ?? 'Network error: ${e.message}',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  // Get follow requests for a user (incoming requests)
+  Future<List<dynamic>> getFollowRequests(String userId) async {
+    try {
+      final response = await authService?.dio
+          .get('${AppConstants.baseUrl}/request/for/$userId');
+      if (response != null &&
+          (response.statusCode == 200 || response.statusCode == 201)) {
+        final data = response.data;
+        if (data is List) return data;
+        if (data is Map && data['data'] is List) return data['data'];
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Accept a follow request
+  Future<Map<String, dynamic>> acceptFollowRequest(
+      String targetUserId, String requesterId) async {
+    if (authService == null) {
+      return {
+        'success': false,
+        'message': 'Authentication service not available',
+      };
+    }
+    try {
+      final response = await authService!.dio.patch(
+        '${AppConstants.baseUrl}/request/confirm',
+        data: {
+          'requestSendUserId': requesterId,
+          'requestReceiveUserId': targetUserId,
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': response.data['message'] ?? 'Request accepted',
+        };
+      }
+      return {
+        'success': false,
+        'message': response.data['message'] ?? 'Failed to accept request',
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
+  // Reject a follow request
+  Future<Map<String, dynamic>> rejectFollowRequest(
+      String targetUserId, String requesterId) async {
+    if (authService == null) {
+      return {
+        'success': false,
+        'message': 'Authentication service not available',
+      };
+    }
+    try {
+      final response = await authService!.dio.patch(
+        '${AppConstants.baseUrl}/request/reject',
+        data: {
+          'requestSendUserId': requesterId,
+          'requestReceiveUserId': targetUserId,
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': response.data['message'] ?? 'Request rejected',
+        };
+      }
+      return {
+        'success': false,
+        'message': response.data['message'] ?? 'Failed to reject request',
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
+  // Cancel a follow request (initiated by the requester)
+  Future<Map<String, dynamic>> cancelFollowRequest(
+      String requesterId, String targetUserId) async {
+    if (authService == null) {
+      return {
+        'success': false,
+        'message': 'Authentication service not available',
+      };
+    }
+    try {
+      final response = await authService!.dio.patch(
+        '${AppConstants.baseUrl}/request/cancel',
+        data: {
+          'requestSendUserId': requesterId,
+          'requestReceiveUserId': targetUserId,
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': response.data['message'] ?? 'Request canceled',
+        };
+      }
+      return {
+        'success': false,
+        'message': response.data['message'] ?? 'Failed to cancel request',
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
   // Unfollow a user
   Future<Map<String, dynamic>> unfollowUser(
       String followerId, String followingId) async {
