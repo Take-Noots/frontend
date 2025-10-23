@@ -48,14 +48,14 @@ class SongPostService {
           };
         }
 
-        // Extract background color from album image
+     
         String? backgroundColor;
         if (albumImage != null && albumImage.isNotEmpty) {
           backgroundColor =
               await ColorExtractor.extractBackgroundColor(albumImage);
         }
 
-        // use default color
+      
         if (backgroundColor == null && context != null) {
           backgroundColor = ColorExtractor.getDefaultBackgroundColor(context);
         }
@@ -248,6 +248,43 @@ class SongPostService {
         return {
           'success': false,
           'message': 'Failed to retrieve user posts',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> getPostById(String postId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/song-posts/$postId/details'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return {
+            'success': true,
+            'data': data['data'],
+            'message': 'Post retrieved successfully',
+          };
+        } else {
+          return {
+            'success': false,
+            'message': data['message'] ?? 'Failed to retrieve post',
+          };
+        }
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to retrieve post',
         };
       }
     } catch (e) {

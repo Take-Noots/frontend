@@ -7,6 +7,7 @@ import '../../widgets/auth/custom_button.dart';
 import '../../widgets/auth/custom_snack_bar.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/utils/temp_storage.dart';
+import '../../../core/router/route_names.dart';
 
 class UsernameScreen extends StatefulWidget {
   const UsernameScreen({Key? key}) : super(key: key);
@@ -85,7 +86,7 @@ class _UsernameScreenState extends State<UsernameScreen> {
     });
 
     // Navigate to terms and service screen
-    context.push('/terms');
+    context.push(AppRoutes.terms);
   }
 
   @override

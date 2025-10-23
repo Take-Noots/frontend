@@ -5,6 +5,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/signup_screen.dart';
 import '../../presentation/screens/auth/username_screen.dart';
+import '../../presentation/screens/auth/terms_screen.dart';
 import '../../presentation/screens/auth/link_spotify_screen.dart';
 import '../../presentation/screens/home_screen.dart';
 import '../../presentation/screens/search/search_feed_screen.dart';
@@ -32,6 +33,7 @@ import '../../presentation/screens/notifications/notifications_screen.dart';
 import '../../presentation/screens/chat/chat_list_screen.dart';
 import '../../presentation/screens/chat/chat_screen.dart';
 import '../../presentation/screens/chat/group_chat_screen.dart';
+import '../../presentation/screens/post/post_details_screen.dart';
 import 'route_names.dart';
 
 /// Main application router configuration using GoRouter
@@ -53,7 +55,8 @@ class AppRouter {
 
       final isGoingToAuth = state.matchedLocation.startsWith('/login') ||
           state.matchedLocation.startsWith('/signup') ||
-          state.matchedLocation.startsWith('/username');
+          state.matchedLocation.startsWith('/username') ||
+          state.matchedLocation.startsWith('/terms');
 
       final isGoingToLinkSpotify =
           state.matchedLocation.startsWith('/link-spotify');
@@ -90,6 +93,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.username,
         builder: (context, state) => const UsernameScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.terms,
+        builder: (context, state) => const TermsScreen(),
       ),
       GoRoute(
         path: AppRoutes.linkSpotify,
@@ -252,9 +259,7 @@ class AppRouter {
             path: '/post/:postId',
             builder: (context, state) {
               final postId = state.pathParameters['postId']!;
-              // You might need to create a PostDetailsScreen or redirect to appropriate screen
-              // For now, redirect to home
-              return HomeScreen(inShell: true);
+              return PostDetailsScreen(postId: postId);
             },
           ),
           GoRoute(

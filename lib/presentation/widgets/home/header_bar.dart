@@ -56,7 +56,7 @@ class _NootAppBarState extends State<NootAppBar> {
                 Image.asset(
                   isDark
                       ? 'assets/images/logo.png'
-                      : 'assets/images/logo_black.png',
+                      : 'assets/images/logo_light.png',
                   width: 100,
                   height: 40,
                 ),

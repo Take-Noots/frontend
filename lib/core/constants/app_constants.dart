@@ -8,6 +8,10 @@ class AppConstants {
       return 'http://localhost:3000';
     } else {
       // Running on Android/iOS (mobile)
+      // my
+      return 'https://unthreshed-eugenic-edgar.ngrok-free.dev';
+      // ravindu's
+      // return 'https://jeremiah-unphotographable-basely.ngrok-free.dev';
       return 'https://unacquitted-abrielle-patricianly.ngrok-free.dev';
     }
   }

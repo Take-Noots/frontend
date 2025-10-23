@@ -4,6 +4,7 @@ import '../../../data/services/chat_service.dart';
 import '../../../data/services/profile_service.dart';
 import 'user_profile_screen.dart';
 import 'dart:async';
+import 'package:intl/intl.dart';
 
 class ChatScreen extends StatefulWidget {
   final Chat chat;
@@ -389,9 +390,9 @@ class MessageBubble extends StatelessWidget {
             message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           if (!message.isMe) ...[
-            const CircleAvatar(
+            ProfilePictureWidget(
+              userId: message.senderId,
               radius: 12,
-              backgroundImage: AssetImage('assets/images/hehe.png'),
             ),
             const SizedBox(width: 8),
           ],
@@ -432,9 +433,9 @@ class MessageBubble extends StatelessWidget {
           ),
           if (message.isMe) ...[
             const SizedBox(width: 8),
-            const CircleAvatar(
+            ProfilePictureWidget(
+              userId: message.senderId,
               radius: 12,
-              backgroundImage: AssetImage('assets/images/hehe.png'),
             ),
           ],
         ],
@@ -443,12 +444,23 @@ class MessageBubble extends StatelessWidget {
   }
 
   String _formatTime(DateTime timestamp) {
-    final hour = timestamp.hour;
-    final minute = timestamp.minute.toString().padLeft(2, '0');
-    final period = hour >= 12 ? 'PM' : 'AM';
-    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    try {
+      // Convert UTC timestamp to user's local time
+      final localTime = timestamp.toLocal();
 
-    return '$displayHour:$minute $period';
+      // Format using device's timezone or use a specific timezone
+      final formatter = DateFormat('h:mm a');
+      return formatter.format(localTime);
+    } catch (e) {
+      // Fallback to basic format if there's any error
+      final localTime = timestamp.toLocal();
+      final hour = localTime.hour;
+      final minute = localTime.minute.toString().padLeft(2, '0');
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+
+      return '$displayHour:$minute $period';
+    }
   }
 }
 

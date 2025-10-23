@@ -149,6 +149,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 width: 50,
                 height: 50,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Image.network(
+                    'https://picsum.photos/seed/picsum/200/300',
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                  );
+                },
               )
             : Container(
                 width: 50,
@@ -191,6 +199,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 width: 50,
                 height: 50,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Image.network(
+                    'https://picsum.photos/seed/picsum/200/300',
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                  );
+                },
               )
             : Container(
                 width: 50,

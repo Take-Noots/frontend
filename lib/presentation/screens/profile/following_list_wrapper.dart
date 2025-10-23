@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../../data/services/profile_service.dart';
+import '../../../data/services/request_service.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../core/providers/auth_provider.dart';
 import './following_list.dart';
@@ -28,6 +30,8 @@ class _FollowingListPageWrapperState extends State<FollowingListPageWrapper> {
   String? _errorMessage;
   Set<String> _currentUserFollowing = {};
   Set<String> _loadingUserIds = {};
+  Set<String> _pendingRequests =
+      {}; // User IDs where a request is pending (from logged-in user)
 
   @override
   void initState() {
@@ -50,7 +54,7 @@ class _FollowingListPageWrapperState extends State<FollowingListPageWrapper> {
       final followingList =
           await profileService.getFollowingListWithDetails(widget.userId);
 
-      // Load current user's following if logged in
+      // Load current user's following
       Set<String> currentUserFollowing = {};
       if (currentUserId != null) {
         final result = await profileService.getUserProfile(currentUserId);
@@ -61,17 +65,47 @@ class _FollowingListPageWrapperState extends State<FollowingListPageWrapper> {
         }
       }
 
+      // For each following user, query their incoming requests and mark pending
+      // where the logged-in user is the sender and the request is still pending.
+      Set<String> pendingRequests = {};
+      if (currentUserId != null) {
+        final List<String> userIds = [];
+        final List<Future<List<Map<String, dynamic>>>> futures = [];
+        for (final user in followingList) {
+          final userId = (user is Map<String, dynamic>)
+              ? user['userId']?.toString()
+              : null;
+          if (userId != null) {
+            userIds.add(userId);
+            futures.add(RequestService.getRequestsForUser(userId));
+          }
+        }
+        final responses = await Future.wait(futures);
+        for (var i = 0; i < responses.length; i++) {
+          final reqs = responses[i];
+          final targetUserId = userIds[i];
+          for (final req in reqs) {
+            if (req['requestSendUserId']?.toString() == currentUserId &&
+                req['respond'] == 'pending') {
+              pendingRequests.add(targetUserId);
+              break;
+            }
+          }
+        }
+      }
+
       if (mounted) {
         setState(() {
           _following = followingList;
           _currentUserFollowing = currentUserFollowing;
+          _pendingRequests = pendingRequests;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to load following: ${e.toString()}';
+          _errorMessage = 'Failed to load following: [${e.toString()}';
           _isLoading = false;
         });
       }
@@ -84,13 +118,36 @@ class _FollowingListPageWrapperState extends State<FollowingListPageWrapper> {
     if (currentUserId != null) {
       final profileService = ProfileService();
       final result = await profileService.getUserProfile(currentUserId);
+      Set<String> currentUserFollowing = {};
       if (result['success'] == true) {
         final profile = result['data'] as Map<String, dynamic>;
         final following = profile['following'] as List<dynamic>? ?? [];
-        setState(() {
-          _currentUserFollowing = following.map((e) => e.toString()).toSet();
-        });
+        currentUserFollowing = following.map((e) => e.toString()).toSet();
       }
+      // Re-check pending requests for all following
+      Set<String> pendingRequests = {};
+      for (final user in _following) {
+        final userId = (user is Map<String, dynamic>) ? user['userId'] : null;
+        if (userId != null) {
+          final userProfileResult = await profileService.getUserProfile(userId);
+          if (userProfileResult['success'] == true &&
+              userProfileResult['data'] != null) {
+            final data = userProfileResult['data'];
+            if (data['pendingRequests'] is List) {
+              final pending = (data['pendingRequests'] as List)
+                  .map((e) => e.toString())
+                  .toList();
+              if (pending.contains(currentUserId)) {
+                pendingRequests.add(userId);
+              }
+            }
+          }
+        }
+      }
+      setState(() {
+        _currentUserFollowing = currentUserFollowing;
+        _pendingRequests = pendingRequests;
+      });
     }
   }
 
@@ -105,34 +162,75 @@ class _FollowingListPageWrapperState extends State<FollowingListPageWrapper> {
     if (currentUserId == null) return;
 
     final profileService = ProfileService(authService: authService);
-    final result = isFollow
-        ? await profileService.followUser(currentUserId, targetUserId)
-        : await profileService.unfollowUser(currentUserId, targetUserId);
 
+    // Fetch target user's profile to check if private
+    final targetProfileResult =
+        await profileService.getUserProfile(targetUserId);
+    bool isPrivate = false;
+    if (targetProfileResult['success'] == true &&
+        targetProfileResult['data'] != null) {
+      final data = targetProfileResult['data'] as Map<String, dynamic>;
+      isPrivate = (data['userType'] ?? 'public') == 'private';
+    }
+
+    Map<String, dynamic> result;
+    if (!isFollow && isPrivate && _pendingRequests.contains(targetUserId)) {
+      // Cancel follow request
+      result =
+          await profileService.cancelFollowRequest(currentUserId, targetUserId);
+    } else if (isFollow &&
+        isPrivate &&
+        !_currentUserFollowing.contains(targetUserId) &&
+        !_pendingRequests.contains(targetUserId)) {
+      // Send follow request
+      result =
+          await profileService.sendFollowRequest(currentUserId, targetUserId);
+    } else {
+      // Regular follow/unfollow
+      result = isFollow
+          ? await profileService.followUser(currentUserId, targetUserId)
+          : await profileService.unfollowUser(currentUserId, targetUserId);
+    }
+
+    // After any action, update state optimistically if successful
     if (mounted) {
-      setState(() {
-        _loadingUserIds.remove(targetUserId);
-        if (result['success'] == true) {
-          if (isFollow) {
-            _currentUserFollowing.add(targetUserId);
-          } else {
-            _currentUserFollowing.remove(targetUserId);
-          }
-        } else {
-          // Show error
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ??
-                  'Failed to ${isFollow ? 'follow' : 'unfollow'} user'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
-        }
-      });
-
-      // Reload to ensure state matches database after successful operation
       if (result['success'] == true) {
-        await _reloadCurrentUserFollowing();
+        setState(() {
+          if (!isFollow &&
+              isPrivate &&
+              _pendingRequests.contains(targetUserId)) {
+            // Cancel follow request succeeded
+            _pendingRequests.remove(targetUserId);
+          } else if (isFollow &&
+              isPrivate &&
+              !_currentUserFollowing.contains(targetUserId) &&
+              !_pendingRequests.contains(targetUserId)) {
+            // Send follow request succeeded
+            _pendingRequests.add(targetUserId);
+          } else if (isFollow) {
+            // Follow succeeded
+            _currentUserFollowing.add(targetUserId);
+            _pendingRequests.remove(targetUserId); // Clear any pending
+          } else if (!isFollow) {
+            // Unfollow succeeded
+            _currentUserFollowing.remove(targetUserId);
+            // Ensure any pending request flags are cleared and refresh current user's following
+            _pendingRequests.remove(targetUserId);
+            Future.microtask(() => _reloadCurrentUserFollowing());
+          }
+          _loadingUserIds.remove(targetUserId);
+        });
+      } else {
+        setState(() {
+          _loadingUserIds.remove(targetUserId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ??
+                'Failed to ${isFollow ? 'follow' : 'unfollow'} user'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
     }
   }
@@ -189,6 +287,7 @@ class _FollowingListPageWrapperState extends State<FollowingListPageWrapper> {
       currentUserFollowing: _currentUserFollowing,
       onFollowToggle: _onFollowToggle,
       loadingUserIds: _loadingUserIds,
+      pendingRequests: _pendingRequests,
     );
   }
 }

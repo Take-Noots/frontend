@@ -219,15 +219,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 10),
 
                         // Forgot Password Link
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              // Forgot password functionality would go here
-                            },
-                            child: const Text('Forgot Password?'),
-                          ),
-                        ),
+                        // Align(
+                        //   alignment: Alignment.centerRight,
+                        //   child: TextButton(
+                        //     onPressed: () {
+                        //       // Forgot password functionality would go here
+                        //     },
+                        //     child: const Text('Forgot Password?'),
+                        //   ),
+                        // ),
 
                         // Login Button
                         Padding(

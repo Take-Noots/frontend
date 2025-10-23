@@ -15,6 +15,7 @@ class FollowersListPage extends StatelessWidget {
   final Future<void> Function(String targetUserId, bool isFollow)
       onFollowToggle;
   final Set<String> loadingUserIds;
+  final Set<String> pendingRequests;
 
   const FollowersListPage({
     Key? key,
@@ -24,6 +25,7 @@ class FollowersListPage extends StatelessWidget {
     required this.currentUserFollowing,
     required this.onFollowToggle,
     this.loadingUserIds = const {},
+    this.pendingRequests = const {},
   }) : super(key: key);
 
   @override
@@ -115,14 +117,24 @@ class FollowersListPage extends StatelessWidget {
                                     : () {
                                         final isFollowing = currentUserFollowing
                                             .contains(follower['userId']);
-                                        onFollowToggle(
-                                            follower['userId'], !isFollowing);
+                                        final isRequested = pendingRequests
+                                            .contains(follower['userId']);
+                                        if (isRequested) {
+                                          onFollowToggle(follower['userId'],
+                                              false); // Cancel request
+                                        } else {
+                                          onFollowToggle(
+                                              follower['userId'], !isFollowing);
+                                        }
                                       },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: currentUserFollowing
                                       .contains(follower['userId'])
                                   ? Theme.of(context).colorScheme.surface
-                                  : const Color(0xFF8E08EF),
+                                  : (pendingRequests
+                                          .contains(follower['userId'])
+                                      ? Colors.grey[400]
+                                      : const Color(0xFF8E08EF)),
                               foregroundColor: currentUserFollowing
                                       .contains(follower['userId'])
                                   ? Theme.of(context).colorScheme.onSurface
@@ -144,10 +156,15 @@ class FollowersListPage extends StatelessWidget {
                                           Colors.white),
                                     ),
                                   )
-                                : Text(currentUserFollowing
-                                        .contains(follower['userId'])
-                                    ? 'Unfollow'
-                                    : 'Follow'),
+                                : Text(
+                                    currentUserFollowing
+                                            .contains(follower['userId'])
+                                        ? 'Unfollow'
+                                        : (pendingRequests
+                                                .contains(follower['userId'])
+                                            ? 'Requested'
+                                            : 'Follow'),
+                                  ),
                           )
                         : null,
                   );
