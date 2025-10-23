@@ -76,12 +76,12 @@ class _FanbasePageState extends State<FanbasePage>
   }
 
   // ✅ Add this method to switch to Creator tab after deletion
-  void _switchToCreatorTab() {
-    setState(() {
-      _selectedTabIndex = 2;
-    });
-    _tabController.animateTo(2);
-  }
+  // void _switchToCreatorTab() {
+  //   setState(() {
+  //     _selectedTabIndex = 2;
+  //   });
+  //   _tabController.animateTo(2);
+  // }
 
   /// Filters fanbases based on ownership
   List<Fanbase> _filterFanbases(List<Fanbase> fanbases, int tabIndex) {

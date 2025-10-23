@@ -75,13 +75,12 @@ class FanbaseService {
         // ✅ Read bytes from XFile (works on web and native)
         final bytes = await imageFile.readAsBytes();
 
-        // ✅ Use MultipartFile.fromBytes with proper filename
+        // Create MultipartFile from bytes (web-compatible)
         formData.files.add(MapEntry(
-          'image',
+          'image', // Field name expected by backend
           MultipartFile.fromBytes(
             bytes,
-            filename: imageFile
-                .name, // ✅ Use imageFile.name instead of path splitting
+            filename: imageFile.name, // Original filename
           ),
         ));
       } else if (imageUrl != null && imageUrl.isNotEmpty) {
